@@ -1,6 +1,6 @@
 {
   "name": "@kispace-io/extension-howto-system",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "type": "module",
   "main": "./dist/index.js",
   "exports": {

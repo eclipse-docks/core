@@ -1,0 +1,3 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/k-monaco-editor-CNuFiYzI.js","assets/main-CosDFh9I.js","assets/main-BftkUBAw.css"])))=>i.map(i=>d[i]);
+import{k as a,j as o,c as i,_ as r}from"./main-CosDFh9I.js";a.registerEditorInputHandler({editorId:"system.monaco-editor",label:"Code",icon:"file-pen",lazyInit:async()=>{await r(()=>import("./k-monaco-editor-CNuFiYzI.js"),__vite__mapDeps([0,1,2]))},canHandle:e=>e instanceof i&&!e.getName().toLowerCase().endsWith(".py"),handle:async e=>{const t={title:e.getName(),data:e,key:e.getName(),icon:"file-pen",noOverflow:!1,state:{}};return t.widgetFactory=()=>o`
+            <k-monaco-editor .input=${t}></k-monaco-editor>`,t}});

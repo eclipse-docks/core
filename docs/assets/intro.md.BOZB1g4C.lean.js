@@ -1,1 +1,0 @@
-import{_ as t,o as n,c as a,ae as s}from"./chunks/framework.BIONGpTb.js";const h=JSON.parse('{"title":"What is Appspace","description":"","frontmatter":{},"headers":[],"relativePath":"intro.md","filePath":"intro.md"}'),o={name:"intro.md"};function i(r,e,c,d,p,l){return n(),a("div",null,[...e[0]||(e[0]=[s("",5)])])}const m=t(o,[["render",i]]);export{h as __pageData,m as default};

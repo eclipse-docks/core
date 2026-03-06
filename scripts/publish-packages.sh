@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-VERSION="${1:-1.0.0}"
+VERSION="${1:-0.0.0}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 

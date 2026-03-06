@@ -1,0 +1,32 @@
+import{_ as n,o as a,c as e,ae as t}from"./chunks/framework.BIONGpTb.js";const u=JSON.parse('{"title":"Architecture","description":"","frontmatter":{},"headers":[],"relativePath":"concepts/architecture.md","filePath":"concepts/architecture.md"}'),o={name:"concepts/architecture.md"};function p(c,s,i,r,d,l){return a(),e("div",null,[...s[0]||(s[0]=[t(`<h1 id="architecture" tabindex="-1">Architecture <a class="header-anchor" href="#architecture" aria-label="Permalink to &quot;Architecture&quot;">​</a></h1><h2 id="layers" tabindex="-1">Layers <a class="header-anchor" href="#layers" aria-label="Permalink to &quot;Layers&quot;">​</a></h2><div class="language- vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span>┌─────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│  Applications (packages/app, or custom apps)                 │</span></span>
+<span class="line"><span>│  – AppDefinition: id, extensions, contributions, render     │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                              │</span></span>
+<span class="line"><span>                              ▼</span></span>
+<span class="line"><span>┌─────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│  App Loader (core)                                          │</span></span>
+<span class="line"><span>│  – App registration &amp; lifecycle  – Extension enable/disable │</span></span>
+<span class="line"><span>│  – Contribution registration     – Render app root         │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                              │</span></span>
+<span class="line"><span>        ┌─────────────────────┼─────────────────────┐</span></span>
+<span class="line"><span>        ▼                     ▼                     ▼</span></span>
+<span class="line"><span>┌───────────────┐   ┌─────────────────┐   ┌───────────────┐</span></span>
+<span class="line"><span>│  Extensions   │   │  Contributions   │   │   Commands    │</span></span>
+<span class="line"><span>│  Registry     │   │  Registry       │   │   Registry    │</span></span>
+<span class="line"><span>│  (per-app)    │   │  (tabs, toolbars)│   │   (handlers)  │</span></span>
+<span class="line"><span>└───────────────┘   └─────────────────┘   └───────────────┘</span></span>
+<span class="line"><span>        │                     │                     │</span></span>
+<span class="line"><span>        └─────────────────────┼─────────────────────┘</span></span>
+<span class="line"><span>                              ▼</span></span>
+<span class="line"><span>┌─────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│  UI (core)                                                   │</span></span>
+<span class="line"><span>│  lyra-standard-layout · lyra-tabs · lyra-toolbar · lyra-filebrowser · …    │</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────┘</span></span>
+<span class="line"><span>                              │</span></span>
+<span class="line"><span>                              ▼</span></span>
+<span class="line"><span>┌─────────────────────────────────────────────────────────────┐</span></span>
+<span class="line"><span>│  Core services                                               │</span></span>
+<span class="line"><span>│  Workspace · Settings · Editor registry · Tasks · Events · DI│</span></span>
+<span class="line"><span>└─────────────────────────────────────────────────────────────┘</span></span></code></pre></div><h2 id="monorepo-layout" tabindex="-1">Monorepo layout <a class="header-anchor" href="#monorepo-layout" aria-label="Permalink to &quot;Monorepo layout&quot;">​</a></h2><table tabindex="0"><thead><tr><th>Path</th><th>Role</th></tr></thead><tbody><tr><td><strong><code>packages/core</code></strong> (<code>@eclipse-lyra/core</code>)</td><td>Platform: registries, services, parts, widgets, dialogs. No extension logic; extensions live in separate packages.</td></tr><tr><td><strong><code>packages/extension-*</code></strong></td><td>One package per extension. Each depends on core and registers commands, contributions, and optionally editors.</td></tr><tr><td><strong><code>packages/app</code></strong></td><td>Default app: imports core and extensions, defines <code>AppDefinition</code> and <code>extensions[]</code>, registers with the app loader. Use as a template.</td></tr><tr><td><strong>Root</strong></td><td>Workspace root. Scripts: <code>dev</code>, <code>build</code>, <code>build:app</code>, <code>test</code>, <code>docs:dev</code>, <code>docs:build</code>.</td></tr></tbody></table><h2 id="main-concepts" tabindex="-1">Main concepts <a class="header-anchor" href="#main-concepts" aria-label="Permalink to &quot;Main concepts&quot;">​</a></h2><ul><li><strong>Apps</strong> — Implement <code>AppDefinition</code>: <code>id</code>, <code>name</code>, <code>version</code>, <code>extensions[]</code>, optional <code>contributions</code>, <code>render</code> (string tag, <code>{ tag, attributes }</code>, or Lit template), <code>initialize</code> / <code>dispose</code>.</li><li><strong>Extensions</strong> — Register with <code>extensionRegistry</code>; provide a loader that runs when the extension is enabled. Register commands, contributions, editors.</li><li><strong>Contributions</strong> — Declarative UI: tabs (sidebars, editor area), toolbar buttons, HTML blocks. Targets include <code>SIDEBAR_MAIN</code>, <code>SIDEBAR_AUXILIARY</code>, <code>TOOLBAR_MAIN_RIGHT</code>, <code>TOOLBAR_BOTTOM_END</code>, etc.</li><li><strong>Commands</strong> — Id and handlers (optional <code>canExecute</code>). Toolbars and menus reference commands; the command palette and AI can execute them.</li></ul><p>Next: <a href="/docs/concepts/apps.html">Apps</a>, <a href="/docs/concepts/extensions.html">Extensions</a>, <a href="/docs/concepts/contributions.html">Contributions</a>, <a href="/docs/concepts/commands.html">Commands</a>.</p>`,8)])])}const m=n(o,[["render",p]]);export{u as __pageData,m as default};

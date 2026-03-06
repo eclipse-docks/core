@@ -204,6 +204,7 @@ For those comparing frameworks, here is how Eclipse Lyra lines up with Angular, 
 ## Repository and license
 
 - **Repository:** [github.com/eclipse-lyra/core](https://github.com/eclipse-lyra/core)
-- **License:** EPL-2.0
+- **License:** EPL-2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE))
+- **Contributing:** See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 Publishing of `@eclipse-lyra/core` and extensions is done via GitHub Actions on version tags; see workflow and npm trusted publishing in the repo.

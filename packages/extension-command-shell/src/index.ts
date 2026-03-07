@@ -12,4 +12,5 @@ extensionRegistry.registerExtension({
   description: t("EXT_COMMANDSHELL_DESC"),
   loader: () => import("./command-shell-extension"),
   icon: "terminal",
+  experimental: true,
 });

@@ -12,6 +12,6 @@ extensionRegistry.registerExtension({
   description: t('EXT_WEBDAV_DESC'),
   loader: () => import("./webdav-extension"),
   icon: "cloud",
-  
+  experimental: true,
   
 });

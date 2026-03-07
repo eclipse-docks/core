@@ -8,4 +8,5 @@ extensionRegistry.registerExtension({
   loader: () => import("./webmcp-extension"),
   icon: "plug",
   dependencies: ["@eclipse-lyra/extension-ai-system"],
+  experimental: true,
 });

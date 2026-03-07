@@ -12,6 +12,6 @@ extensionRegistry.registerExtension({
   description: t('EXT_WEBLLM_DESC'),
   loader: () => import("./webllmservice"),
   icon: "robot",
-  
+  experimental: true,
   
 });

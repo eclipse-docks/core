@@ -18,4 +18,5 @@ extensionRegistry.registerExtension({
   loader: () => import('./duckdb-extension'),
   icon: 'database',
   dependencies: ['@eclipse-lyra/extension-monaco-editor'],
+  experimental: true,
 });

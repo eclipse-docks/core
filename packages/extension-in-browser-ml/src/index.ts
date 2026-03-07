@@ -12,4 +12,5 @@ extensionRegistry.registerExtension({
   description: t('EXT_IN_BROWSER_ML_DESC'),
   loader: () => import("./in-browser-ml-extension"),
   icon: "brain",
+  experimental: true,
 });

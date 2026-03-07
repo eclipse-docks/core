@@ -12,6 +12,5 @@ extensionRegistry.registerExtension({
   description: t('EXT_HOWTO_DESC'),
   loader: () => import("./howto-extension"),
   icon: "list-check",
-  
-  
+  experimental: true,
 });

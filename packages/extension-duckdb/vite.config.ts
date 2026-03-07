@@ -21,6 +21,13 @@ const isExternal = (id: string): boolean => {
   return true;
 };
 
+/** Emit portable specifiers: duckdb main → package name, our package.json → relative path. */
+const outputPath = (id: string): string => {
+  if (isDuckdbMainEntry(id)) return DUCKDB_PKG;
+  if (id.endsWith('package.json')) return '../package.json';
+  return id;
+};
+
 export default defineConfig({
   plugins: [
     dts({
@@ -43,7 +50,7 @@ export default defineConfig({
       external: isExternal,
       output: {
         format: 'es',
-        paths: (id) => (isDuckdbMainEntry(id) ? DUCKDB_PKG : id),
+        paths: outputPath,
       },
     },
     outDir: 'dist',

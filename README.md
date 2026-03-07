@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://deepwiki.com/eclipse-lyra/core"><img src="https://deepwiki.com/badge.svg" alt="DeepWiki" /></a>
   <a href="https://github.com/eclipse-lyra/core/actions/workflows/ci.yml"><img src="https://github.com/eclipse-lyra/core/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://www.npmjs.com/package/@eclipse-lyra/core"><img src="https://img.shields.io/npm/v/@eclipse-lyra/core" alt="npm @eclipse-lyra/core" /></a>
   <a href="https://github.com/eclipse-lyra/core/blob/main/LICENSE"><img src="https://img.shields.io/github/license/eclipse-lyra/core" alt="License EPL-2.0" /></a>

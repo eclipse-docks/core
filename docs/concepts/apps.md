@@ -1,22 +1,34 @@
 # Apps
 
-An **app** is the top-level unit of the framework. You define it with an `AppDefinition` and register it with `appLoaderService`.
+An **app** is the top-level unit of the framework. You define it with an `AppDefinition` and register it with `appLoaderService`. The app root is always the chosen layout's component.
 
 ## AppDefinition
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `id` | Yes | Unique application identifier. |
-| `name` | Yes | Human-readable name. |
-| `version` | Yes | Semantic version string. |
+| `name` | No* | Human-readable name. Set by hostConfig when omitted. |
+| `version` | No* | Semantic version string. Set by hostConfig when omitted. |
 | `description` | No | Short description. |
 | `extensions` | No | List of extension ids (e.g. `@eclipse-lyra/extension-command-palette`) to enable when the app loads. |
 | `contributions` | No | App-level contributions (UI and/or extensions). |
-| `component` | No | Root component: tag string, `{ tag, attributes }`, or a function returning a Lit `TemplateResult`. Defaults to `lyra-standard-layout`. |
+| `layoutId` | No | Id of a layout registered to the `system.layouts` slot. The app root is the chosen layout's component. Defaults to `'standard'` (IDE layout). |
 | `initialize` | No | Called after extensions and contributions are registered. |
 | `dispose` | No | Called when the app is unloaded. |
 | `releaseHistory` | No | Static array or callback for release history (used by version-info). |
 | `metadata` | No | Custom metadata (e.g. `metadata.github` for release checking). |
+
+\* Use **`hostConfig: true`** in `registerApp` options so the framework fills name, version, and dependencies from the build-time plugin when available.
+
+## Layouts
+
+Layouts are registered via **LayoutContribution** to the slot **`SYSTEM_LAYOUTS`** (`system.layouts`). Each layout has:
+
+- **`id`** — Unique identifier (e.g. `'standard'`, `'dashboard'`).
+- **`name`** — Display name (e.g. for the layout switcher).
+- **`component`** — Function returning a Lit `TemplateResult` (the layout shell).
+- **`onShow`** (optional) — Callback when the layout is shown (e.g. open a default view).
+
+Core registers the **standard** layout (IDE: sidebars, editor area, bottom panel). Your app can register additional layouts (e.g. a dashboard shell) by calling `contributionRegistry.registerContribution(SYSTEM_LAYOUTS, { id, name, component, onShow })`. Users switch between layouts via the **toolbar layout switcher**; the preferred layout is persisted and used on next load.
 
 ## Registration
 
@@ -25,13 +37,10 @@ import { appLoaderService } from '@eclipse-lyra/core';
 
 appLoaderService.registerApp(
   {
-    id: 'my-app',
-    name: 'My App',
-    version: '1.0.0',
     extensions: ['@eclipse-lyra/extension-command-palette', '@eclipse-lyra/extension-settings-tree'],
-    component: { tag: 'lyra-standard-layout', attributes: { 'show-bottom-panel': 'true' } },
+    layoutId: 'standard',
   },
-  { autoStart: true }
+  { autoStart: true, hostConfig: true }
 );
 ```
 
@@ -49,11 +58,9 @@ import appPkg from '../package.json';
 
 appLoaderService.registerApp(
   {
-    id: 'my-app',
-    name: 'My App',
-    version: appPkg.version,
     marketplaceCatalogUrls: (appPkg as any).marketplace?.catalogUrls,
     extensions: [/* ... */],
+    layoutId: 'standard',
   },
   { autoStart: true, hostConfig: true }
 );

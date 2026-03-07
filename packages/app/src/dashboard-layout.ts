@@ -5,11 +5,11 @@ import {
     type HTMLContribution,
     type TabContribution,
     SYSTEM_VIEWS,
+    SYSTEM_LAYOUTS,
     TOOLBAR_MAIN_RIGHT,
     LyraPart,
     EDITOR_AREA_MAIN,
     commandRegistry,
-    appLoaderService,
 } from "@eclipse-lyra/core";
 import { customElement } from "@eclipse-lyra/core/externals/lit";
 
@@ -83,60 +83,54 @@ contributionRegistry.registerContribution("dashboard-views-toolbar-bottom", {
     command: "open_settings"
 });
 
-appLoaderService.registerApp({
-    id: 'dev-dashboard-app',
-    name: 'Dashboard Demo',
-    version: '0.0.0',
-    description: 'Demo dashboard layout with left navigation and views.',
-    extensions: [
-        '@eclipse-lyra/extension-utils',
-        '@eclipse-lyra/extension-md-editor',
-        '@eclipse-lyra/extension-monaco-editor',
-        '@eclipse-lyra/extension-media-viewer',
-        '@eclipse-lyra/extension-settings-tree'
-    ],
-    component: () =>
-        html`<style>
-          .dashboard-shell {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            width: 100%;
-            box-sizing: border-box;
-            padding: var(--wa-space-m);
-            gap: var(--wa-space-m);
-          }
-  
-          .dashboard-main {
-            flex: 1;
-            min-height: 0;
-          }
-  
-          .toolbar-top {
-            display: grid;
-            grid-template-columns: auto 1fr auto;
-            align-items: center;
-            border-radius: var(--wa-radius-l);
-            padding: 0 var(--wa-space-m);
-            min-height: 48px;
-            background-color: var(--wa-color-neutral-fill-surface);
-          }
-        </style>
-  
-        <div class="dashboard-shell">
-          <div class="toolbar-top">
-            <lyra-toolbar id="dashboard-toolbar-top"></lyra-toolbar>
-            <lyra-toolbar id="dashboard-toolbar-top-center"></lyra-toolbar>
-            <lyra-toolbar id=${TOOLBAR_MAIN_RIGHT}></lyra-toolbar>
-          </div>
-          <lyra-resizable-grid class="dashboard-main" orientation="horizontal" sizes="15%, 85%">
-            <lyra-toolbar id="dashboard-views" size="large" orientation="vertical"></lyra-toolbar>
-            <lyra-tabs style="padding: 10px;" id=${EDITOR_AREA_MAIN}></lyra-tabs>
-          </lyra-resizable-grid>
-        </div>`,
-    initialize() {
+const dashboardShellTemplate = () =>
+    html`<style>
+      .dashboard-shell {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        width: 100%;
+        box-sizing: border-box;
+        padding: var(--wa-space-m);
+        gap: var(--wa-space-m);
+      }
+
+      .dashboard-main {
+        flex: 1;
+        min-height: 0;
+      }
+
+      .toolbar-top {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        border-radius: var(--wa-radius-l);
+        padding: 0 var(--wa-space-m);
+        min-height: 48px;
+        background-color: var(--wa-color-neutral-fill-surface);
+      }
+    </style>
+
+    <div class="dashboard-shell">
+      <div class="toolbar-top">
+        <lyra-toolbar id="dashboard-toolbar-top"></lyra-toolbar>
+        <lyra-toolbar id="dashboard-toolbar-top-center"></lyra-toolbar>
+        <lyra-toolbar id=${TOOLBAR_MAIN_RIGHT}></lyra-toolbar>
+      </div>
+      <lyra-resizable-grid class="dashboard-main" orientation="horizontal" sizes="15%, 85%">
+        <lyra-toolbar id="dashboard-views" size="large" orientation="vertical"></lyra-toolbar>
+        <lyra-tabs style="padding: 10px;" id=${EDITOR_AREA_MAIN}></lyra-tabs>
+      </lyra-resizable-grid>
+    </div>`;
+
+contributionRegistry.registerContribution(SYSTEM_LAYOUTS, {
+    id: "dashboard",
+    name: "Dashboard",
+    label: "Dashboard",
+    component: dashboardShellTemplate,
+    onShow() {
         requestAnimationFrame(() => {
-            commandRegistry.execute('open_view_as_editor', { params: { name: 'dashboard-home' } });
+            commandRegistry.execute("open_view_as_editor", { params: { name: "dashboard-home" } });
         });
     },
 });

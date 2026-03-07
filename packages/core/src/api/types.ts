@@ -19,6 +19,7 @@ export type {
     CommandContribution,
     HTMLContribution,
     TabContribution,
+    LayoutContribution,
     ContributionChangeEvent
 } from '../core/contributionregistry';
 export type {

@@ -16,7 +16,8 @@ import {render, TemplateResult, html} from "lit";
 import {rootContext} from "./di";
 import {createLogger} from "./logger";
 import {extensionRegistry, Extension} from "./extensionregistry";
-import {contributionRegistry, Contribution} from "./contributionregistry";
+import {contributionRegistry, Contribution, LayoutContribution} from "./contributionregistry";
+import {SYSTEM_LAYOUTS} from "./constants";
 import {appSettings} from "./settingsservice";
 import { marketplaceRegistry } from "./marketplaceregistry";
 
@@ -169,15 +170,12 @@ export interface AppDefinition {
      * (if metadata.github is configured).
      */
     releaseHistory?: ReleaseHistory | (() => ReleaseHistory | Promise<ReleaseHistory>);
-    
+
     /**
-     * Root component to render. Can be:
-     * - A tag name string (e.g. "lyra-standard-layout") for a single custom element with no attributes.
-     * - A descriptor { tag, attributes? } for a single custom element with optional attributes.
-     * - A function returning a Lit TemplateResult for custom templates (requires lit in the app).
-     * If not provided, defaults to lyra-standard-layout.
+     * Id of a layout registered to the system.layouts contribution slot.
+     * The app root is always the chosen layout's component. Defaults to 'standard' when omitted.
      */
-    component?: string | RenderDescriptor | (() => TemplateResult);
+    layoutId?: string;
 
     /**
      * Optional cleanup function.
@@ -235,6 +233,8 @@ class AppLoaderService {
     private container: HTMLElement = document.body;
     private systemRequiredExtensions: Set<string> = new Set();
     private static readonly PREFERRED_APP_KEY = 'preferredAppName';
+    private static readonly PREFERRED_LAYOUT_KEY = 'preferredLayoutId';
+    private preferredLayoutId?: string;
     
     /**
      * Register an application with the framework.
@@ -474,11 +474,8 @@ class AppLoaderService {
         
         this.currentApp = app;
         logger.info(`App ${app.name} loaded successfully`);
-        
-        // Update document metadata from app
+        this.preferredLayoutId = await this.getPreferredLayoutId();
         this.updateDocumentMetadata(app);
-        
-        // Auto-render if container provided
         if (container) {
             this.renderApp(container);
         }
@@ -509,7 +506,8 @@ class AppLoaderService {
     
     /**
      * Render the current application to the DOM.
-     * 
+     * Resolves the layout by layoutId (default 'standard'), renders its component, then calls layout.onShow if defined.
+     *
      * @param container - DOM element to render into
      */
     renderApp(container: HTMLElement): void {
@@ -517,23 +515,39 @@ class AppLoaderService {
             throw new Error('No app loaded. Call loadApp() first.');
         }
 
-        const r = this.currentApp.component;
+        const layoutId = this.preferredLayoutId ?? this.currentApp.layoutId ?? 'standard';
+        const layouts = contributionRegistry.getContributions<LayoutContribution>(SYSTEM_LAYOUTS);
+        let layout = layouts.find((c) => c.id === layoutId);
+        if (!layout) {
+            logger.warn(`Layout '${layoutId}' not found, falling back to 'standard'`);
+            layout = layouts.find((c) => c.id === 'standard');
+        }
+        if (!layout) {
+            throw new Error(`No layout found for layoutId '${layoutId}' and no 'standard' layout registered.`);
+        }
+
+        const r = layout.component;
+        container.innerHTML = '';
         if (typeof r === 'string') {
-            const el = document.createElement(r);
-            container.innerHTML = '';
-            container.appendChild(el);
+            container.appendChild(document.createElement(r));
         } else if (r && typeof r === 'object' && 'tag' in r) {
             const el = document.createElement(r.tag);
             for (const [key, value] of Object.entries(r.attributes ?? {})) {
                 el.setAttribute(key, value);
             }
-            container.innerHTML = '';
             container.appendChild(el);
         } else if (typeof r === 'function') {
-            const template = r();
-            render(template, container);
+            render(r(), container);
         } else {
-            render(html`<lyra-standard-layout></lyra-standard-layout>`, container);
+            throw new Error(`Layout '${layout.id}' has invalid component.`);
+        }
+
+        if (layout.onShow) {
+            requestAnimationFrame(() => {
+                void Promise.resolve(layout!.onShow!()).catch((err) =>
+                    logger.error(`Layout onShow failed for '${layout!.id}': ${getErrorMessage(err)}`)
+                );
+            });
         }
         logger.info(`Rendered ${this.currentApp.name}`);
     }
@@ -571,13 +585,48 @@ class AppLoaderService {
         if (!this.apps.has(appId)) {
             throw new Error(`App '${appId}' not found. Make sure it's registered.`);
         }
-        
         try {
             await appSettings.set(AppLoaderService.PREFERRED_APP_KEY, appId);
             this.defaultAppName = appId;
             logger.info(`Set preferred app to: ${appId}`);
         } catch (error) {
             logger.error(`Failed to persist preferred app: ${getErrorMessage(error)}`);
+            throw error;
+        }
+    }
+
+    getRegisteredLayouts(): LayoutContribution[] {
+        return contributionRegistry.getContributions<LayoutContribution>(SYSTEM_LAYOUTS);
+    }
+
+    getCurrentLayoutId(): string {
+        return this.preferredLayoutId ?? this.currentApp?.layoutId ?? 'standard';
+    }
+
+    async getPreferredLayoutId(): Promise<string | undefined> {
+        try {
+            return await appSettings.get(AppLoaderService.PREFERRED_LAYOUT_KEY);
+        } catch (error) {
+            logger.debug(`Failed to get preferred layout ID: ${getErrorMessage(error)}`);
+            return undefined;
+        }
+    }
+
+    async setPreferredLayoutId(layoutId: string): Promise<void> {
+        const layouts = this.getRegisteredLayouts();
+        if (!layouts.some((l) => l.id === layoutId)) {
+            throw new Error(`Layout '${layoutId}' not found.`);
+        }
+        try {
+            await appSettings.set(AppLoaderService.PREFERRED_LAYOUT_KEY, layoutId);
+            this.preferredLayoutId = layoutId;
+            logger.info(`Set preferred layout to: ${layoutId}`);
+            if (this.currentApp && this.container) {
+                this.renderApp(this.container);
+            }
+            window.dispatchEvent(new CustomEvent('layout-changed', { detail: { layoutId } }));
+        } catch (error) {
+            logger.error(`Failed to persist preferred layout: ${getErrorMessage(error)}`);
             throw error;
         }
     }

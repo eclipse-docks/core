@@ -45,6 +45,13 @@ export interface IconContribution extends Contribution {
     priority?: number;
 }
 
+export interface LayoutContribution extends Contribution {
+    id: string;
+    name: string;
+    component: string | { tag: string; attributes?: Record<string, string> } | (() => TemplateResult);
+    onShow?: () => void | Promise<void>;
+}
+
 class ContributionRegistry {
     private contributions: Map<string, Contribution[]> = new Map();
 

@@ -53,14 +53,15 @@ Downstream domain-specific apps:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Applications (packages/app, or custom apps)                 │
-│  – AppDefinition: id, extensions, contributions, render     │
+│  – AppDefinition: extensions, optional layoutId              │
+│  – Layouts registered via LayoutContribution (system.layouts)│
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  App Loader (core)                                          │
 │  – App registration & lifecycle  – Extension enable/disable │
-│  – Contribution registration     – Render app root         │
+│  – Layout resolution & preferred layout  – Render layout root│
 └─────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -96,7 +97,8 @@ Downstream domain-specific apps:
 
 ### Main concepts
 
-- **Apps** — Implement `AppDefinition`: `id`, `name`, `version`, `extensions[]`, optional `contributions`, `render` (string tag, `{ tag, attributes }`, or Lit template), `initialize` / `dispose`.
+- **Apps** — One or more apps register via `AppDefinition`: `name`, `version`, `extensions[]`, optional `layoutId`, `contributions`, `initialize` / `dispose`. The app root is always the chosen layout's component.
+- **Layouts** — Registered via `LayoutContribution` (slot `system.layouts`): `id`, `name`, `component` (Lit template), optional `onShow`. Core registers the standard (IDE) layout; apps can register additional layouts (e.g. dashboard). Users switch layout via the toolbar layout switcher.
 - **Extensions** — Register with `extensionRegistry`; provide a loader that runs when the extension is enabled. Register commands, contributions, editors, services.
 - **Contributions** — Declarative UI: tabs (sidebars, editor area), toolbar buttons, HTML blocks. Targets include `SIDEBAR_MAIN`, `SIDEBAR_AUXILIARY`, `TOOLBAR_MAIN_RIGHT`, `TOOLBAR_BOTTOM_END`, etc.
 - **Commands** — Id + handlers (with optional `canExecute`). Toolbar/menus reference commands; AI and command palette can execute them.
@@ -134,19 +136,18 @@ npm run build:app    # build the default app (depends on core)
 2. In your app entry (e.g. `main.ts`):
    - Import the extensions you need (`@eclipse-lyra/extension-*`).
    - Call `appLoaderService.registerApp(appDefinition, { autoStart: true, hostConfig: true })`. Add `marketplaceCatalogUrls` to the app definition if you use the marketplace.
-3. **App definition** — Minimal example (no Lit in app):
+3. **App definition** — Minimal example (default layout is `standard`, i.e. IDE):
 
 ```ts
-import { appLoaderService, type RenderDescriptor } from '@eclipse-lyra/core';
+import { appLoaderService } from '@eclipse-lyra/core';
 
 appLoaderService.registerApp({
-  id: 'my-app',
-  name: 'My App',
-  version: '1.0.0',
   extensions: ['@eclipse-lyra/extension-command-palette', '@eclipse-lyra/extension-settings-tree', '@eclipse-lyra/extension-ai-system'],
-  render: { tag: 'lyra-standard-layout', attributes: { 'show-bottom-panel': 'true' } } satisfies RenderDescriptor,
-}, { autoStart: true });
+  layoutId: 'standard',
+}, { autoStart: true, hostConfig: true });
 ```
+
+To add another layout (e.g. dashboard), register a `LayoutContribution` to the `system.layouts` slot (id, name, component, optional onShow). Users switch between layouts via the toolbar layout switcher.
 
 4. Add the app package to the root `package.json` workspaces and run `npm run dev` from the app package or via root scripts.
 
@@ -188,7 +189,7 @@ For those comparing frameworks, here is how Eclipse Lyra lines up with Angular, 
 | **Dependency injection** | Built-in: `rootContext`, `uiContext`; services (appLoader, commandRegistry, workspace, settings, etc.) | Built-in hierarchical injector | Context API or external (Inversify, etc.) | provide/inject (composition API) |
 | **Plugin / Extension model** | Core feature: extensions (per-app), contribution + command registries; loaders; enable/disable at runtime; **marketplace**: install external extensions from catalog URLs (e.g. appspace-marketplace) | NgModules; lazy-loaded feature modules | No standard; plugin patterns ad-hoc | Plugins (use()); Nuxt modules |
 | **Commands / shortcuts** | Built-in: command registry, keybindings, command palette | No built-in; custom or libs | No built-in; custom or libs | No built-in; custom or libs |
-| **Layouts / App modes** | Flexible: `lyra-standard-layout` (IDE) or custom render (e.g. dashboard shell with nav + tabs); same contributions | App shell + router-outlet | App shell + router; layout is component tree | App shell + router; layout is component tree |
+| **Layouts / App modes** | Layout contributions (slot `system.layouts`); default `standard` (IDE); optional layouts (e.g. dashboard); layout switcher in toolbar | App shell + router-outlet | App shell + router; layout is component tree | App shell + router; layout is component tree |
 | **Primary use case** | IDE-like apps and dashboard-like apps (tabs, workspace, editors, views, AI, extensions) | Enterprise SPAs, large teams | SPAs, dashboards, content apps | SPAs, progressive enhancement |
 | **License** | EPL-2.0 | MIT | MIT | MIT |
 
@@ -196,7 +197,7 @@ For those comparing frameworks, here is how Eclipse Lyra lines up with Angular, 
 
 - **Where Eclipse Lyra aligns**: TypeScript, components, state (signals), i18n, testing (Vitest), Vite build, theming (via WebAwesome), DI, strong typing; **browser-native stack** (Lit, standard DOM, Web APIs) and **lightweight runtime footprint**.
 - **Where Eclipse Lyra differs by design**: No URL routing (IDE-style navigation); no built-in forms/HTTP; no CLI; client-only (no SSR); focus on IDE-like experiences and extensions rather than content-focused SPAs.
-- **Unique to Eclipse Lyra**: Focus on **browser-native, lightweight runtime**; contribution targets (sidebars, toolbars, editor area), command registry + keybindings, extension registry with enable/disable at runtime; **extension marketplace** — install external extensions from catalog URLs; workspace/service layer; flexible layouts (IDE with `lyra-standard-layout` or custom dashboard shell with nav + views); first-class IDE UX (tabs, resizable layout, file browser, Monaco) and dashboard-style views.
+- **Unique to Eclipse Lyra**: Focus on **browser-native, lightweight runtime**; contribution targets (sidebars, toolbars, editor area), command registry + keybindings, extension registry with enable/disable at runtime; **extension marketplace** — install external extensions from catalog URLs; workspace/service layer; **layout contributions** (slot `system.layouts`) with preferred layout and toolbar layout switcher (IDE vs dashboard or custom shells); first-class IDE UX (tabs, resizable layout, file browser, Monaco) and dashboard-style views.
 
 ---
 

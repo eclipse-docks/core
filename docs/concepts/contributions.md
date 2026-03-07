@@ -16,6 +16,7 @@ Contribution targets define where UI appears:
 | `TOOLBAR_MAIN` | Main toolbar. |
 | `TOOLBAR_MAIN_RIGHT`, `TOOLBAR_MAIN_CENTER` | Main toolbar slots. |
 | `TOOLBAR_BOTTOM`, `TOOLBAR_BOTTOM_END`, `TOOLBAR_BOTTOM_CENTER` | Bottom toolbar. |
+| `SYSTEM_LAYOUTS` | Layout contributions (id, name, component, optional onShow). See [Apps](/concepts/apps#layouts). |
 | `SYSTEM_LANGUAGE_BUNDLES` | i18n language bundles (extensions). |
 
 Import these from `@eclipse-lyra/core`.
@@ -25,6 +26,7 @@ Import these from `@eclipse-lyra/core`.
 - **CommandContribution** — `command`, `label`, `icon`, optional `params`, `showLabel`, `disabled`. Used for toolbar buttons and menu items.
 - **TabContribution** — `name`, optional `editorId`, `closable`, `noOverflow`, `component` (function returning a Lit template). Used for sidebar and editor area tabs.
 - **HTMLContribution** — `component` (string or function returning a Lit `TemplateResult`). Raw HTML or template in a slot.
+- **LayoutContribution** — For `SYSTEM_LAYOUTS`: `id`, `name`, `component` (Lit template), optional `onShow`. Defines a layout shell; the app root is the chosen layout's component.
 - **IconContribution** — `mappings` (map of icon keys to identifiers), optional `priority`.
 
 All contributions can include `target`, `label`, `icon`, `slot` from the base `Contribution` interface where applicable.

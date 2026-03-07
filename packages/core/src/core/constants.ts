@@ -7,6 +7,7 @@ export const TOOLBAR_BOTTOM_CENTER = "app-toolbars-bottom-center"
 export const TOOLBAR_BOTTOM_END = "app-toolbars-bottom-end"
 
 export const SYSTEM_VIEWS = "system-views"
+export const SYSTEM_LAYOUTS = "system.layouts"
 
 // VS Code-style layout containers
 export const EDITOR_AREA_MAIN = "editor-area-main"

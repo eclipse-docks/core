@@ -5,14 +5,15 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Applications (packages/app, or custom apps)                 │
-│  – AppDefinition: id, extensions, contributions, render     │
+│  – AppDefinition: extensions, optional layoutId              │
+│  – Layouts registered via LayoutContribution (system.layouts)│
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  App Loader (core)                                          │
 │  – App registration & lifecycle  – Extension enable/disable │
-│  – Contribution registration     – Render app root         │
+│  – Layout resolution & preferred layout  – Render layout root│
 └─────────────────────────────────────────────────────────────┘
                               │
         ┌─────────────────────┼─────────────────────┐
@@ -48,9 +49,10 @@
 
 ## Main concepts
 
-- **Apps** — Implement `AppDefinition`: `id`, `name`, `version`, `extensions[]`, optional `contributions`, `render` (string tag, `{ tag, attributes }`, or Lit template), `initialize` / `dispose`.
+- **Apps** — Register via `AppDefinition`: `name`, `version`, `extensions[]`, optional `layoutId`, `contributions`, `initialize` / `dispose`. The app root is the chosen layout's component.
+- **Layouts** — Registered via `LayoutContribution` (slot `system.layouts`): `id`, `name`, `component`, optional `onShow`. Core provides the standard (IDE) layout; apps can add layouts (e.g. dashboard). Users switch via the toolbar layout switcher.
 - **Extensions** — Register with `extensionRegistry`; provide a loader that runs when the extension is enabled. Register commands, contributions, editors.
-- **Contributions** — Declarative UI: tabs (sidebars, editor area), toolbar buttons, HTML blocks. Targets include `SIDEBAR_MAIN`, `SIDEBAR_AUXILIARY`, `TOOLBAR_MAIN_RIGHT`, `TOOLBAR_BOTTOM_END`, etc.
+- **Contributions** — Declarative UI: tabs (sidebars, editor area), toolbar buttons, HTML blocks. Targets include `SIDEBAR_MAIN`, `SIDEBAR_AUXILIARY`, `TOOLBAR_MAIN_RIGHT`, `TOOLBAR_BOTTOM_END`, `SYSTEM_LAYOUTS`, etc.
 - **Commands** — Id and handlers (optional `canExecute`). Toolbars and menus reference commands; the command palette and AI can execute them.
 
 Next: [Apps](/concepts/apps), [Extensions](/concepts/extensions), [Contributions](/concepts/contributions), [Commands](/concepts/commands).

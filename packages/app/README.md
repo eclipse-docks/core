@@ -1,11 +1,13 @@
-# Appspace default app
+# Eclipse Lyra default app
 
-Template application built on Appspace. Use this package as a starting point for downstream applications.
+Template application built on Eclipse Lyra. Use this package as a starting point for downstream applications.
 
 - **Run dev server**: From repo root, `npm run dev` (or from this directory, `npm run dev`).
 - **Build**: From repo root, `npm run build:app` (or from this directory, `npm run build`). Output is in `dist/`.
 
-To create your own app, copy this package, adjust `src/main.ts` (register your app, choose extensions), and add your own dependencies as needed.
+The app registers a single app definition with extensions; the default layout is `standard` (IDE). Import `./dashboard-layout` to add the Dashboard layout—users can switch between IDE and Dashboard via the toolbar layout switcher.
+
+To create your own app, copy this package, adjust `src/main.ts` (register your app, choose extensions and optional `layoutId`), and add your own dependencies as needed.
 
 **Resolved package info in About:** To show actual installed dependency versions (instead of specifiers like `*` or `^1.0.0`) in the version-info / About UI:
 

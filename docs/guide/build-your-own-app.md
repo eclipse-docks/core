@@ -16,31 +16,27 @@ Use **`packages/app`** as a template: copy it or add a new workspace package.
    - Call `appLoaderService.registerApp(appDefinition, { autoStart: true, hostConfig: true })`. Add `marketplaceCatalogUrls` and optionally `dependencies` to the app definition if you use the marketplace or want to show dependency versions in About.
 
 4. **App definition**  
-   Minimal example:
+   Minimal example (default layout is `standard`, i.e. IDE):
 
 ```ts
-import { appLoaderService, type RenderDescriptor } from '@eclipse-lyra/core';
+import { appLoaderService } from '@eclipse-lyra/core';
 
 appLoaderService.registerApp(
   {
-    id: 'my-app',
-    name: 'My App',
-    version: '1.0.0',
     extensions: [
       '@eclipse-lyra/extension-command-palette',
       '@eclipse-lyra/extension-settings-tree',
       '@eclipse-lyra/extension-ai-system',
     ],
-    component: {
-      tag: 'lyra-standard-layout',
-      attributes: { 'show-bottom-panel': 'true' },
-    } satisfies RenderDescriptor,
+    layoutId: 'standard',
   },
-  { autoStart: true }
+  { autoStart: true, hostConfig: true }
 );
 ```
 
-5. **Run and build**  
-   From the repo root: `npm run dev` (or run the app package’s dev script). For production: `npm run build` then build the app package; output will be in the app’s `dist/`.
+To add another layout (e.g. dashboard), register a **LayoutContribution** to the `SYSTEM_LAYOUTS` slot (`id`, `name`, `component`, optional `onShow`). Users switch between layouts via the toolbar layout switcher.
 
-See [Concepts: Apps](/concepts/apps) for all `AppDefinition` options.
+5. **Run and build**  
+   From the repo root: `npm run dev` (or run the app package's dev script). For production: `npm run build` then build the app package; output will be in the app's `dist/`.
+
+See [Concepts: Apps](/concepts/apps) for all `AppDefinition` options and layout registration.

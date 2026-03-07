@@ -39,6 +39,6 @@ contributionRegistry.registerContribution(TOOLBAR_BOTTOM_END, {
 
 contributionRegistry.registerContribution(TOOLBAR_MAIN_RIGHT, {
     label: "App Switcher",
-    component: () => html`<lyra-app-switcher></lyra-app-switcher>`
+    component: () => html`<lyra-layout-switcher></lyra-layout-switcher>`
 } as HTMLContribution);
 

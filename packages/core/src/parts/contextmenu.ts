@@ -198,8 +198,8 @@ export class LyraContextMenu extends LyraElement {
                     ${commandContribution.label}
                 </lyra-command>
             `;
-        } else if ("html" in contribution) {
-            const contents = (contribution as HTMLContribution).html;
+        } else if ("component" in contribution) {
+            const contents = (contribution as HTMLContribution).component;
             if (contents instanceof Function) {
                 return contents();
             }

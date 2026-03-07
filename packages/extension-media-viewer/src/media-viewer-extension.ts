@@ -62,7 +62,7 @@ editorRegistry.registerEditorInputHandler({
             noOverflow: false,
             state: {},
         } as EditorInput
-        editorInput.widgetFactory = () => html`
+        editorInput.component = () => html`
             <lyra-media-viewer .input=${editorInput}></lyra-media-viewer>`
         return editorInput;
     },

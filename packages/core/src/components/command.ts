@@ -123,9 +123,9 @@ export class LyraCommand extends LyraWidget {
             `
         }
         
-        if ('html' in contribution) {
+        if ('component' in contribution) {
             const htmlContribution = contribution as HTMLContribution
-            const contents = htmlContribution.html
+            const contents = htmlContribution.component
             if (contents instanceof Function) {
                 return contents()
             }

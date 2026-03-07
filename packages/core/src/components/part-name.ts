@@ -10,7 +10,7 @@ import {i18n} from "../core/i18n";
 const t = i18n('partname');
 
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM_CENTER, {
-    html: "<lyra-part-name></lyra-part-name>"
+    component: "<lyra-part-name></lyra-part-name>"
 } as HTMLContribution)
 
 @customElement('lyra-part-name')

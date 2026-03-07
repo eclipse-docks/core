@@ -32,7 +32,7 @@ appLoaderService.registerApp(
       '@eclipse-lyra/extension-settings-tree',
       '@eclipse-lyra/extension-ai-system',
     ],
-    render: {
+    component: {
       tag: 'lyra-standard-layout',
       attributes: { 'show-bottom-panel': 'true' },
     } satisfies RenderDescriptor,

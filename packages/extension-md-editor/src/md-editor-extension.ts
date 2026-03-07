@@ -20,7 +20,7 @@ editorRegistry.registerEditorInputHandler({
             noOverflow: false,
             state: {},
         } as EditorInput
-        editorInput.widgetFactory = () => html`
+        editorInput.component = () => html`
             <lyra-md-editor .input=${editorInput}></lyra-md-editor>`
         return editorInput;
     },

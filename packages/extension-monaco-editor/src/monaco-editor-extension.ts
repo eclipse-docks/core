@@ -21,7 +21,7 @@ editorRegistry.registerEditorInputHandler({
             noOverflow: false,
             state: {},
         } as EditorInput
-        editorInput.widgetFactory = () => html`
+        editorInput.component = () => html`
             <lyra-monaco-editor .input=${editorInput}></lyra-monaco-editor>`
         return editorInput;
     }

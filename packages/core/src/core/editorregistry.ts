@@ -16,7 +16,7 @@ export interface EditorInput {
     icon?: string;
     data: any;
     noOverflow?: boolean;
-    widgetFactory: (container: any, tab: HTMLElement) => any;
+    component: (container: any, tab: HTMLElement) => any;
     state: { [key: string]: any };
 }
 
@@ -246,11 +246,11 @@ class EditorRegistry {
             return
         }
 
-        if (!("widgetFactory" in editorInput)) {
+        if (!("component" in editorInput)) {
             editorInput = await this.handleInput(editorInput, preferredEditorId)
         }
 
-        if (!editorInput || !("widgetFactory" in editorInput)) {
+        if (!editorInput || !("component" in editorInput)) {
             return
         }
 
@@ -264,7 +264,7 @@ class EditorRegistry {
             icon: editorInput.icon,
             closable: true,
             noOverflow: editorInput.noOverflow,
-            component: editorInput.widgetFactory
+            component: editorInput.component
         } as TabContribution) 
     }
 

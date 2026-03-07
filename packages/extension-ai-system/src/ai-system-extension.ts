@@ -44,7 +44,7 @@ contributionRegistry.registerContribution(CID_AGENTS, {
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM, {
     target: TOOLBAR_BOTTOM,
     label: 'Token Usage',
-    html: '<lyra-token-usage></lyra-token-usage>'
+    component: '<lyra-token-usage></lyra-token-usage>'
 } as HTMLContribution);
 
 editorRegistry.registerEditorInputHandler({
@@ -53,7 +53,7 @@ editorRegistry.registerEditorInputHandler({
     ranking: 1000,
     canHandle: (input: EditorInput) => input.key === '.system.ai-config',
     handle: async (input: EditorInput) => {
-        input.widgetFactory = () => html`<lyra-ai-config-editor .input="${input}"></lyra-ai-config-editor>`;
+        input.component = () => html`<lyra-ai-config-editor .input="${input}"></lyra-ai-config-editor>`;
         return input;
     }
 });

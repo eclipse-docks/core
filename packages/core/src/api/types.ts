@@ -19,7 +19,6 @@ export type {
     CommandContribution,
     HTMLContribution,
     TabContribution,
-    PaneContribution,
     ContributionChangeEvent
 } from '../core/contributionregistry';
 export type {

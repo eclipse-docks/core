@@ -5,7 +5,7 @@ import { TOOLBAR_MAIN } from "@eclipse-lyra/core";
 contributionRegistry.registerContribution(TOOLBAR_MAIN, {
   label: "Eclipse Lyra",
   slot: "start",
-  html: () => html`
+  component: () => html`
     <div
       style="
         display: inline-flex;

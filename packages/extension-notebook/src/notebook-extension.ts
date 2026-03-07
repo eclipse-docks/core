@@ -64,7 +64,7 @@ export default ({editorRegistry, commandRegistry, contributionRegistry}: any) =>
                 noOverflow: true,
                 state: {},
             } as EditorInput;
-            editorInput.widgetFactory = () => html`
+            editorInput.component = () => html`
                 <lyra-notebook-editor .input=${editorInput}></lyra-notebook-editor>`;
             return editorInput;
         },

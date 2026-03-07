@@ -22,9 +22,9 @@ export default function () {
         icon: 'database',
         noOverflow: false,
         state: {},
-        widgetFactory: () => null as any,
+        component: () => null as any,
       };
-      editorInput.widgetFactory = () =>
+      editorInput.component = () =>
         html`<lyra-duckdb-editor .input=${editorInput}></lyra-duckdb-editor>`;
       return editorInput;
     },

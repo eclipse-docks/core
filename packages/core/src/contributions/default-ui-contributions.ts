@@ -29,16 +29,16 @@ contributionRegistry.registerContribution(TOOLBAR_BOTTOM_END, {
 
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM_END, {
     label: `Fast Views`,
-    html: `<lyra-fastviews target="system.fastviews-bottomend" icon="bolt" title="Fast Views"></lyra-fastviews>`
+    component: `<lyra-fastviews target="system.fastviews-bottomend" icon="bolt" title="Fast Views"></lyra-fastviews>`
 });
 
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM_END, {
     label: "Language",
-    html: () => html`<lyra-language-selector></lyra-language-selector>`
+    component: () => html`<lyra-language-selector></lyra-language-selector>`
 });
 
 contributionRegistry.registerContribution(TOOLBAR_MAIN_RIGHT, {
     label: "App Switcher",
-    html: () => html`<lyra-app-switcher></lyra-app-switcher>`
+    component: () => html`<lyra-app-switcher></lyra-app-switcher>`
 } as HTMLContribution);
 

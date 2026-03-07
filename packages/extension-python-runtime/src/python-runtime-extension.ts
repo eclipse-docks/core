@@ -83,10 +83,10 @@ editorRegistry.registerEditorInputHandler({
             icon: "python",
             noOverflow: false,
             state: {},
-            widgetFactory: () => null as any,
+            component: () => null as any,
         };
 
-        editorInput.widgetFactory = () =>
+        editorInput.component = () =>
             html`<lyra-python-editor .input=${editorInput}></lyra-python-editor>`;
 
         return editorInput;

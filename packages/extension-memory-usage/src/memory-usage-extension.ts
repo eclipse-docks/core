@@ -5,6 +5,6 @@ import "./memory-usage";
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM, {
     target: TOOLBAR_BOTTOM,
     label: "Memory",
-    html: `<lyra-memory-usage></lyra-memory-usage>`
+    component: `<lyra-memory-usage></lyra-memory-usage>`
 } as HTMLContribution)
 

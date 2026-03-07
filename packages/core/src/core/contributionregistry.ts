@@ -25,7 +25,7 @@ export interface CommandContribution extends Contribution {
 }
 
 export interface HTMLContribution extends Contribution {
-    html: string | (() => TemplateResult)
+    component: string | (() => TemplateResult)
 }
 
 export interface TabContribution extends Contribution {
@@ -38,15 +38,6 @@ export interface TabContribution extends Contribution {
     /** When true or omitted, a contextmenu is rendered for this tab; when false, no context menu is shown. */
     contextMenu?: boolean;
     component?: (id: string) => TemplateResult;
-}
-
-export interface PaneContribution extends Contribution {
-    name: string;
-    size?: number;
-    minSize?: number;
-    maxSize?: number;
-    order?: number;
-    component: () => TemplateResult;
 }
 
 export interface IconContribution extends Contribution {

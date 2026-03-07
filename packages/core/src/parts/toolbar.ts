@@ -186,7 +186,7 @@ export class LyraToolbar extends LyraElement {
     }
 
     private isToolbarItem(contribution: Contribution): boolean {
-        return "command" in contribution || "html" in contribution;
+        return "command" in contribution || "component" in contribution;
     }
 
     contributionCreator(contribution: Contribution) {
@@ -203,8 +203,8 @@ export class LyraToolbar extends LyraElement {
                 </wa-button>
             `;
         }
-        if ("html" in contribution) {
-            const contents = (contribution as HTMLContribution).html
+        if ("component" in contribution) {
+            const contents = (contribution as HTMLContribution).component
             if (contents instanceof Function) {
                 return contents()
             }

@@ -123,7 +123,7 @@ registerAll({
                 icon: "puzzle-piece",
                 state: {},
                 noOverflow: true,
-                widgetFactory: () => html`<lyra-extensions></lyra-extensions>`,
+                component: () => html`<lyra-extensions></lyra-extensions>`,
             }
             editorRegistry.loadEditor(editorInput, "extensions-editor").then()
         }

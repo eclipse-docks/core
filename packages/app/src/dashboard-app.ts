@@ -27,7 +27,7 @@ const dashboardLogo = () => html`
 contributionRegistry.registerContribution("dashboard-toolbar-top", {
     label: "Dashboard",
     slot: "start",
-    html: dashboardLogo
+    component: dashboardLogo
 } as HTMLContribution);
 
 @customElement('lyra-view-wrapper')
@@ -95,7 +95,7 @@ appLoaderService.registerApp({
         '@eclipse-lyra/extension-media-viewer',
         '@eclipse-lyra/extension-settings-tree'
     ],
-    render: () =>
+    component: () =>
         html`<style>
           .dashboard-shell {
             display: flex;

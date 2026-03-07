@@ -176,7 +176,7 @@ export interface AppDefinition {
      * - A function returning a Lit TemplateResult for custom templates (requires lit in the app).
      * If not provided, defaults to lyra-standard-layout.
      */
-    render?: string | RenderDescriptor | (() => TemplateResult);
+    component?: string | RenderDescriptor | (() => TemplateResult);
 
     /**
      * Optional cleanup function.
@@ -486,7 +486,7 @@ class AppLoaderService {
             throw new Error('No app loaded. Call loadApp() first.');
         }
 
-        const r = this.currentApp.render;
+        const r = this.currentApp.component;
         if (typeof r === 'string') {
             const el = document.createElement(r);
             container.innerHTML = '';

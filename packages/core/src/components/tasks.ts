@@ -10,7 +10,7 @@ import {i18n} from "../core/i18n";
 const t = i18n('tasks');
 
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM_CENTER, {
-    html: "<lyra-tasks></lyra-tasks>"
+    component: "<lyra-tasks></lyra-tasks>"
 } as HTMLContribution)
 
 // Singleton dialog container for progress dialog

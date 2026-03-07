@@ -24,8 +24,7 @@ Import these from `@eclipse-lyra/core`.
 
 - **CommandContribution** — `command`, `label`, `icon`, optional `params`, `showLabel`, `disabled`. Used for toolbar buttons and menu items.
 - **TabContribution** — `name`, optional `editorId`, `closable`, `noOverflow`, `component` (function returning a Lit template). Used for sidebar and editor area tabs.
-- **PaneContribution** — `name`, `component`, optional `size`, `minSize`, `maxSize`, `order`. Used for resizable panes.
-- **HTMLContribution** — `html` (string or function returning a Lit `TemplateResult`). Raw HTML or template in a slot.
+- **HTMLContribution** — `component` (string or function returning a Lit `TemplateResult`). Raw HTML or template in a slot.
 - **IconContribution** — `mappings` (map of icon keys to identifiers), optional `priority`.
 
 All contributions can include `target`, `label`, `icon`, `slot` from the base `Contribution` interface where applicable.

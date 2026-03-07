@@ -12,7 +12,7 @@ An **app** is the top-level unit of the framework. You define it with an `AppDef
 | `description` | No | Short description. |
 | `extensions` | No | List of extension ids (e.g. `@eclipse-lyra/extension-command-palette`) to enable when the app loads. |
 | `contributions` | No | App-level contributions (UI and/or extensions). |
-| `render` | No | Root component: tag string, `{ tag, attributes }`, or a function returning a Lit `TemplateResult`. Defaults to `lyra-standard-layout`. |
+| `component` | No | Root component: tag string, `{ tag, attributes }`, or a function returning a Lit `TemplateResult`. Defaults to `lyra-standard-layout`. |
 | `initialize` | No | Called after extensions and contributions are registered. |
 | `dispose` | No | Called when the app is unloaded. |
 | `releaseHistory` | No | Static array or callback for release history (used by version-info). |
@@ -29,7 +29,7 @@ appLoaderService.registerApp(
     name: 'My App',
     version: '1.0.0',
     extensions: ['@eclipse-lyra/extension-command-palette', '@eclipse-lyra/extension-settings-tree'],
-    render: { tag: 'lyra-standard-layout', attributes: { 'show-bottom-panel': 'true' } },
+    component: { tag: 'lyra-standard-layout', attributes: { 'show-bottom-panel': 'true' } },
   },
   { autoStart: true }
 );

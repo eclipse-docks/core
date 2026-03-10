@@ -1,221 +1,137 @@
 import { signal, Signal } from '@lit-labs/signals';
-import { Contribution, contributionRegistry, TOPIC_CONTRIBUTEIONS_CHANGED, ContributionChangeEvent } from "./contributionregistry";
 import { appSettings, TOPIC_SETTINGS_CHANGED } from "./settingsservice";
 import { subscribe } from "./events";
-import { rootContext } from "./di";
 
-export const SYSTEM_LANGUAGE_BUNDLES = 'system.language_bundles';
 export const SETTINGS_KEY_LANGUAGE = 'language';
 
-export interface LanguageBundleContribution extends Omit<Contribution, 'label'> {
-    namespace: string;
-    language?: string;
-    translations?: Record<string, string>;
-    [languageCode: string]: any;
-}
+export const DEFAULT_LANGUAGE = 'en';
 
 function replaceParameters(text: string, params?: Record<string, string>): string {
-    if (!params) {
-        return text;
-    }
-
-    return text.replace(/\{(\w+)\}/g, (match, paramKey) => {
-        return params[paramKey] !== undefined ? params[paramKey] : match;
-    });
+    if (!params) return text;
+    return text.replace(/\{(\w+)\}/g, (match, paramKey) =>
+        params[paramKey] !== undefined ? params[paramKey] : match
+    );
 }
 
-export class LazyTranslation extends String {
-    private cachedValue?: string;
-    private cachedLanguage?: string;
+const supportedLocales = new Set<string>([DEFAULT_LANGUAGE]);
+export const supportedLocalesSignal: Signal.State<Set<string>> = signal(supportedLocales);
 
-    constructor(
-        private readonly i18nService: I18nService,
-        private readonly namespace: string,
-        private readonly key: string,
-        private readonly params?: Record<string, string>
-    ) {
-        super('');
-    }
+let languageFromSettings: string | null = null;
 
-    toString(): string {
-        const currentLanguage = this.i18nService.currentLanguageSignal.get();
-        
-        if (this.cachedValue !== undefined && this.cachedLanguage === currentLanguage) {
-            return this.cachedValue;
+function addSupportedLocales(locales: string[]): void {
+    let changed = false;
+    for (const loc of locales) {
+        const normalized = loc.toLowerCase().replace('-', '_');
+        if (!supportedLocales.has(normalized)) {
+            supportedLocales.add(normalized);
+            changed = true;
         }
-
-        this.cachedValue = this.i18nService.translate(this.namespace, this.key, this.params);
-        this.cachedLanguage = currentLanguage;
-        return this.cachedValue;
     }
-
-    valueOf(): string {
-        return this.toString();
-    }
-
-    [Symbol.toPrimitive](hint: 'default' | 'string' | 'number'): string | number {
-        if (hint === 'number') {
-            const num = Number(this.toString());
-            return isNaN(num) ? 0 : num;
+    if (changed) {
+        supportedLocalesSignal.set(new Set(supportedLocales));
+        if (languageFromSettings === null) {
+            const preferred = getPreferredBrowserLanguage();
+            if (preferred !== currentLanguageSignal.get()) currentLanguageSignal.set(preferred);
         }
-        return this.toString();
-    }
-
-    toJSON(): string {
-        return this.toString();
     }
 }
 
-export type UILabel = string | LazyTranslation;
-
-class I18nService {
-    private static readonly DEFAULT_LANGUAGE = 'en';
-    private readonly translationCache = new Map<string, Record<string, string>>();
-
-    public readonly currentLanguageSignal: Signal.State<string>;
-    public readonly languageContributionsSignal: Signal.State<LanguageBundleContribution[]>;
-
-    constructor() {
-        this.currentLanguageSignal = signal<string>(this.getBrowserLanguage());
-        this.languageContributionsSignal = signal<LanguageBundleContribution[]>([]);
-
-        this.initialize();
+function getPreferredBrowserLanguage(): string {
+    const list = navigator.languages?.length ? navigator.languages : [navigator.language || DEFAULT_LANGUAGE];
+    const supported = supportedLocalesSignal.get();
+    for (const raw of list) {
+        const primary = raw.split('-')[0].toLowerCase();
+        if (supported.has(primary)) return primary;
     }
-
-    private getBrowserLanguage(): string {
-        const browserLanguage = navigator.language || navigator.languages?.[0] || I18nService.DEFAULT_LANGUAGE;
-        return browserLanguage.split('-')[0].toLowerCase();
-    }
-
-    private async initializeLanguage(): Promise<string> {
-        const settingsLanguage = await appSettings.get(SETTINGS_KEY_LANGUAGE);
-        return settingsLanguage || this.getBrowserLanguage();
-    }
-
-    private async updateLanguageFromSettings(): Promise<void> {
-        const language = await this.initializeLanguage();
-        this.currentLanguageSignal.set(language);
-    }
-
-    private getPrimaryLanguage(language: string): string {
-        return language.split('-')[0].toLowerCase();
-    }
-
-    private updateLanguageContributions(): void {
-        const contributions = contributionRegistry.getContributions<Contribution>(SYSTEM_LANGUAGE_BUNDLES) as unknown as LanguageBundleContribution[];
-        this.languageContributionsSignal.set(contributions);
-    }
-
-    private createCacheKey(namespace: string, language: string): string {
-        return `${namespace}:${language}`;
-    }
-
-    public mergeTranslationsForLanguage(
-        contributions: LanguageBundleContribution[],
-        namespace: string,
-        language: string
-    ): Record<string, string> {
-        const cacheKey = this.createCacheKey(namespace, language);
-        const cached = this.translationCache.get(cacheKey);
-        if (cached !== undefined) {
-            return cached;
-        }
-
-        const merged: Record<string, string> = {};
-
-        for (const contribution of contributions) {
-            if (contribution.namespace !== namespace) {
-                continue;
-            }
-
-            let translations: Record<string, string> | undefined;
-
-            if (contribution.translations && contribution.language === language) {
-                translations = contribution.translations;
-            } else if (contribution[language] && typeof contribution[language] === 'object') {
-                translations = contribution[language] as Record<string, string>;
-            }
-
-            if (translations) {
-                Object.assign(merged, translations);
-            }
-        }
-
-        this.translationCache.set(cacheKey, merged);
-        return merged;
-    }
-
-    private invalidateTranslationCache(): void {
-        this.translationCache.clear();
-    }
-
-    public translate(namespace: string, key: string, params?: Record<string, string>): string {
-        const currentLanguage = this.currentLanguageSignal.get();
-        const primaryLanguage = this.getPrimaryLanguage(currentLanguage);
-        const contributions = this.languageContributionsSignal.get();
-
-        let translation: string | undefined;
-
-        const currentLangTranslations = this.mergeTranslationsForLanguage(contributions, namespace, currentLanguage);
-        if (currentLangTranslations[key]) {
-            translation = currentLangTranslations[key];
-        } else {
-            const primaryLangTranslations = currentLanguage !== primaryLanguage
-                ? this.mergeTranslationsForLanguage(contributions, namespace, primaryLanguage)
-                : currentLangTranslations;
-            if (primaryLangTranslations[key]) {
-                translation = primaryLangTranslations[key];
-            } else if (primaryLanguage !== I18nService.DEFAULT_LANGUAGE && currentLanguage !== I18nService.DEFAULT_LANGUAGE) {
-                const defaultLangTranslations = this.mergeTranslationsForLanguage(contributions, namespace, I18nService.DEFAULT_LANGUAGE);
-                if (defaultLangTranslations[key]) {
-                    translation = defaultLangTranslations[key];
-                }
-            }
-        }
-
-        if (!translation) {
-            return key;
-        }
-
-        return replaceParameters(translation, params);
-    }
-
-    private initialize(): void {
-        subscribe(TOPIC_SETTINGS_CHANGED, async (settings: any) => {
-            const language = settings?.[SETTINGS_KEY_LANGUAGE] || this.getBrowserLanguage();
-            this.currentLanguageSignal.set(language);
-            this.invalidateTranslationCache();
-        });
-
-        subscribe(TOPIC_CONTRIBUTEIONS_CHANGED, (event: ContributionChangeEvent) => {
-            if (event.target === SYSTEM_LANGUAGE_BUNDLES) {
-                this.invalidateTranslationCache();
-                this.updateLanguageContributions();
-            }
-        });
-
-        this.updateLanguageFromSettings();
-        this.updateLanguageContributions();
-    }
-
-    public i18n(namespace: string) {
-        return (key: string, params?: Record<string, string>): string => {
-            return this.translate(namespace, key, params);
-        };
-    }
-
-    public i18nLazy(namespace: string) {
-        return (key: string, params?: Record<string, string>): LazyTranslation => {
-            return new LazyTranslation(this, namespace, key, params);
-        };
-    }
+    return DEFAULT_LANGUAGE;
 }
 
-export const i18nService = new I18nService();
-rootContext.put("i18nService", i18nService);
+export const currentLanguageSignal: Signal.State<string> = signal(getPreferredBrowserLanguage());
 
-export const currentLanguageSignal = i18nService.currentLanguageSignal;
-export const languageContributionsSignal = i18nService.languageContributionsSignal;
+async function updateLanguageFromSettings(): Promise<void> {
+    const settingsLanguage = await appSettings.get(SETTINGS_KEY_LANGUAGE);
+    languageFromSettings = settingsLanguage ?? null;
+    currentLanguageSignal.set(settingsLanguage || getPreferredBrowserLanguage());
+}
 
-export const i18n = (namespace: string) => i18nService.i18n(namespace);
-export const i18nLazy = (namespace: string) => i18nService.i18nLazy(namespace);
+subscribe(TOPIC_SETTINGS_CHANGED, (settings: any) => {
+    languageFromSettings = settings?.[SETTINGS_KEY_LANGUAGE] ?? null;
+    currentLanguageSignal.set(settings?.[SETTINGS_KEY_LANGUAGE] || getPreferredBrowserLanguage());
+});
+
+updateLanguageFromSettings();
+
+export interface LazyLabel {
+    toString(): string;
+    valueOf(): string;
+    [Symbol.toPrimitive](hint?: string): string;
+    toJSON?(): string;
+}
+
+export type UILabel = string | LazyLabel;
+
+export function createLazyLabel(getter: () => string): LazyLabel {
+    return {
+        toString: () => getter(),
+        valueOf: () => getter(),
+        [Symbol.toPrimitive]: () => getter(),
+        toJSON: () => getter(),
+    };
+}
+
+type Messages = Record<string, string>;
+
+type I18nHandle<TKeys extends string> = {
+    [K in TKeys]: string & ((params?: Record<string, string>) => string);
+};
+
+export async function i18n<F extends Record<string, () => Promise<any>>>(files: F, reactive = false) {
+    const byLocale: Record<string, Messages> = {};
+
+    await Promise.all(
+        Object.entries(files).map(async ([path, loader]) => {
+            const mod = await loader();
+            const messages: Messages = (mod && 'default' in mod ? (mod as any).default : mod) as Messages;
+            const match = path.match(/\.([a-zA-Z-_]+)\.json$/);
+            const rawLocale = match?.[1] ?? DEFAULT_LANGUAGE;
+            const normalizedLocale = rawLocale.toLowerCase().replace('-', '_');
+            byLocale[normalizedLocale] = messages;
+        }),
+    );
+
+    addSupportedLocales(Object.keys(byLocale));
+
+    type AllKeys = keyof (typeof byLocale)[keyof typeof byLocale] & string;
+    type Handle = I18nHandle<AllKeys>;
+
+    const getMessage = (key: string): string => {
+        const current = currentLanguageSignal.get();
+        const normalized = current.toLowerCase().replace('-', '_');
+        const [lang, region] = normalized.split('_');
+        const candidates: string[] = region ? [`${lang}_${region}`, lang] : [lang];
+        candidates.push(DEFAULT_LANGUAGE);
+        for (const loc of candidates) {
+            const dict = byLocale[loc];
+            if (dict && key in dict) return dict[key]!;
+        }
+        return key;
+    };
+
+    const target = Object.assign({} as Handle, { then: undefined, catch: undefined, finally: undefined });
+
+    const handler: ProxyHandler<Handle> = {
+        get(t, key: string) {
+            if (key in t) return (t as Record<string, unknown>)[key];
+            const base = getMessage(key);
+            const fn = ((params?: Record<string, string>) =>
+                replaceParameters(getMessage(key), params)) as unknown as Handle[typeof key];
+            (fn as any).toString = () => (reactive ? getMessage(key) : base);
+            (fn as any).valueOf = () => (reactive ? getMessage(key) : base);
+            (fn as any)[Symbol.toPrimitive] = () => (reactive ? getMessage(key) : base);
+            if (reactive) (fn as any).toJSON = () => getMessage(key);
+            return fn;
+        },
+    };
+
+    return new Proxy(target, handler);
+}

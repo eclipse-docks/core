@@ -1,0 +1,12 @@
+{
+  "CONNECT_WORKSPACE": "Connect Workspace...",
+  "REFRESH_RESOURCE": "Refresh resource",
+  "CREATE_NEW": "Create new...",
+  "OPEN": "Open",
+  "FILE": "File",
+  "FOLDER": "Folder",
+  "FILE_EXISTS_OVERWRITE": "File \"{fileName}\" already exists. Do you want to overwrite it?",
+  "SELECT_WORKSPACE": "Select a workspace.",
+  "DROP_FILES_HERE": "📁 Drop files here",
+  "OPEN_WITH": "Open with..."
+}

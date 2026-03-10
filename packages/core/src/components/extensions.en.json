@@ -1,0 +1,18 @@
+{
+  "FILTER_PLACEHOLDER": "Filter extensions...",
+  "INSTALLED": "Installed",
+  "AVAILABLE": "Available",
+  "NO_MATCHES": "No extensions match \"{filterText}\"",
+  "EXTERNAL_EXTENSION": "External Extension",
+  "UNINSTALL": "Uninstall (requires restart)",
+  "REQUIRED_HINT": "This extension is required by the current app and cannot be uninstalled",
+  "INSTALL": "Install",
+  "EXPERIMENTAL": "This is an experimental extension!",
+  "VERSION": "Version:",
+  "AUTHOR": "Author:",
+  "DEPENDENCIES": "Dependencies",
+  "NOT_INSTALLED": "Not Installed",
+  "DEPENDENCIES_HINT": "Dependencies are automatically installed when this extension is enabled.",
+  "DISABLE_TITLE": "Disable this extension",
+  "ENABLE_TITLE": "Enable this extension"
+}

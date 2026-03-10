@@ -9,7 +9,7 @@ import { Signal } from '@lit-labs/signals'
 import { LyraTabs } from '../parts/tabs'
 import { i18n } from '../core/i18n'
 
-const t = i18n('fastviews');
+const t = await i18n(import.meta.glob('./fastviews*.json'));
 
 @customElement('lyra-fastviews')
 export class LyraFastViews extends LyraWidget {
@@ -249,7 +249,7 @@ export class LyraFastViews extends LyraWidget {
             ${!this.containerId ? html`
                 <wa-drawer 
                     ${ref(this.drawerRef)}
-                    label="${this.title || t('FAST_VIEWS')}"
+                    label="${this.title || t.FAST_VIEWS}"
                     placement="end"
                     ?open=${this.drawerOpen}
                     @wa-hide=${this.handleDrawerHide}

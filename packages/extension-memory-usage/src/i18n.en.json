@@ -1,0 +1,4 @@
+{
+  "EXT_MEMORYUSAGE_NAME": "Memory Usage Monitor",
+  "EXT_MEMORYUSAGE_DESC": "Displays JavaScript heap memory usage in the bottom toolbar"
+}

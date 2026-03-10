@@ -1,0 +1,19 @@
+{
+  "ALL_LOGS": "Alle Protokolle",
+  "ALL": "Alle",
+  "INFO_LOGS": "Info-Protokolle",
+  "INFO": "Info",
+  "WARNING_LOGS": "Warnungsprotokolle",
+  "WARNINGS": "Warnungen",
+  "ERROR_LOGS": "Fehlerprotokolle",
+  "ERRORS": "Fehler",
+  "DEBUG_LOGS": "Debug-Protokolle",
+  "DEBUG": "Debug",
+  "AUTO_SCROLL_ENABLED": "Automatisches Scrollen aktiviert",
+  "AUTO_SCROLL_DISABLED": "Automatisches Scrollen deaktiviert",
+  "AUTO_SCROLL": "Automatisches Scrollen",
+  "MANUAL": "Manuell",
+  "CLEAR_LOGS": "Protokolle löschen",
+  "CLEAR": "Löschen",
+  "NO_LOG_MESSAGES": "Keine Protokollnachrichten"
+}

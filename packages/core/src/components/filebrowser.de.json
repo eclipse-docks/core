@@ -1,0 +1,12 @@
+{
+  "CONNECT_WORKSPACE": "Arbeitsbereich verbinden...",
+  "REFRESH_RESOURCE": "Ressource aktualisieren",
+  "CREATE_NEW": "Neu erstellen...",
+  "OPEN": "Öffnen",
+  "FILE": "Datei",
+  "FOLDER": "Ordner",
+  "FILE_EXISTS_OVERWRITE": "Die Datei \"{fileName}\" existiert bereits. Möchten Sie sie überschreiben?",
+  "SELECT_WORKSPACE": "Wählen Sie einen Arbeitsbereich aus.",
+  "DROP_FILES_HERE": "📁 Dateien hier ablegen",
+  "OPEN_WITH": "Öffnen mit..."
+}

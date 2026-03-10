@@ -7,7 +7,7 @@ import {TOOLBAR_BOTTOM_CENTER} from "../core/constants";
 import '../widgets/icon';
 import {i18n} from "../core/i18n";
 
-const t = i18n('partname');
+const t = await i18n(import.meta.glob('./partname*.json'));
 
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM_CENTER, {
     component: "<lyra-part-name></lyra-part-name>"
@@ -24,10 +24,10 @@ export class LyraPartName extends LyraElement {
     private getPartName(): string {
         const activePart = activePartSignal.get();
         if (!activePart) {
-            return t('NO_PART');
+            return t.NO_PART;
         }
 
-        return activePart.tabContribution?.label || activePart.getAttribute('id') || t('NO_PART');
+        return activePart.tabContribution?.label || activePart.getAttribute('id') || t.NO_PART;
     }
 
     protected render() {
@@ -38,7 +38,7 @@ export class LyraPartName extends LyraElement {
             <wa-button 
                 appearance="plain"
                 size="small"
-                title="${t('ACTIVE_PART')}">
+                title="${t.ACTIVE_PART}">
                 <lyra-icon slot="start" name="${partIcon}" label="Part"></lyra-icon>
                 ${this.getPartName()}
             </wa-button>

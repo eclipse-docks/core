@@ -1,0 +1,4 @@
+{
+  "EXT_WEBDAV_NAME": "WebDAV Workspace",
+  "EXT_WEBDAV_DESC": "Connect to WebDAV servers (Nextcloud, ownCloud) as workspace folders for cloud storage integration"
+}

@@ -1,0 +1,4 @@
+{
+  "EXT_IN_BROWSER_ML_NAME": "ML im Browser",
+  "EXT_IN_BROWSER_ML_DESC": "Maschinelles Lernen im Browser mit transformers.js für spezialisierte Aufgaben (Zero-Shot-Klassifizierung, Embeddings usw.)"
+}

@@ -5,7 +5,7 @@ import { LyraPart } from "@eclipse-lyra/core";
 import { i18n } from "@eclipse-lyra/core";
 import { runShellLine, type RunResult } from "./shell-runner";
 
-const t = i18n("commandshell");
+const t = await i18n(import.meta.glob("./commandshell*.json"));
 
 export interface ShellHistoryEntry {
   command: string;
@@ -77,7 +77,7 @@ export class LyraCommandShell extends LyraPart {
       <div class="shell-container">
         <div class="output-area" ${ref(this.outputRef)}>
           ${this.history.length === 0
-            ? html`<div class="empty-state">${t("EMPTY")}</div>`
+            ? html`<div class="empty-state">${t.COMMANDSHELL_EMPTY}</div>`
             : this.history.map(
                 (entry) => html`
                   <div class="history-entry">
@@ -100,7 +100,7 @@ export class LyraCommandShell extends LyraPart {
           <span class="prompt">$</span>
           <wa-input
             ${ref(this.inputRef)}
-            placeholder="${t("PROMPT")}"
+            placeholder="${t.COMMANDSHELL_PROMPT}"
             .value=${this.inputValue}
             @input=${(e: Event) => {
               this.inputValue = (e.target as HTMLInputElement & { value: string }).value;
@@ -117,8 +117,8 @@ export class LyraCommandShell extends LyraPart {
 
   protected renderToolbar() {
     return html`
-      <lyra-command icon="trash" title="${t("CLEAR")}" .action=${() => this.clearOutput()}>
-        ${t("CLEAR")}
+      <lyra-command icon="trash" title="${t.COMMANDSHELL_CLEAR}" .action=${() => this.clearOutput()}>
+        ${t.COMMANDSHELL_CLEAR}
       </lyra-command>
     `;
   }

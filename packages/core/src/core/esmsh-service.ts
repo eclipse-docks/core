@@ -1,5 +1,4 @@
 import { rootContext } from "./di";
-import { i18nService } from "./i18n";
 import { createLogger } from "./logger";
 
 const logger = createLogger('EsmShService');

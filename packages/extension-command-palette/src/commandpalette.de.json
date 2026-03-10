@@ -1,0 +1,12 @@
+{
+  "PLACEHOLDER": "Befehlsname eingeben...",
+  "NO_COMMANDS_FOUND": "Keine Befehle gefunden",
+  "PARAMETERS": "Parameter",
+  "ENTER_PARAMETERS": "Parameter für {commandName} eingeben",
+  "CANCEL": "Abbrechen",
+  "EXECUTE": "Ausführen",
+  "OPEN_COMMAND_PALETTE": "Befehls-Palette öffnen",
+  "OPEN_COMMAND_PALETTE_DESC": "Öffnet die Befehls-Palette zum Ausführen von Befehlen",
+  "MISSING_REQUIRED_PARAMS": "Erforderliche Parameter fehlen: {params}",
+  "ENTER_PARAM": "{paramName} eingeben"
+}

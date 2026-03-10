@@ -1,15 +1,12 @@
-import { extensionRegistry, i18nLazy, contributionRegistry, SYSTEM_LANGUAGE_BUNDLES } from '@eclipse-lyra/core';
-import bundle from './i18n.json';
+import { extensionRegistry, i18n } from '@eclipse-lyra/core';
 import pkg from '../package.json';
 
-contributionRegistry.registerContribution(SYSTEM_LANGUAGE_BUNDLES, bundle as any);
-
-const t = i18nLazy('extensions');
+const t = await i18n(import.meta.glob('./i18n*.json'), true);
 
 extensionRegistry.registerExtension({
   id: pkg.name,
-  name: t('EXT_COMMANDPALETTE_NAME'),
-  description: t('EXT_COMMANDPALETTE_DESC'),
+  name: t.EXT_COMMANDPALETTE_NAME,
+  description: t.EXT_COMMANDPALETTE_DESC,
   loader: () => import("./command-palette-extension"),
   icon: "terminal",
   

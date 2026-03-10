@@ -22,7 +22,7 @@ import { editorRegistry } from "../core/editorregistry";
 import { TOPIC_CONTRIBUTEIONS_CHANGED, type ContributionChangeEvent } from '../core/contributionregistry';
 import { i18n } from '../core/i18n';
 
-const t = i18n('filebrowser');
+const t = await i18n(import.meta.glob('./filebrowser*.json'));
 
 const WORKSPACE_CHANGED_DEBOUNCE_MS = 250;
 
@@ -80,9 +80,9 @@ export class LyraFileBrowser extends LyraPart {
 
     protected renderToolbar() {
         return html`
-            <lyra-command icon="folder-open" title="${t('CONNECT_WORKSPACE')}" dropdown="filebrowser.connections"></lyra-command>
-            <lyra-command cmd="refresh_resource" icon="repeat" title="${t('REFRESH_RESOURCE')}"></lyra-command>
-            <lyra-command cmd="touch" icon="plus" title="${t('CREATE_NEW')}" dropdown="filebrowser.create"></lyra-command>
+            <lyra-command icon="folder-open" title="${t.CONNECT_WORKSPACE}" dropdown="filebrowser.connections"></lyra-command>
+            <lyra-command cmd="refresh_resource" icon="repeat" title="${t.REFRESH_RESOURCE}"></lyra-command>
+            <lyra-command cmd="touch" icon="plus" title="${t.CREATE_NEW}" dropdown="filebrowser.create"></lyra-command>
         `;
     }
 
@@ -91,11 +91,11 @@ export class LyraFileBrowser extends LyraPart {
         const file = selection instanceof File ? selection : null
         const hasOpenWith = file && this.fileEditorOptions.length > 0
         return html`
-            <lyra-command cmd="open_editor" icon="folder-open">${t('OPEN')}</lyra-command>
+            <lyra-command cmd="open_editor" icon="folder-open">${t.OPEN}</lyra-command>
             ${hasOpenWith ? html`
                 <wa-dropdown-item>
                     <lyra-icon name="folder-open" slot="icon"></lyra-icon>
-                    ${t('OPEN_WITH')}
+                    ${t.OPEN_WITH}
                     ${this.fileEditorOptions.map(opt => html`
                         <lyra-command
                             slot="submenu"
@@ -107,7 +107,7 @@ export class LyraFileBrowser extends LyraPart {
                     `)}
                 </wa-dropdown-item>
             ` : nothing}
-            <lyra-command cmd="touch" icon="plus" dropdown="filebrowser.create">${t('CREATE_NEW')}</lyra-command>
+            <lyra-command cmd="touch" icon="plus" dropdown="filebrowser.create">${t.CREATE_NEW}</lyra-command>
         `;
     }
 
@@ -216,7 +216,7 @@ export class LyraFileBrowser extends LyraPart {
                 ?expanded=${expanded}
                 ?lazy=${isLazy}>
                 <span class="tree-label">
-                    <wa-icon name=${icon} label="${node.leaf ? t('FILE') : t('FOLDER')}"></wa-icon>
+                    <wa-icon name=${icon} label="${node.leaf ? t.FILE : t.FOLDER}"></wa-icon>
                     <span class="tree-label-text">${node.label}</span>
                     ${!node.leaf && workspaceTag
                         ? html`<wa-badge appearance="outlined" variant="neutral" style="font-size: var(--wa-font-size-xs);">${workspaceTag}</wa-badge>`
@@ -230,7 +230,7 @@ export class LyraFileBrowser extends LyraPart {
         if (!e.dataTransfer) return;
 
         const filePath = file.getWorkspacePath();
-        const fileName = file.getName();
+                const fileName = file.getName();
 
         e.dataTransfer.effectAllowed = 'copy';
         e.dataTransfer.setData('text/plain', filePath);
@@ -408,13 +408,13 @@ export class LyraFileBrowser extends LyraPart {
         let failed = 0;
         let skipped = 0;
 
-        for (const file of files) {
+            for (const file of files) {
             try {
                 const targetPath = this.buildTargetPath(targetDir, file.name);
 
                 const existingFile = await this.workspaceDir!.getResource(targetPath);
                 if (existingFile) {
-                    const overwrite = await confirmDialog(t('FILE_EXISTS_OVERWRITE', { fileName: file.name }));
+                    const overwrite = await confirmDialog(t.FILE_EXISTS_OVERWRITE({ fileName: file.name }));
                     if (!overwrite) {
                         skipped++;
                         continue;
@@ -447,9 +447,9 @@ export class LyraFileBrowser extends LyraPart {
 
     render() {
         return html`
-            <div class="tree" ${ref(this.treeRef)} style="--drop-files-text: '${t('DROP_FILES_HERE')}'">
+            <div class="tree" ${ref(this.treeRef)} style="--drop-files-text: '${t.DROP_FILES_HERE}'">
                 ${when(!this.workspaceDir, () => html`
-                    <lyra-no-content message="${t('SELECT_WORKSPACE')}"></lyra-no-content>`, () => when(this.root, () => html`
+                    <lyra-no-content message="${t.SELECT_WORKSPACE}"></lyra-no-content>`, () => when(this.root, () => html`
                 <wa-tree @wa-selection-change=${this.nobubble(this.onSelectionChanged)}
                          style="--indent-guide-width: 1px;">
                     ${this.root!.children.map(child => this.createTreeItems(child, true))}

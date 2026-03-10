@@ -15,29 +15,22 @@ Ensure the root `package.json` workspaces include `packages/*`.
 In `src/index.ts`, register with `extensionRegistry` and provide a **loader** that runs when the extension is enabled:
 
 ```ts
-import {
-  extensionRegistry,
-  contributionRegistry,
-  commandRegistry,
-  i18nLazy,
-  SYSTEM_LANGUAGE_BUNDLES,
-} from '@eclipse-lyra/core';
-import bundle from './i18n.json';
+import { extensionRegistry, i18n } from '@eclipse-lyra/core';
 import pkg from '../package.json';
 
-contributionRegistry.registerContribution(SYSTEM_LANGUAGE_BUNDLES, bundle as any);
-
-const t = i18nLazy('extensions');
+const t = await i18n(import.meta.glob('./i18n*.json'), true);
 
 extensionRegistry.registerExtension({
   id: pkg.name,
-  name: t('EXT_MYFEATURE_NAME'),
-  description: t('EXT_MYFEATURE_DESC'),
+  name: t.EXT_MYFEATURE_NAME,
+  description: t.EXT_MYFEATURE_DESC,
   loader: () => import('./myfeature-extension'),
   icon: 'puzzle-piece',
   dependencies: ['@eclipse-lyra/extension-someother'], // optional
 });
 ```
+
+Add `src/i18n.en.json` (and optionally `src/i18n.de.json`) with flat key-value objects, e.g. `{ "EXT_MYFEATURE_NAME": "My Feature", "EXT_MYFEATURE_DESC": "Description." }`.
 
 The extension id should match the package name (e.g. `@eclipse-lyra/extension-myfeature`).
 
@@ -72,6 +65,6 @@ You can also register the contribution separately with `contributionRegistry.reg
 
 ## 4. i18n (optional)
 
-Use `i18nLazy('extensions')` and register a language bundle with `SYSTEM_LANGUAGE_BUNDLES` so names and descriptions are translated. Provide `i18n.json` with keys like `EXT_MYFEATURE_NAME` and `EXT_MYFEATURE_DESC`.
+Use **i18n(import.meta.glob('./i18n*.json'), true)** with co-located locale files (`i18n.en.json`, `i18n.de.json`) so the extension name and description update when the user changes language.
 
 See [Concepts: Extensions](/concepts/extensions) and [Add a sidebar tab](/guide/add-sidebar-tab), [Add a command and toolbar button](/guide/add-command-toolbar).

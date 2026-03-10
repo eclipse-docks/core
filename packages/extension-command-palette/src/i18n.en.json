@@ -1,0 +1,4 @@
+{
+  "EXT_COMMANDPALETTE_NAME": "Command Palette",
+  "EXT_COMMANDPALETTE_DESC": "VS Code-style command palette at the top center for quick command execution (Ctrl+Shift+P)"
+}

@@ -13,10 +13,9 @@ import { LyraPart } from "@eclipse-lyra/core";
 import { TOOLBAR_MAIN_CENTER } from "@eclipse-lyra/core";
 import { subscribe } from "@eclipse-lyra/core";
 import { CommandRegistry, ExecutionContext, commandRegistry } from "@eclipse-lyra/core";
-import { SYSTEM_LANGUAGE_BUNDLES, i18n } from "@eclipse-lyra/core";
-import commandpaletteBundle from "./commandpalette.json";
+import { i18n } from "@eclipse-lyra/core";
 
-const t = i18n('commandpalette');
+const t = await i18n(import.meta.glob('./commandpalette*.json'));
 
 // Event topic for opening the command palette
 const TOPIC_OPEN_COMMAND_PALETTE = "commandpalette/open";
@@ -234,7 +233,7 @@ export class LyraCommandPalette extends LyraPart {
 
         if (missingParams && missingParams.length > 0) {
             if ((this as any).toastError) {
-                (this as any).toastError(t('MISSING_REQUIRED_PARAMS', { params: missingParams.join(', ') }));
+                (this as any).toastError(t.MISSING_REQUIRED_PARAMS({ params: missingParams.join(', ') }));
             }
             return;
         }
@@ -407,7 +406,7 @@ export class LyraCommandPalette extends LyraPart {
         return html`
             <wa-input
                 ${ref(this.inputRef)}
-                placeholder="${t('PLACEHOLDER')}"
+                placeholder="${t.PLACEHOLDER}"
                 .value=${this.inputValue}
                 @input=${this.handleInputChange}
                 @keydown=${this.handleKeyDown}
@@ -447,8 +446,8 @@ export class LyraCommandPalette extends LyraPart {
                     `)}
                 ` : html`
                     <div class="no-results">
-                        <wa-icon name="search" label="${t('NO_COMMANDS_FOUND')}" style="font-size: 24px; margin-bottom: 4px; opacity: 0.3;"></wa-icon>
-                        <div>${t('NO_COMMANDS_FOUND')}</div>
+                        <wa-icon name="search" label="${t.NO_COMMANDS_FOUND}" style="font-size: 24px; margin-bottom: 4px; opacity: 0.3;"></wa-icon>
+                        <div>${t.NO_COMMANDS_FOUND}</div>
                     </div>
                 `}
             </div>
@@ -456,20 +455,20 @@ export class LyraCommandPalette extends LyraPart {
             ${this.showParameterPrompt && this.selectedCommand ? html`
                 <wa-dialog 
                     ${ref(this.dialogRef)}
-                    label="${this.selectedCommand.name} - ${t('PARAMETERS')}"
+                    label="${this.selectedCommand.name} - ${t.PARAMETERS}"
                     open
                     @wa-request-close=${this.closeParameterPrompt}
                     @click=${this.handleDialogClick}
                 >
                     <div class="parameter-prompt-title">
-                        ${t('ENTER_PARAMETERS', { commandName: this.selectedCommand.name })}
+                        ${t.ENTER_PARAMETERS({ commandName: this.selectedCommand.name })}
                     </div>
                     ${this.selectedCommand.parameters?.map((param: any) => html`
                         <div class="parameter-field">
                             <wa-input
                                 label="${param.name}${param.required ? ' *' : ''}"
                                 hint=${param.description || ''}
-                                placeholder=${param.description || t('ENTER_PARAM', { paramName: param.name })}
+                                placeholder=${param.description || t.ENTER_PARAM({ paramName: param.name })}
                                 .value=${this.parameterValues[param.name] || ''}
                                 @input=${(e: Event) => this.handleParameterInput(param.name, (e.target as any).value)}
                             ></wa-input>
@@ -477,10 +476,10 @@ export class LyraCommandPalette extends LyraPart {
                     `)}
                     <div class="parameter-actions">
                         <wa-button variant="default" @click=${this.closeParameterPrompt}>
-                            ${t('CANCEL')}
+                            ${t.CANCEL}
                         </wa-button>
                         <wa-button variant="primary" @click=${this.executeWithParameters}>
-                            ${t('EXECUTE')}
+                            ${t.EXECUTE}
                         </wa-button>
                     </div>
                 </wa-dialog>
@@ -490,10 +489,6 @@ export class LyraCommandPalette extends LyraPart {
 }
 
 export default ({ contributionRegistry, commandRegistry, toastInfo, toastError, html, publish }: any) => {
-    // Register language bundle
-    contributionRegistry.registerContribution(SYSTEM_LANGUAGE_BUNDLES,
-        commandpaletteBundle as any);
-
     // Register command to open palette using events
     commandRegistry.registerHandler('commandpalette.open', {
         execute: () => {
@@ -504,8 +499,8 @@ export default ({ contributionRegistry, commandRegistry, toastInfo, toastError, 
 
     commandRegistry.registerCommand({
         id: 'commandpalette.open',
-        name: t('OPEN_COMMAND_PALETTE'),
-        description: t('OPEN_COMMAND_PALETTE_DESC'),
+        name: t.OPEN_COMMAND_PALETTE,
+        description: t.OPEN_COMMAND_PALETTE_DESC,
         icon: 'terminal',
         keyBinding: 'CTRL+SHIFT+P'
     });

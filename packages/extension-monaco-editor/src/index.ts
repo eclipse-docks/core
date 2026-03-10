@@ -1,15 +1,12 @@
-import { extensionRegistry, i18nLazy, contributionRegistry, SYSTEM_LANGUAGE_BUNDLES } from '@eclipse-lyra/core';
-import bundle from './i18n.json';
+import { extensionRegistry, i18n } from '@eclipse-lyra/core';
 import pkg from '../package.json';
 
-contributionRegistry.registerContribution(SYSTEM_LANGUAGE_BUNDLES, bundle as any);
-
-const t = i18nLazy('extensions');
+const t = await i18n(import.meta.glob('./i18n*.json'), true);
 
 extensionRegistry.registerExtension({
   id: pkg.name,
-  name: t('EXT_MONACO_NAME'),
-  description: t('EXT_MONACO_DESC'),
+  name: t.EXT_MONACO_NAME,
+  description: t.EXT_MONACO_DESC,
   loader: () => import("./monaco-editor-extension"),
   icon: "file-pen",
 });

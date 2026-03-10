@@ -1,0 +1,4 @@
+{
+  "EXT_PYTHONRUNTIME_NAME": "Python Runtime",
+  "EXT_PYTHONRUNTIME_DESC": "Pyodide runtime, Python package management, and Run Python Script command"
+}

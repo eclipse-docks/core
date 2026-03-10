@@ -7,7 +7,7 @@ import {activeTasksSignal} from "../core/appstate";
 import {taskService, ProgressMonitor} from "../core/taskservice";
 import {i18n} from "../core/i18n";
 
-const t = i18n('tasks');
+const t = await i18n(import.meta.glob('./tasks*.json'));
 
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM_CENTER, {
     component: "<lyra-tasks></lyra-tasks>"
@@ -69,7 +69,7 @@ function updateProgressDialog(forceOpen = false) {
 
     const template = html`
         <wa-dialog 
-            label="${t('ACTIVE_TASKS')}" 
+            label="${t.ACTIVE_TASKS}" 
             open
             light-dismiss
             style="--width: 600px;"
@@ -256,10 +256,10 @@ export class LyraTasks extends LyraPart {
         }
 
         return html`
-            <div class="tasindicator" @click=${this.handleIndicatorClick} title="${t('ACTIVE_TASKS_TITLE', { taskCount: taskCount.toString() })}">
+            <div class="tasindicator" @click=${this.handleIndicatorClick} title="${t.ACTIVE_TASKS_TITLE({ taskCount: taskCount.toString() })}">
                 <wa-spinner
                     style="font-size: 1rem; --indicator-color: var(--wa-color-warning-fill-loud);"
-                    label="${t('ACTIVE_TASKS')}"
+                    label="${t.ACTIVE_TASKS}"
                 ></wa-spinner>
                 <span class="tascount">${taskCount}</span>
                 <div class="tasbar-wrap"><wa-progress-bar indeterminate></wa-progress-bar></div>

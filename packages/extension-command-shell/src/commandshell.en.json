@@ -1,0 +1,5 @@
+{
+  "COMMANDSHELL_PROMPT": "Run commands",
+  "COMMANDSHELL_EMPTY": "Type a command and press Enter. Examples: open_editor path=test.txt, touch xy.txt && open_editor xy.txt",
+  "COMMANDSHELL_CLEAR": "Clear"
+}

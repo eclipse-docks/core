@@ -1,0 +1,4 @@
+{
+  "EXT_DUCKDB_NAME": "DuckDB",
+  "EXT_DUCKDB_DESC": "SQL-Engine im Browser (DuckDB-WASM) für erweiterte Abfragen, Analysen und Parquet/CSV/JSON."
+}

@@ -1,0 +1,4 @@
+{
+  "EXT_MEMORYUSAGE_NAME": "Speicherverbrauch-Monitor",
+  "EXT_MEMORYUSAGE_DESC": "Zeigt die JavaScript-Heap-Speichernutzung in der unteren Symbolleiste an"
+}

@@ -17,7 +17,6 @@ Contribution targets define where UI appears:
 | `TOOLBAR_MAIN_RIGHT`, `TOOLBAR_MAIN_CENTER` | Main toolbar slots. |
 | `TOOLBAR_BOTTOM`, `TOOLBAR_BOTTOM_END`, `TOOLBAR_BOTTOM_CENTER` | Bottom toolbar. |
 | `SYSTEM_LAYOUTS` | Layout contributions (id, name, component, optional onShow). See [Apps](/concepts/apps#layouts). |
-| `SYSTEM_LANGUAGE_BUNDLES` | i18n language bundles (extensions). |
 
 Import these from `@eclipse-lyra/core`.
 

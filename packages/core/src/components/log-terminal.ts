@@ -5,7 +5,7 @@ import { createRef, ref, Ref } from 'lit/directives/ref.js';
 import { registerLogHandler, unregisterLogHandler, type LogLevel } from '../core/logger';
 import { i18n } from '../core/i18n';
 
-const t = i18n('logterminal');
+const t = await i18n(import.meta.glob('./logterminal*.json'));
 
 export interface LogMessage {
     timestamp: Date;
@@ -110,7 +110,7 @@ export class LyraLogTerminal extends LyraPart {
         return html`
             <lyra-command 
                 icon="list"
-                title="${t('ALL_LOGS')}"
+                title="${t.ALL_LOGS}"
                 appearance="${this.filter === 'all' ? 'filled' : 'plain'}"
                 variant="${this.filter === 'all' ? 'brand' : 'neutral'}"
                 .action=${() => {
@@ -118,12 +118,12 @@ export class LyraLogTerminal extends LyraPart {
                     this.saveSettings();
                     this.updateToolbar();
                 }}>
-                ${t('ALL')} (${this.messages.length})
+                ${t.ALL} (${this.messages.length})
             </lyra-command>
 
             <lyra-command 
                 icon="circle-info"
-                title="${t('INFO_LOGS')}"
+                title="${t.INFO_LOGS}"
                 appearance="${this.filter === 'info' ? 'filled' : 'plain'}"
                 variant="${this.filter === 'info' ? 'brand' : 'neutral'}"
                 .action=${() => {
@@ -131,12 +131,12 @@ export class LyraLogTerminal extends LyraPart {
                     this.saveSettings();
                     this.updateToolbar();
                 }}>
-                ${t('INFO')}${infoCount > 0 ? ` (${infoCount})` : ''}
+                ${t.INFO}${infoCount > 0 ? ` (${infoCount})` : ''}
             </lyra-command>
 
             <lyra-command 
                 icon="triangle-exclamation"
-                title="${t('WARNING_LOGS')}"
+                title="${t.WARNING_LOGS}"
                 appearance="${this.filter === 'warning' ? 'filled' : 'plain'}"
                 variant="${this.filter === 'warning' ? 'brand' : 'neutral'}"
                 .action=${() => {
@@ -144,12 +144,12 @@ export class LyraLogTerminal extends LyraPart {
                     this.saveSettings();
                     this.updateToolbar();
                 }}>
-                ${t('WARNINGS')}${warningCount > 0 ? ` (${warningCount})` : ''}
+                ${t.WARNINGS}${warningCount > 0 ? ` (${warningCount})` : ''}
             </lyra-command>
 
             <lyra-command 
                 icon="circle-xmark"
-                title="${t('ERROR_LOGS')}"
+                title="${t.ERROR_LOGS}"
                 appearance="${this.filter === 'error' ? 'filled' : 'plain'}"
                 variant="${this.filter === 'error' ? 'brand' : 'neutral'}"
                 .action=${() => {
@@ -157,12 +157,12 @@ export class LyraLogTerminal extends LyraPart {
                     this.saveSettings();
                     this.updateToolbar();
                 }}>
-                ${t('ERRORS')}${errorCount > 0 ? ` (${errorCount})` : ''}
+                ${t.ERRORS}${errorCount > 0 ? ` (${errorCount})` : ''}
             </lyra-command>
 
             <lyra-command 
                 icon="bug"
-                title="${t('DEBUG_LOGS')}"
+                title="${t.DEBUG_LOGS}"
                 appearance="${this.filter === 'debug' ? 'filled' : 'plain'}"
                 variant="${this.filter === 'debug' ? 'brand' : 'neutral'}"
                 .action=${() => {
@@ -170,14 +170,14 @@ export class LyraLogTerminal extends LyraPart {
                     this.saveSettings();
                     this.updateToolbar();
                 }}>
-                ${t('DEBUG')}${debugCount > 0 ? ` (${debugCount})` : ''}
+                ${t.DEBUG}${debugCount > 0 ? ` (${debugCount})` : ''}
             </lyra-command>
 
             <wa-divider orientation="vertical"></wa-divider>
 
             <lyra-command 
                 icon="arrow-down" 
-                title="${this.autoScroll ? t('AUTO_SCROLL_ENABLED') : t('AUTO_SCROLL_DISABLED')}"
+                title="${this.autoScroll ? t.AUTO_SCROLL_ENABLED : t.AUTO_SCROLL_DISABLED}"
                 appearance="${this.autoScroll ? 'filled' : 'plain'}"
                 variant="${this.autoScroll ? 'brand' : 'neutral'}"
                 .action=${() => {
@@ -185,14 +185,14 @@ export class LyraLogTerminal extends LyraPart {
                     this.saveSettings();
                     this.updateToolbar();
                 }}>
-                ${this.autoScroll ? t('AUTO_SCROLL') : t('MANUAL')}
+                ${this.autoScroll ? t.AUTO_SCROLL : t.MANUAL}
             </lyra-command>
 
             <lyra-command 
                 icon="trash" 
-                title="${t('CLEAR_LOGS')}"
+                title="${t.CLEAR_LOGS}"
                 .action=${() => this.clear()}>
-                ${t('CLEAR')}
+                ${t.CLEAR}
             </lyra-command>
         `;
     }
@@ -204,7 +204,7 @@ export class LyraLogTerminal extends LyraPart {
             <div class="log-terminal">
                 <div class="messages" ${ref(this.containerRef)}>
                     ${filteredMessages.length === 0 
-                        ? html`<div class="empty-state">${t('NO_LOG_MESSAGES')}</div>`
+                        ? html`<div class="empty-state">${t.NO_LOG_MESSAGES}</div>`
                         : filteredMessages.map(msg => html`
                             <div class="message" data-level="${msg.level}">
                                 <span class="timestamp">${this.formatTimestamp(msg.timestamp)}</span>

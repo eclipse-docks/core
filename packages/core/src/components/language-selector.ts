@@ -1,7 +1,7 @@
 import { html, render, css } from "lit";
 import { customElement } from "lit/decorators.js";
 import { LyraElement } from "../parts/element";
-import { currentLanguageSignal, languageContributionsSignal, SETTINGS_KEY_LANGUAGE } from "../core/i18n";
+import { currentLanguageSignal, supportedLocalesSignal, SETTINGS_KEY_LANGUAGE } from "../core/i18n";
 import { appSettings } from "../core/settingsservice";
 
 function getDialogContainer(): HTMLElement {
@@ -22,23 +22,7 @@ const getLanguageName = (code: string): string => {
     }
 };
 
-const getAvailableLanguages = (): string[] => {
-    const contributions = languageContributionsSignal.get();
-    const languages = new Set<string>();
-    
-    for (const contribution of contributions) {
-        if (contribution.namespace) {
-            const contributionObj = contribution as any;
-            for (const key in contributionObj) {
-                if (key !== 'namespace' && key !== 'label' && key !== 'language' && key !== 'translations' && typeof contributionObj[key] === 'object') {
-                    languages.add(key);
-                }
-            }
-        }
-    }
-    
-    return Array.from(languages).sort();
-};
+const getAvailableLanguages = (): string[] => [...supportedLocalesSignal.get()].sort();
 
 export const showLanguageSelectorDialog = async (): Promise<void> => {
     const availableLanguages = getAvailableLanguages();

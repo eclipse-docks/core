@@ -29,7 +29,7 @@ export class DataViewPart extends LyraPart {
 
   protected async doInitUI() {
     this.subscribe(TOPIC_DATAVIEW_PUBLISH, () => this.refreshPersistedList(true));
-    await this.refreshPersistedList(true);
+    await this.refreshPersistedList(false);
   }
 
   private async refreshPersistedList(selectLatest: boolean): Promise<void> {

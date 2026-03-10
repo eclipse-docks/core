@@ -55,6 +55,8 @@ contributionRegistry.registerContribution(TOOLBAR_MAIN, {
 
 appLoaderService.registerApp(
   {
+    name: 'Eclipse Lyra',
+    description: 'Eclipse Lyra demo app with default extensions.',
     layoutId: 'standard-full',
     extensions: [
       '@eclipse-lyra/extension-utils',

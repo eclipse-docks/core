@@ -1,0 +1,1 @@
+const n="Command Shell",o="Shell-like UI for running framework commands",e={EXT_COMMANDSHELL_NAME:n,EXT_COMMANDSHELL_DESC:o};export{o as EXT_COMMANDSHELL_DESC,n as EXT_COMMANDSHELL_NAME,e as default};

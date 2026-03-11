@@ -1,0 +1,1 @@
+const e="Befehle ausführen",n="Geben Sie einen Befehl ein und drücken Sie Enter.",s="Löschen",L={COMMANDSHELL_PROMPT:e,COMMANDSHELL_EMPTY:n,COMMANDSHELL_CLEAR:s};export{s as COMMANDSHELL_CLEAR,n as COMMANDSHELL_EMPTY,e as COMMANDSHELL_PROMPT,L as default};

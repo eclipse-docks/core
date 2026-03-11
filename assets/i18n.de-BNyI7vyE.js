@@ -1,0 +1,1 @@
+const e="Befehlsshell",l="Shell-ähnliche Oberfläche zum Ausführen von Framework-Befehlen",h={EXT_COMMANDSHELL_NAME:e,EXT_COMMANDSHELL_DESC:l};export{l as EXT_COMMANDSHELL_DESC,e as EXT_COMMANDSHELL_NAME,h as default};

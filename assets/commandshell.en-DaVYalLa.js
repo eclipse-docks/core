@@ -1,0 +1,1 @@
+const t="Run commands",e="Type a command and press Enter. Examples: open_editor path=test.txt, touch xy.txt && open_editor xy.txt",n="Clear",o={COMMANDSHELL_PROMPT:t,COMMANDSHELL_EMPTY:e,COMMANDSHELL_CLEAR:n};export{n as COMMANDSHELL_CLEAR,e as COMMANDSHELL_EMPTY,t as COMMANDSHELL_PROMPT,o as default};

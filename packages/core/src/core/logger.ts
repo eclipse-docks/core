@@ -51,24 +51,39 @@ function formatArg(arg: any): string {
 export class Logger {
     constructor(private source: string) {}
 
-    info(message: string) {
-        this.log(message, 'info');
+    info(message: string, ...args: unknown[]) {
+        const combinedMessage = args.length === 0
+            ? message
+            : `${message} ${args.map(a => formatArg(a)).join(' ')}`;
+        this.log(combinedMessage, 'info');
     }
 
-    warning(message: string) {
-        this.log(message, 'warning');
+    warning(message: string, ...args: unknown[]) {
+        const combinedMessage = args.length === 0
+            ? message
+            : `${message} ${args.map(a => formatArg(a)).join(' ')}`;
+        this.log(combinedMessage, 'warning');
     }
 
-    warn(message: string) {
-        this.log(message, 'warning');
+    warn(message: string, ...args: unknown[]) {
+        const combinedMessage = args.length === 0
+            ? message
+            : `${message} ${args.map(a => formatArg(a)).join(' ')}`;
+        this.log(combinedMessage, 'warning');
     }
 
-    error(message: string) {
-        this.log(message, 'error');
+    error(message: string, ...args: unknown[]) {
+        const combinedMessage = args.length === 0
+            ? message
+            : `${message} ${args.map(a => formatArg(a)).join(' ')}`;
+        this.log(combinedMessage, 'error');
     }
 
-    debug(message: string) {
-        this.log(message, 'debug');
+    debug(message: string, ...args: unknown[]) {
+        const combinedMessage = args.length === 0
+            ? message
+            : `${message} ${args.map(a => formatArg(a)).join(' ')}`;
+        this.log(combinedMessage, 'debug');
     }
 
     private log(message: string, level: LogLevel) {

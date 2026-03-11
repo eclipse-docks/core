@@ -31,6 +31,18 @@ if [ "$DRY_RUN" = true ]; then
     echo ""
 fi
 
+echo "Running pre-release health checks (type-check, test, build, app build)..."
+echo ""
+
+npm run type-check
+npm run test
+npm run build
+npm run build:app
+
+echo ""
+echo "✅ Pre-release health checks passed"
+echo ""
+
 echo "Incrementing $VERSION_PART version"
 
 # Get latest version tag: try GitHub API first (works when git ls-remote gets no refs e.g. auth), then git ls-remote

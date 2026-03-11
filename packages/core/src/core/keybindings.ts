@@ -140,8 +140,6 @@ export class KeyBindingManager {
         }
 
         existing.push(binding);
-        logger.debug(`Key binding registered: ${keyBindingString} -> ${commandId}`);
-        
         return true;
     }
 

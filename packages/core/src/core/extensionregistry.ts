@@ -106,7 +106,6 @@ class ExtensionRegistry {
                 persisted.forEach((ext: Extension) => {
                     this.extensions[ext.id] = ext
                 })
-                logger.debug(`Loaded ${persisted.length} persisted external extensions`)
             }
         } catch (error) {
             logger.error(`Failed to load persisted external extensions: ${error}`)
@@ -136,7 +135,8 @@ class ExtensionRegistry {
 
     registerExtension(extension: Extension): void {
         this.extensions[extension.id] = extension;
-        
+        logger.debug(`Registered extension: ${extension.id}`);
+
         // Persist external extensions
         if (extension.external) {
             this.savePersistedExternalExtensions().catch(err => {
@@ -298,11 +298,10 @@ class ExtensionRegistry {
             throw new Error("Extension not found: " + extensionId)
         }
         
-        // Create and track the loading promise
         const loadingPromise = (async () => {
             try {
+                logger.debug(`Loading extension: ${extensionId}`);
                 if (extension.dependencies && extension.dependencies.length > 0) {
-                    logger.debug(`Loading dependencies for ${extensionId}: ${extension.dependencies.join(', ')}`)
                     const newChain = [...loadingChain, extensionId]
                     for (const depId of extension.dependencies) {
                         await this.load(depId, newChain)
@@ -331,17 +330,14 @@ class ExtensionRegistry {
                 this.loadedExtensions.add(extensionId)
 
                 if (module?.default instanceof Function) {
-                    logger.debug(`Executing extension function for: ${extensionId}`)
                     try {
                         module.default(uiContext.getProxy())
-                        logger.debug(`Extension function executed successfully: ${extensionId}`)
                     } catch (error) {
                         logger.error(`Error executing extension function for ${extensionId}: ${error}`)
                         throw error
                     }
                 }
                 
-                logger.debug(`Extension loaded: ${extensionId}`)
             } catch (error) {
                 // If loading failed, remove from loaded set
                 this.loadedExtensions.delete(extensionId)
@@ -406,7 +402,5 @@ class ExtensionRegistry {
     }
 }
 
-logger.debug('ExtensionRegistry initializing...');
 export const extensionRegistry = new ExtensionRegistry()
 rootContext.put("extensionRegistry", extensionRegistry)
-logger.debug('ExtensionRegistry initialized');

@@ -8,10 +8,11 @@ import { marked } from "marked";
 import * as monaco from 'monaco-editor';
 import monacoStyles from "monaco-editor/min/vs/editor/editor.main.css?raw";
 import type { EditorInput } from "@eclipse-lyra/core";
-import { File, workspaceService } from "@eclipse-lyra/core";
+import { File, workspaceService, createLogger, LyraPart } from "@eclipse-lyra/core";
 import { PyEnv, pythonPackageManagerService } from "@eclipse-lyra/extension-python-runtime/api";
-import { LyraPart } from "@eclipse-lyra/core";
 import type { NotebookCell, NotebookData, NotebookEditorLike } from "./notebook-types";
+
+const logger = createLogger('NotebookRuntime');
 
 @customElement('lyra-notebook-editor')
 export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
@@ -465,8 +466,7 @@ except ImportError:
                     await this.pyenv!.execCode('_display_data = None');
                 }
             } catch (e) {
-                // No display data, which is fine
-                console.debug('No display data to retrieve:', e);
+                logger.debug('No display data to retrieve:', e);
             }
 
             // Add the return value if it exists, but only if we didn't capture a matplotlib figure

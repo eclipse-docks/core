@@ -78,14 +78,19 @@ function getDialogContainer(): HTMLElement {
 
 class DialogService {
     private contributions: Map<string, DialogContribution> = new Map();
+    private contributionsChangeScheduled = false;
 
     constructor() {
         this.loadContributions();
-        
+
         subscribe(TOPIC_CONTRIBUTEIONS_CHANGED, (event: any) => {
-            if (event.target === DIALOG_CONTRIBUTION_TARGET) {
+            if (event.target !== DIALOG_CONTRIBUTION_TARGET) return;
+            if (this.contributionsChangeScheduled) return;
+            this.contributionsChangeScheduled = true;
+            queueMicrotask(() => {
+                this.contributionsChangeScheduled = false;
                 this.loadContributions();
-            }
+            });
         });
     }
 
@@ -112,10 +117,7 @@ class DialogService {
             }
 
             this.contributions.set(contribution.id, contribution);
-            logger.debug(`Loaded dialog contribution: ${contribution.id}`);
         }
-
-        logger.info(`Loaded ${this.contributions.size} dialog contributions`);
     }
 
     async open(dialogId: string, state?: any): Promise<void> {

@@ -1,10 +1,12 @@
 import { persistenceService } from "../persistenceservice";
 import { publish } from "../events";
 import { rootContext } from "../di";
-
+import { createLogger } from "../logger";
 
 export const TOPIC_WORKSPACE_CHANGED = "events/filesys/workspaceChanged"
 export const TOPIC_WORKSPACE_CONNECTED = "events/filesys/workspaceConnected"
+
+const logger = createLogger('WorkspaceService');
 
 export abstract class Resource {
     public state: { [p: string]: any } = {};
@@ -259,7 +261,6 @@ export class WorkspaceService {
 
     registerContribution(contribution: WorkspaceContribution): void {
         this.contributions.set(contribution.type, contribution);
-        console.log(`Workspace contribution registered: ${contribution.name} (${contribution.type})`);
     }
 
     getContributions(): WorkspaceContribution[] {
@@ -269,6 +270,7 @@ export class WorkspaceService {
     private static readonly DEFAULT_INDEXEDDB_FOLDER_NAME = 'My Folder';
 
     private async loadPersistedWorkspace(resolveInit: () => void): Promise<void> {
+        logger.debug('Restoring workspace from persistence');
         try {
             const raw = await persistenceService.getObject(LEGACY_WORKSPACE_KEY) as PersistedWorkspaceData | null;
             if (!raw) {
@@ -284,6 +286,7 @@ export class WorkspaceService {
                 this._currentWorkspace = composite ?? undefined;
                 if (composite) {
                     publish(TOPIC_WORKSPACE_CONNECTED, composite);
+                    logger.debug('Workspace restored from persisted folders');
                 }
                 resolveInit();
                 return;
@@ -302,9 +305,10 @@ export class WorkspaceService {
                             this.currentType = raw.type;
                             await this.persistFolders();
                             publish(TOPIC_WORKSPACE_CONNECTED, comp);
+                            logger.debug('Workspace restored from legacy format');
                         }
                     } catch (error) {
-                        console.error('Failed to restore legacy workspace:', error);
+                        logger.error('Failed to restore legacy workspace:', error);
                     }
                 }
             }
@@ -318,8 +322,9 @@ export class WorkspaceService {
             if (this.folders.length === 0) {
                 try {
                     await this.connectFolder({ indexeddb: true, name: WorkspaceService.DEFAULT_INDEXEDDB_FOLDER_NAME });
+                    logger.debug('Connected default IndexedDB workspace');
                 } catch (e) {
-                    console.warn('Failed to connect default IndexedDB folder', e);
+                    logger.warn('Failed to connect default IndexedDB folder', e);
                 }
             }
         }
@@ -338,7 +343,7 @@ export class WorkspaceService {
                     this.folders.push({ type: folder.type, data: folder.data, directory: dir });
                 }
             } catch (error) {
-                console.warn(`Failed to restore folder (${folder.type}):`, error);
+                logger.warn(`Failed to restore folder (${folder.type}):`, error);
             }
         }
     }
@@ -356,6 +361,7 @@ export class WorkspaceService {
             : null;
         await persistenceService.persistObject(LEGACY_WORKSPACE_KEY, toPersist);
         await persistenceService.persistObject("workspace", null);
+        logger.debug(`Persisted ${this.folders.length} folder(s)`);
     }
 
     async getFolders(): Promise<Array<{ name: string; type: string }>> {
@@ -398,6 +404,7 @@ export class WorkspaceService {
         this.workspace = Promise.resolve(composite);
         this._currentWorkspace = composite ?? undefined;
         publish(TOPIC_WORKSPACE_CONNECTED, composite);
+        logger.debug(`Updated folder name: ${name}`);
     }
 
     async connectFolder(input: any): Promise<Directory> {
@@ -406,6 +413,8 @@ export class WorkspaceService {
         if (!contribution) {
             throw new Error('No workspace contribution can handle this input');
         }
+        const name = (input?.name as string) ?? contribution.type;
+        logger.debug(`Connecting workspace: ${contribution.type}, ${name}`);
         const directory = await contribution.connect(input);
         const data = contribution.persist ? await contribution.persist(directory) : input;
         this.folders.push({ type: contribution.type, data, directory });
@@ -415,6 +424,8 @@ export class WorkspaceService {
         this.workspace = Promise.resolve(composite);
         this._currentWorkspace = composite;
         publish(TOPIC_WORKSPACE_CONNECTED, composite);
+        const displayName = directory.getName();
+        logger.info(`Workspace connected: ${contribution.type} (${displayName})`);
         return composite;
     }
 
@@ -424,12 +435,15 @@ export class WorkspaceService {
         if (idx < 0) {
             return;
         }
+        const folder = this.folders[idx];
+        logger.debug(`Disconnecting folder: ${folder.directory.getName()} (${folder.type})`);
         this.folders.splice(idx, 1);
         await this.persistFolders();
         if (this.folders.length > 0) {
             this.currentType = this.folders[0].type;
         } else {
             this.currentType = undefined;
+            logger.info('Workspace disconnected');
         }
         const composite = this.buildComposite();
         this.workspace = Promise.resolve(composite);
@@ -465,6 +479,7 @@ export class WorkspaceService {
         this.currentType = undefined;
         await this.persistFolders();
         publish(TOPIC_WORKSPACE_CONNECTED, undefined as any);
+        logger.info('Workspace disconnected');
     }
 }
 

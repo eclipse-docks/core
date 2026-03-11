@@ -14,7 +14,9 @@
  * Import this file to register the WebDAV extension and its commands.
  */
 
-import { workspaceService } from '@eclipse-lyra/core';
+import { workspaceService, createLogger } from '@eclipse-lyra/core';
+
+const logger = createLogger('WebDAVExtension');
 import { WebDAVClient, type WebDAVConnectionInfo } from './webdav-client';
 import { WebDAVDirectoryResource } from './webdav-filesys';
 import type { WebDAVResource } from './webdav-client';
@@ -63,7 +65,7 @@ workspaceService.registerContribution({
             };
             return new WebDAVDirectoryResource(client, rootResource);
         } catch (error) {
-            console.error('Failed to restore WebDAV workspace:', error);
+            logger.error('Failed to restore WebDAV workspace:', error);
             return undefined;
         }
     },
@@ -97,5 +99,4 @@ function extractWorkspaceNameFromUrl(url: string): string {
     }
 }
 
-console.log('WebDAV Extension loaded');
-
+logger.debug('WebDAV Extension loaded');

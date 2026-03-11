@@ -155,7 +155,6 @@ export class CommandRegistry {
 
     registerCommand(command: Command): void {
         this.commands[command.id] = command;
-        logger.debug(`Command registered: ${command.id}`);
         publish(TOPIC_COMMAND_REGISTERED, command);
     }
 

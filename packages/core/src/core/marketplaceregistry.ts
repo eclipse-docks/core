@@ -33,7 +33,6 @@ class MarketplaceRegistry {
         try {
             const urls = await appSettings.get(KEY_CATALOG_URLS);
             this.catalogUrls = Array.isArray(urls) ? urls : [];
-            logger.debug(`Loaded ${this.catalogUrls.length} catalog URLs`);
         } catch (error) {
             logger.error(`Failed to load catalog URLs: ${error}`);
             this.catalogUrls = [];
@@ -57,12 +56,33 @@ class MarketplaceRegistry {
 
         this.catalogUrls.push(url);
         await this.saveCatalogUrls();
-        logger.info(`Added catalog URL: ${url}`);
+        logger.debug(`Added catalog URL: ${url}`);
 
         try {
             await this.refreshCatalogs();
         } catch (error) {
             logger.warn(`Failed to refresh catalogs immediately after adding: ${error}`);
+        }
+    }
+
+    async addCatalogUrls(urls: string[]): Promise<void> {
+        let added = 0;
+        for (const url of urls) {
+            if (!this.isValidUrl(url)) {
+                logger.warn(`Skipping invalid catalog URL: ${url}`);
+                continue;
+            }
+            if (this.catalogUrls.includes(url)) continue;
+            this.catalogUrls.push(url);
+            logger.debug(`Added catalog URL: ${url}`);
+            added++;
+        }
+        if (added === 0) return;
+        await this.saveCatalogUrls();
+        try {
+            await this.refreshCatalogs();
+        } catch (error) {
+            logger.warn(`Failed to refresh catalogs after adding URLs: ${error}`);
         }
     }
 
@@ -98,7 +118,6 @@ class MarketplaceRegistry {
 
         const fetchPromise = (async () => {
             try {
-                logger.debug(`Fetching catalog from: ${url}`);
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -122,8 +141,6 @@ class MarketplaceRegistry {
                     extensions: data.extensions || [],
                 };
 
-                const extCount = catalog.extensions?.length || 0;
-                logger.debug(`Successfully fetched catalog from ${url}: ${extCount} extensions`);
                 return catalog;
             } catch (error) {
                 logger.error(`Failed to fetch catalog from ${url}: ${error}`);
@@ -138,8 +155,6 @@ class MarketplaceRegistry {
     }
 
     async refreshCatalogs(): Promise<void> {
-        logger.info(`Refreshing ${this.catalogUrls.length} catalogs...`);
-        
         const promises = this.catalogUrls.map(url =>
             this.fetchCatalog(url).catch(error => {
                 logger.warn(`Failed to refresh catalog ${url}: ${error.message}`);
@@ -148,33 +163,31 @@ class MarketplaceRegistry {
         );
 
         const catalogs = await Promise.allSettled(promises);
-        
-        // Register all marketplace extensions from successfully fetched catalogs
-        // Extensions will register apps themselves when loaded
-        catalogs.forEach((result, index) => {
+        let registeredCount = 0;
+
+        catalogs.forEach((result) => {
             if (result.status === 'fulfilled' && result.value) {
                 const catalog = result.value;
-                
-                // Register extensions
                 if (catalog.extensions) {
                     catalog.extensions.forEach(marketplaceExt => {
-                        // Only register if not already registered
                         if (!extensionRegistry.getExtensions().find(e => e.id === marketplaceExt.id)) {
                             const extension: Extension = {
                                 ...marketplaceExt,
                                 external: true
                             };
                             extensionRegistry.registerExtension(extension);
-                            logger.debug(`Registered marketplace extension: ${marketplaceExt.id}`);
+                            registeredCount++;
                         }
                     });
                 }
             }
         });
-        
-        // Publish event after registration
+
+        logger.debug(`Refreshed ${this.catalogUrls.length} catalogs, ${registeredCount} extensions registered`);
+        if (registeredCount > 0) {
+            logger.info(`Marketplace: ${registeredCount} new extension(s) available`);
+        }
         publish(TOPIC_MARKETPLACE_CHANGED, {type: 'refreshed'});
-        logger.info('Catalog refresh completed');
     }
 
     getMarketplaceExtension(extensionId: string): Extension | undefined {

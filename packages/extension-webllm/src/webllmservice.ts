@@ -1,5 +1,8 @@
 import {ChatCompletionMessageParam, MLCEngine} from "@mlc-ai/web-llm";
+import { createLogger } from "@eclipse-lyra/core";
 import type {ChatMessage, ChatProvider, StreamChunk} from "@eclipse-lyra/extension-ai-system/api";
+
+const logger = createLogger('WebLLM');
 import type {IProvider, StreamingParams, CompletionParams} from "@eclipse-lyra/extension-ai-system/api";
 import {aiService} from "@eclipse-lyra/extension-ai-system/api";
 
@@ -15,7 +18,7 @@ class WebLLMProvider implements IProvider {
         if (this.engine) return;
         
         const initProgressCallback = (progress: any) => {
-            console.log("Model loading progress:", progress);
+            logger.debug("Model loading progress:", progress);
         };
 
         this.engine = new MLCEngine({initProgressCallback});

@@ -288,11 +288,10 @@ class AppLoaderService {
             logger.warn(`App '${app.name}' is already registered. Overwriting.`);
         }
         if (app.marketplaceCatalogUrls?.length) {
-            app.marketplaceCatalogUrls.forEach((url) => marketplaceRegistry.addCatalogUrl(url).catch(() => {}));
+            marketplaceRegistry.addCatalogUrls(app.marketplaceCatalogUrls).catch(() => {});
         }
 
         this.apps.set(app.name, app);
-        logger.info(`Registered app: ${app.name} v${app.version}`);
 
         if (options?.defaultAppName) {
             this.defaultAppName = options.defaultAppName;
@@ -356,8 +355,7 @@ class AppLoaderService {
         }
         
         this.started = true;
-        logger.info('Starting AppLoader...');
-        
+
         const urlParams = new URLSearchParams(window.location.search);
         const appUrl = urlParams.get('app');
         const appIdFromUrl = urlParams.get('appId');
@@ -439,8 +437,6 @@ class AppLoaderService {
             throw new Error(`App '${appName}' not found. Make sure it's registered.`);
         }
         
-        logger.info(`Loading app: ${app.name}...`);
-        
         // Dispose current app if exists
         if (this.currentApp) {
             logger.info(`Disposing current app: ${this.currentApp.name}`);
@@ -509,7 +505,6 @@ class AppLoaderService {
         // Enable new app's extensions (after contributions are registered and
         // any globally enabled extensions have been loaded)
         if (app.extensions.length > 0) {
-            logger.info(`Enabling ${app.extensions.length} extensions...`);
             app.extensions.forEach(extId => {
                 extensionRegistry.enable(extId);
             });
@@ -611,7 +606,6 @@ class AppLoaderService {
                 );
             });
         }
-        logger.info(`Rendered ${this.currentApp.name}`);
     }
     
     /**
@@ -762,7 +756,6 @@ class AppLoaderService {
         const registeredApps = this.getRegisteredApps();
         if (registeredApps.length > 0) {
             const app = registeredApps[0];
-            logger.info(`Loading first registered app: ${app.name}`);
             return app.name;
         }
 

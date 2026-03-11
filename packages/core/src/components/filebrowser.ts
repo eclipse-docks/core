@@ -21,7 +21,9 @@ import { confirmDialog } from "../dialogs";
 import { editorRegistry } from "../core/editorregistry";
 import { TOPIC_CONTRIBUTEIONS_CHANGED, type ContributionChangeEvent } from '../core/contributionregistry';
 import { i18n } from '../core/i18n';
+import { createLogger } from '../core/logger';
 
+const logger = createLogger('LyraFileBrowser');
 const t = await i18n(import.meta.glob('./filebrowser*.json'));
 
 const WORKSPACE_CHANGED_DEBOUNCE_MS = 250;
@@ -174,8 +176,7 @@ export class LyraFileBrowser extends LyraPart {
                     (node as any).workspaceTag = info.backendName;
                 }
             } catch (e) {
-                // Fail silently; tag is purely cosmetic.
-                console.warn('Failed to get workspace info for directory', e);
+                logger.debug('Failed to get workspace info for directory', e);
             }
         }
 
@@ -276,7 +277,7 @@ export class LyraFileBrowser extends LyraPart {
             node.children.sort(treeNodeComparator);
             this.requestUpdate();
         } catch (error) {
-            console.error('Failed to load directory children:', error);
+            logger.error('Failed to load directory children:', error);
         } finally {
             this.loadingNodes.delete(node);
         }
@@ -430,12 +431,12 @@ export class LyraFileBrowser extends LyraPart {
 
                 processed++;
             } catch (error) {
-                console.error(`Failed to upload ${file.name}:`, error);
+                logger.error(`Failed to upload ${file.name}:`, error);
                 failed++;
             }
         }
 
-        console.log(`Uploaded ${processed}/${total} files${skipped > 0 ? `, ${skipped} skipped` : ''}${failed > 0 ? `, ${failed} failed` : ''}`);
+        logger.info(`Uploaded ${processed}/${total} files${skipped > 0 ? `, ${skipped} skipped` : ''}${failed > 0 ? `, ${failed} failed` : ''}`);
 
         await this.loadWorkspace(this.workspaceDir);
     }

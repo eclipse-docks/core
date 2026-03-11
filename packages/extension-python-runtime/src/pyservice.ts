@@ -1,4 +1,6 @@
-import {Directory, File, TOPIC_WORKSPACE_CHANGED, workspaceService} from "@eclipse-lyra/core";
+import {Directory, File, TOPIC_WORKSPACE_CHANGED, workspaceService, createLogger} from "@eclipse-lyra/core";
+
+const logger = createLogger('PyService');
 type PipRequirementsModule = typeof import("pip-requirements-js");
 
 let pipRequirementsModulePromise: Promise<PipRequirementsModule> | null = null;
@@ -84,7 +86,7 @@ export class PyEnv {
             if (this.stdoutCallback) {
                 this.stdoutCallback(response.payload);
             } else {
-                console.info(response.payload);
+                logger.debug(response.payload);
             }
             return;
         }
@@ -93,7 +95,7 @@ export class PyEnv {
             if (this.stderrCallback) {
                 this.stderrCallback(response.payload);
             } else {
-                console.error(response.payload);
+                logger.error(response.payload);
             }
             return;
         }

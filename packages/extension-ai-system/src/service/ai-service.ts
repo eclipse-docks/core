@@ -378,7 +378,7 @@ export class AIService {
         while (rawMessage.toolCalls && rawMessage.toolCalls.length > 0) {
             toolCallIteration++;
             if (toolCallIteration > MAX_TOOL_ITERATIONS) {
-                console.warn(`[AIService] Max tool call iterations reached`);
+                logger.warn('Max tool call iterations reached');
                 break;
             }
 

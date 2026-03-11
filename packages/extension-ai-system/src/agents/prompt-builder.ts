@@ -1,5 +1,7 @@
 import type { ExecutionContext } from "@eclipse-lyra/core";
-import { contributionRegistry } from "@eclipse-lyra/core";
+import { contributionRegistry, createLogger } from "@eclipse-lyra/core";
+
+const logger = createLogger('PromptBuilder');
 import type { ChatMessage, ApiMessage, ToolDefinition } from "../core/types";
 import type { PromptEnhancer, AgentContribution, PromptEnhancerContribution } from "../core/interfaces";
 import { CID_PROMPT_ENHANCERS } from "../core/constants";
@@ -36,7 +38,7 @@ export class PromptBuilder {
                 const result = await enhancer.enhance(enhanced, context);
                 if (result && typeof result === 'string') enhanced = result;
             } catch (err) {
-                console.warn('[PromptBuilder] Enhancer failed:', err);
+                logger.warn('Enhancer failed:', err);
             }
         }
         return enhanced;

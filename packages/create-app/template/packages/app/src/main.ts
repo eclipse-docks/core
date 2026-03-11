@@ -13,9 +13,19 @@ import '@eclipse-lyra/extension-ai-system';
 import '@eclipse-lyra/extension-command-palette';
 import '@eclipse-lyra/extension-notebook';
 import '@eclipse-lyra/extension-python-runtime';
-
-// Eagerly import all local extensions so they can register with the extension registry.
-void import.meta.glob('../../extension-*/src/index.ts', { eager: true });
+import '@eclipse-lyra/extension-command-shell';
+import '@eclipse-lyra/extension-dataviewer';
+import '@eclipse-lyra/extension-duckdb';
+import '@eclipse-lyra/extension-github-service';
+import '@eclipse-lyra/extension-howto-system';
+import '@eclipse-lyra/extension-in-browser-ml';
+import '@eclipse-lyra/extension-linuxterminal';
+import '@eclipse-lyra/extension-pglite';
+import '@eclipse-lyra/extension-rag-system';
+import '@eclipse-lyra/extension-sqleditor';
+import '@eclipse-lyra/extension-webdav';
+import '@eclipse-lyra/extension-webllm';
+import '@eclipse-lyra/extension-webmcp';
 
 import { appLoaderService, contributionRegistry, type HTMLContribution, TOOLBAR_MAIN } from '@eclipse-lyra/core';
 

@@ -5,6 +5,7 @@ registerAll({
     id: "mv",
     name: "mv - Rename a resource (file or directory)",
     description: "Renames a resource (file or directory)",
+    keyBinding: "F2",
     parameters: [
       {
         name: "path",

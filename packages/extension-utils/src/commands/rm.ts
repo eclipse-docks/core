@@ -5,6 +5,7 @@ registerAll({
     id: "rm",
     name: "rm - Delete a resource (file or directory)",
     description: "Deletes a resource (file or directory)",
+    keyBinding: "Delete",
     parameters: [
       {
         name: "path",

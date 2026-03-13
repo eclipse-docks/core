@@ -1,0 +1,62 @@
+name: Auto Tag on Version Commit
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  auto-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Extract version and create tag
+        id: extract-version
+        run: |
+          COMMIT_SUBJECT=$(git log -1 --pretty=%s)
+          COMMIT_BODY=$(git log -1 --pretty=%b)
+          echo "Commit subject: $COMMIT_SUBJECT"
+
+          VERSION_WITH_V=$(echo "$COMMIT_SUBJECT" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+
+          if [ -n "$VERSION_WITH_V" ]; then
+            echo "version=$VERSION_WITH_V" >> $GITHUB_OUTPUT
+            {
+              echo "release_body<<EOF"
+              echo "$COMMIT_BODY"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+
+            if git rev-parse "$VERSION_WITH_V" >/dev/null 2>&1; then
+              echo "Error: Tag $VERSION_WITH_V already exists!"
+              exit 1
+            fi
+
+            git tag "$VERSION_WITH_V"
+            git push origin "$VERSION_WITH_V"
+            echo "Created and pushed tag: $VERSION_WITH_V"
+          else
+            echo "No version pattern found in commit message"
+            echo "version=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        if: steps.extract-version.outputs.version != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.extract-version.outputs.version }}
+          name: Release ${{ steps.extract-version.outputs.version }}
+          body: ${{ steps.extract-version.outputs.release_body }}
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

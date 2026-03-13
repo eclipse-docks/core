@@ -26,7 +26,14 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION from tag: $TAG"
-      
+
+      - name: Fetch tag annotation
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          git fetch origin tag "$TAG" --no-tags
+        env:
+          GIT_TERMINAL_PROMPT: 0
+
       - name: Get tag message
         id: tag_message
         run: |

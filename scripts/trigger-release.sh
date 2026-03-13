@@ -118,7 +118,11 @@ echo "$CHANGES"
 echo "---"
 echo ""
 
-# Generate summary using LLM if API key is available
+if [ -z "$OPENAI_API_KEY" ] && [ -n "$CHANGES" ]; then
+    echo "⚠ OPENAI_API_KEY not set — release description will use raw changelog. Set it in .env to enable AI summary."
+    echo ""
+fi
+
 SUMMARY=""
 if [ -n "$OPENAI_API_KEY" ] && [ -n "$CHANGES" ]; then
     echo "Generating AI summary of changes..."
@@ -155,18 +159,23 @@ PYEOF
         echo "$SUMMARY"
         echo "---"
         echo ""
+    else
+        echo "⚠ Could not extract AI summary (API error or invalid response). Release will use raw changelog."
+        echo "$API_RESPONSE" | head -c 300
+        echo ""
     fi
 fi
 
-# Create tag with 'v' prefix (matching publish.yml workflow pattern)
-TAG_NAME="v$NEXT_VERSION"
+# Commit subject for CI to detect (auto-tag workflow creates tag and release from commit body)
+RELEASE_VERSION="v$NEXT_VERSION"
 
 if [ "$DRY_RUN" = true ]; then
     echo ""
-    echo "📝 Would create tag: $TAG_NAME"
-    echo ""
-    echo "Tag message:"
+    echo "📝 Would create empty commit with message:"
     echo "---"
+    echo "Subject: Release: $RELEASE_VERSION"
+    echo ""
+    echo "Body:"
     if [ -z "$CHANGES" ]; then
         echo "No changes since last release."
     elif [ -n "$SUMMARY" ]; then
@@ -181,68 +190,47 @@ if [ "$DRY_RUN" = true ]; then
     fi
     echo "---"
     echo ""
-    
-    # Check for unpushed commits in dry-run
-    git fetch origin
+    git fetch origin 2>/dev/null || true
     LOCAL_COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null || git log origin/master..HEAD --oneline 2>/dev/null || echo "")
     if [ -n "$LOCAL_COMMITS" ]; then
         echo "Local commits that would be pushed:"
         echo "$LOCAL_COMMITS"
         echo ""
     fi
-    
-    echo "🚫 DRY RUN: No tag created, nothing pushed"
+    echo "🚫 DRY RUN: No commit created, nothing pushed"
 else
-    # Check if tag already exists
-    if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-        echo "Error: Tag $TAG_NAME already exists!"
-        exit 1
-    fi
-    
-    # Fetch to check for unpushed commits
-    echo "Checking for unpushed commits..."
-    git fetch origin
-    
-    # Determine the main branch name
     MAIN_BRANCH="main"
-    if ! git show-ref --verify --quiet refs/remotes/origin/main; then
+    if ! git show-ref --verify --quiet refs/remotes/origin/main 2>/dev/null; then
         MAIN_BRANCH="master"
     fi
-    
-    # Check if there are local commits to push
+    git fetch origin 2>/dev/null || true
     LOCAL_COMMITS=$(git log origin/$MAIN_BRANCH..HEAD --oneline 2>/dev/null || echo "")
     if [ -n "$LOCAL_COMMITS" ]; then
         echo "Pushing local commits first..."
-        echo "Commits to push:"
         echo "$LOCAL_COMMITS"
         echo ""
         git push origin HEAD:$MAIN_BRANCH
         echo "✓ Local commits pushed"
         echo ""
-    else
-        echo "No local commits to push"
-        echo ""
     fi
-    
-    # Create tag with message
-    echo "Creating tag $TAG_NAME..."
+
+    COMMIT_MSG_FILE=$(mktemp)
     if [ -z "$CHANGES" ]; then
-        git tag -a "$TAG_NAME" -m "Release: $TAG_NAME" -m "No changes since last release."
+        printf 'Release: %s\n\nNo changes since last release.\n' "$RELEASE_VERSION" > "$COMMIT_MSG_FILE"
     elif [ -n "$SUMMARY" ]; then
-        git tag -a "$TAG_NAME" -m "Release: $TAG_NAME" -m "$SUMMARY"
+        printf 'Release: %s\n\n%s\n' "$RELEASE_VERSION" "$SUMMARY" > "$COMMIT_MSG_FILE"
     else
         if [ -n "$LATEST_TAG" ]; then
-            git tag -a "$TAG_NAME" -m "Release: $TAG_NAME" -m "Changes since $LATEST_TAG:" -m "$CHANGES"
+            printf 'Release: %s\n\nChanges since %s:\n\n%s\n' "$RELEASE_VERSION" "$LATEST_TAG" "$CHANGES" > "$COMMIT_MSG_FILE"
         else
-            git tag -a "$TAG_NAME" -m "Release: $TAG_NAME" -m "Initial release:" -m "$CHANGES"
+            printf 'Release: %s\n\nInitial release:\n\n%s\n' "$RELEASE_VERSION" "$CHANGES" > "$COMMIT_MSG_FILE"
         fi
     fi
-
-    # Push tag to trigger publish workflow
-    echo "Pushing tag to remote..."
-    git push origin "$TAG_NAME"
-
-    echo "✓ Tag $TAG_NAME created and pushed successfully!"
-    echo "The publish workflow will automatically build and publish to npm."
+    git commit --allow-empty -F "$COMMIT_MSG_FILE"
+    rm -f "$COMMIT_MSG_FILE"
+    echo "Pushing to remote..."
+    git push origin HEAD:$MAIN_BRANCH
+    echo "✓ Release $RELEASE_VERSION triggered successfully!"
+    echo "The auto-tag workflow will create the tag and GitHub release (with this message as description), then publish to npm."
 fi
 

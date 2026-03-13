@@ -14,7 +14,7 @@
  * Import this file to register the WebDAV extension and its commands.
  */
 
-import { workspaceService, createLogger } from '@eclipse-lyra/core';
+import { workspaceService, createLogger, contributionRegistry } from '@eclipse-lyra/core';
 
 const logger = createLogger('WebDAVExtension');
 import { WebDAVClient, type WebDAVConnectionInfo } from './webdav-client';
@@ -27,6 +27,8 @@ export { WebDAVFileResource, WebDAVDirectoryResource } from './webdav-filesys';
 
 // Import UI component (registers itself)
 import './webdav-connect';
+import { html } from "lit";
+import { LyraWebDAVConnect } from "./webdav-connect";
 
 // Import commands (registers themselves)
 import './webdav-commands';
@@ -55,15 +57,21 @@ workspaceService.registerContribution({
         if (!data || !data.url) {
             return undefined;
         }
-        
+
         try {
-            const client = new WebDAVClient(data);
+            const restored: WebDAVConnectionInfo = {
+                url: data.url,
+                username: data.username,
+                password: data.password ? decodePassword(data.password) : undefined
+            };
+
+            const client = new WebDAVClient(restored);
             const rootResource: WebDAVResource = {
                 href: data.url,
                 displayName: extractWorkspaceNameFromUrl(data.url),
                 isDirectory: true
             };
-            return new WebDAVDirectoryResource(client, rootResource, undefined, data);
+            return new WebDAVDirectoryResource(client, rootResource, undefined, restored);
         } catch (error) {
             logger.error('Failed to restore WebDAV workspace:', error);
             return undefined;
@@ -80,12 +88,57 @@ workspaceService.registerContribution({
             return {
                 url: connectionInfo.url,
                 ...(connectionInfo.username !== undefined ? { username: connectionInfo.username } : {}),
-                ...(connectionInfo.password !== undefined ? { password: connectionInfo.password } : {})
+                ...(connectionInfo.password !== undefined ? { password: encodePassword(connectionInfo.password) } : {})
             };
         }
         return null;
     }
 });
+
+interface WebDAVDialogState {
+    close?: () => void;
+}
+
+contributionRegistry.registerContribution("dialogs", {
+    label: "Connect to WebDAV / NextCloud",
+    icon: "cloud",
+    name: "dialog.webdav.connect",
+    id: "webdav-connect-dialog",
+    buttons: [
+        { id: "help", label: "Show help", variant: "neutral" },
+        { id: "cancel", label: "Cancel", variant: "default" },
+        { id: "connect", label: "Connect", variant: "primary" }
+    ],
+    component: (_state?: WebDAVDialogState) =>
+        html`<lyra-webdav-connect></lyra-webdav-connect>`,
+    onButton: async (id: string, result: any, state?: WebDAVDialogState) => {
+        const component = result as LyraWebDAVConnect | undefined;
+
+        if (id === "help") {
+            component?.toggleHelp();
+            return false;
+        }
+
+        if (id === "connect") {
+            if (component?.handleConnect) {
+                const ok = await component.handleConnect();
+                if (ok) {
+                    state?.close?.();
+                    return true;
+                }
+                return false;
+            }
+            return true;
+        }
+
+        if (id === "cancel") {
+            state?.close?.();
+            return true;
+        }
+
+        return true;
+    }
+} as any);
 
 function extractWorkspaceNameFromUrl(url: string): string {
     try {
@@ -97,4 +150,31 @@ function extractWorkspaceNameFromUrl(url: string): string {
     }
 }
 
-logger.debug('WebDAV Extension loaded');
+function encodePassword(password: string): string {
+    try {
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(password);
+        let binary = '';
+        for (const b of bytes) {
+            binary += String.fromCharCode(b);
+        }
+        return btoa(binary);
+    } catch {
+        return password;
+    }
+}
+
+function decodePassword(encoded: string): string {
+    try {
+        const binary = atob(encoded);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        const decoder = new TextDecoder();
+        return decoder.decode(bytes);
+    } catch {
+        // If it's not valid base64 (e.g. older plain-text entries), return as-is
+        return encoded;
+    }
+}

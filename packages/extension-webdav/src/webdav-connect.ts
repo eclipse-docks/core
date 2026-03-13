@@ -1,5 +1,5 @@
 import { customElement, state } from "lit/decorators.js";
-import { LyraElement } from "@eclipse-lyra/core";
+import { LyraDialogContent } from "@eclipse-lyra/core";
 import { html } from "lit";
 import { workspaceService } from "@eclipse-lyra/core";
 import type { WebDAVConnectionInfo } from "./webdav-client";
@@ -8,7 +8,7 @@ import { createLogger } from "@eclipse-lyra/core";
 const logger = createLogger('WebDAV');
 
 @customElement('lyra-webdav-connect')
-export class LyraWebDAVConnect extends LyraElement {
+export class LyraWebDAVConnect extends LyraDialogContent {
     
     @state()
     private url = '';
@@ -25,10 +25,14 @@ export class LyraWebDAVConnect extends LyraElement {
     @state()
     private showHelp = false;
 
-    private async handleConnect() {
+    public override getResult(): any {
+        return this;
+    }
+
+    public async handleConnect(): Promise<boolean> {
         if (!this.url) {
             logger.error('Please provide a URL');
-            return;
+            return false;
         }
 
         // Validate URL format
@@ -36,21 +40,37 @@ export class LyraWebDAVConnect extends LyraElement {
             new URL(this.url);
         } catch {
             logger.error('Invalid URL format');
-            return;
+            return false;
         }
 
         this.connecting = true;
         
         try {
-            const connectionInfo: WebDAVConnectionInfo = {
-                url: this.url,
-                // Only include credentials if both are provided
-                ...(this.username && this.password && {
-                    username: this.username,
-                    password: this.password
-                })
-            };
-            
+            let connectionInfo: WebDAVConnectionInfo;
+
+            // Check if it's a Nextcloud/ownCloud public share URL
+            const shareMatch = this.url.match(/^(https?:\/\/[^\/]+)\/(?:index\.php\/)?s\/([A-Za-z0-9]+)/);
+
+            if (shareMatch) {
+                const server = shareMatch[1];
+                const token = shareMatch[2];
+
+                connectionInfo = {
+                    url: `${server}/public.php/webdav/`,
+                    username: token,
+                    password: this.password || ''
+                };
+            } else {
+                // Direct WebDAV endpoint URL - use optional username/password fields
+                connectionInfo = {
+                    url: this.url,
+                    ...(this.username && this.password && {
+                        username: this.username,
+                        password: this.password
+                    })
+                };
+            }
+
             await workspaceService.connectWorkspace(connectionInfo);
             logger.info('Successfully connected to WebDAV workspace');
             
@@ -58,18 +78,20 @@ export class LyraWebDAVConnect extends LyraElement {
                 bubbles: true,
                 composed: true
             }));
+            return true;
         } catch (error) {
             if (error instanceof Error) {
                 logger.error(`Connection failed: ${error.message}`);
             } else {
                 logger.error('Failed to connect to WebDAV server');
             }
+            return false;
         } finally {
             this.connecting = false;
         }
     }
 
-    private toggleHelp() {
+    public toggleHelp() {
         this.showHelp = !this.showHelp;
     }
 
@@ -82,6 +104,9 @@ export class LyraWebDAVConnect extends LyraElement {
                     gap: 1rem;
                     max-width: 500px;
                     padding: 1.5rem;
+                    height: 420px;
+                    box-sizing: border-box;
+                    overflow-y: auto;
                 }
                 
                 .webdav-connect-dialog h2 {
@@ -89,11 +114,10 @@ export class LyraWebDAVConnect extends LyraElement {
                     font-size: 1.5rem;
                 }
                 
-                .form-buttons {
-                    display: flex;
-                    gap: 0.5rem;
-                    justify-content: flex-end;
-                    margin-top: 1rem;
+                .password-warning {
+                    font-size: 0.8rem;
+                    color: var(--wa-color-neutral-400);
+                    margin: 0.25rem 0 0.5rem 0;
                 }
                 
                 .help-text {
@@ -132,11 +156,6 @@ export class LyraWebDAVConnect extends LyraElement {
             </style>
             
             <div class="webdav-connect-dialog">
-                <h2>
-                    <wa-icon name="cloud" label="WebDAV"></wa-icon>
-                    Connect to WebDAV Folder
-                </h2>
-                
                 <wa-input
                     label="WebDAV URL"
                     placeholder="https://cloud.example.com/remote.php/dav/files/username/"
@@ -160,25 +179,11 @@ export class LyraWebDAVConnect extends LyraElement {
                     placeholder="Password or App Password"
                     .value=${this.password}
                     @input=${(e: Event) => this.password = (e.target as any).value}
-                    help-text="Leave empty for public/shared folders. Use an app password if 2FA is enabled">
+                    help-text="Leave empty for public/shared folders. Use an app password if 2FA is enabled.">
                 </wa-input>
-                
-                <div class="form-buttons">
-                    <wa-button
-                        appearance="outline"
-                        @click=${this.toggleHelp}>
-                        <wa-icon name="circle-info" slot="start"></wa-icon>
-                        ${this.showHelp ? 'Hide' : 'Show'} Help
-                    </wa-button>
-                    
-                    <wa-button
-                        appearance="primary"
-                        @click=${this.handleConnect}
-                        ?disabled=${this.connecting || !this.url}>
-                        <wa-icon name="${this.connecting ? 'spinner' : 'plug'}" slot="start"></wa-icon>
-                        ${this.connecting ? 'Connecting...' : 'Connect'}
-                    </wa-button>
-                </div>
+                <p class="password-warning">
+                    Passwords are stored locally in this browser (base64 encoded). Only use this on machines you trust.
+                </p>
                 
                 ${this.showHelp ? html`
                     <div class="help-text">
@@ -190,11 +195,10 @@ export class LyraWebDAVConnect extends LyraElement {
                         <p><strong>Nextcloud Public Shares:</strong></p>
                         <p>For Nextcloud public shares (e.g., https://cloud.example.com/s/TOKEN):</p>
                         <ul>
-                            <li><strong>URL:</strong> https://your-cloud.com/public.php/webdav/</li>
-                            <li><strong>Username:</strong> The share token (the part after /s/)</li>
-                            <li><strong>Password:</strong> Leave empty (or enter share password if protected)</li>
+                            <li><strong>URL:</strong> You can paste the share link directly into the URL field.</li>
+                            <li><strong>Username:</strong> Will be filled automatically from the share token.</li>
+                            <li><strong>Password:</strong> Leave empty (or enter the share password if the link is protected).</li>
                         </ul>
-                        <p><em>Tip: Use the "Connect to Nextcloud Public Share" command for easier setup!</em></p>
                         
                         <p><strong>Nextcloud Personal Files:</strong></p>
                         <p>Your WebDAV URL should look like:</p>
@@ -216,7 +220,7 @@ export class LyraWebDAVConnect extends LyraElement {
                         <p>If connection fails, your WebDAV server may need CORS configuration. 
                         Contact your administrator or check the server documentation.</p>
                         
-                        <p><strong>Note:</strong> Your credentials (if provided) will be stored securely in your browser's storage.</p>
+                        <p><strong>Security note:</strong> Connection details (including password, if provided) are stored locally in this browser using base64 encoding. Only use this on machines and profiles you trust.</p>
                     </div>
                 ` : ''}
             </div>
@@ -229,4 +233,3 @@ declare global {
         'lyra-webdav-connect': LyraWebDAVConnect;
     }
 }
-

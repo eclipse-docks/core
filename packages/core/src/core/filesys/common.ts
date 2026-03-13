@@ -222,6 +222,59 @@ export class CompositeDirectory extends Directory {
     }
 }
 
+/**
+ * Placeholder directory used when a persisted workspace folder references
+ * a backend type for which no contribution is currently registered.
+ *
+ * This allows the UI to surface a metadata node instead of silently
+ * dropping the folder, and it can be replaced later once the real
+ * contribution is loaded.
+ */
+export class MissingContributionDirectory extends Directory {
+    private readonly backendType: string;
+    private readonly persistedData: any;
+    private readonly name: string;
+
+    constructor(options: { backendType: string; name: string; data: any }) {
+        super();
+        this.backendType = options.backendType;
+        this.persistedData = options.data;
+        this.name = options.name;
+    }
+
+    getName(): string {
+        return this.name;
+    }
+
+    getParent(): Directory | undefined {
+        return undefined;
+    }
+
+    async listChildren(_forceRefresh: boolean): Promise<Resource[]> {
+        return [];
+    }
+
+    async getResource(_path: string, _options?: GetResourceOptions): Promise<Resource | null> {
+        throw new Error(`Workspace backend "${this.backendType}" is not available in this environment.`);
+    }
+
+    touch(): void {
+        // No-op: without a real backend there is nothing to refresh.
+    }
+
+    async delete(_name?: string, _recursive?: boolean): Promise<void> {
+        throw new Error(`Cannot modify workspace folder for missing backend "${this.backendType}".`);
+    }
+
+    async copyTo(_targetPath: string): Promise<void> {
+        throw new Error(`Cannot copy from workspace folder for missing backend "${this.backendType}".`);
+    }
+
+    async rename(_newName: string): Promise<void> {
+        throw new Error(`Cannot rename workspace folder for missing backend "${this.backendType}".`);
+    }
+}
+
 export interface WorkspaceContribution {
     type: string;
     name: string;
@@ -278,7 +331,9 @@ export class WorkspaceService {
             return;
         }
 
-        if (this.folders.some(f => f.type === contribution.type)) {
+        const existingForType = this.folders.filter(f => f.type === contribution.type);
+        const hasRealFoldersForType = existingForType.some(f => !(f.directory instanceof MissingContributionDirectory));
+        if (hasRealFoldersForType) {
             this.restoredTypes.add(contribution.type);
             return;
         }
@@ -294,6 +349,10 @@ export class WorkspaceService {
             this.restoredTypes.add(contribution.type);
             return;
         }
+
+        // Remove any placeholder folders for this type; we'll replace them with
+        // real directories if restoration succeeds.
+        this.folders = this.folders.filter(f => !(f.type === contribution.type && f.directory instanceof MissingContributionDirectory));
 
         for (const folder of toRestore) {
             if (!contribution.restore) {
@@ -395,6 +454,15 @@ export class WorkspaceService {
         for (const folder of persisted) {
             const contribution = this.contributions.get(folder.type);
             if (!contribution?.restore) {
+                const displayName =
+                    (folder.data && typeof folder.data === 'object' && (folder.data as any).name) ||
+                    `${folder.type} (missing)`;
+                const placeholder = new MissingContributionDirectory({
+                    backendType: folder.type,
+                    name: displayName,
+                    data: folder.data
+                });
+                this.folders.push({ type: folder.type, data: folder.data, directory: placeholder });
                 continue;
             }
             try {

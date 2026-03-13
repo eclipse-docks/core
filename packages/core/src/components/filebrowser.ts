@@ -202,6 +202,7 @@ export class LyraFileBrowser extends LyraPart {
         const isLazy = !node.leaf && node.children.length === 0;
         const resource = node.data as Resource;
         const isFile = resource instanceof File;
+        const isDraggable = !!resource.getParent();
         const icon = isFile
             ? editorRegistry.getFileIcon(resource.getName())
             : (node.icon || "folder-open");
@@ -209,8 +210,8 @@ export class LyraFileBrowser extends LyraPart {
 
         return html`
             <wa-tree-item 
-                draggable=${isFile}
-                @dragstart=${isFile ? this.nobubble((e: Event) => this.onDragStart(e as DragEvent, resource as File)) : undefined}
+                draggable=${isDraggable}
+                @dragstart=${isDraggable ? this.nobubble((e: Event) => this.onDragStart(e as DragEvent, resource)) : undefined}
                 @dblclick=${this.nobubble(this.onFileDoubleClicked)}
                 @wa-lazy-load=${this.nobubble((e: Event) => this.onLazyLoad(e, node))}
                 .model=${node} 
@@ -227,20 +228,48 @@ export class LyraFileBrowser extends LyraPart {
             </wa-tree-item>`
     }
 
-    private onDragStart(e: DragEvent, file: File) {
+    private onDragStart(e: DragEvent, resource: Resource) {
         if (!e.dataTransfer) return;
 
-        const filePath = file.getWorkspacePath();
-                const fileName = file.getName();
+        // Do not allow dragging the synthetic workspace root node.
+        if (!resource.getParent()) return;
 
-        e.dataTransfer.effectAllowed = 'copy';
-        e.dataTransfer.setData('text/plain', filePath);
-        e.dataTransfer.setData('application/x-workspace-file', filePath);
-        e.dataTransfer.setData('text/uri-list', filePath);
+        const currentTarget = e.currentTarget as HTMLElement | null;
+        const tree = currentTarget?.closest('wa-tree') as any | null;
+
+        const selectedItems: Array<{ model?: TreeNode }> = Array.isArray(tree?.selectedItems)
+            ? tree.selectedItems
+            : [];
+
+        const resources: Resource[] = [];
+
+        if (selectedItems.length > 0) {
+            for (const item of selectedItems) {
+                const node = item.model as TreeNode | undefined;
+                const data = node?.data as Resource | undefined;
+                if (data && data.getParent()) {
+                    resources.push(data);
+                }
+            }
+        }
+
+        if (resources.length === 0) {
+            resources.push(resource);
+        }
+
+        const workspacePaths = resources.map(r => r.getWorkspacePath());
+        const primaryName = resources.length === 1 ? resources[0].getName() : `${resources.length} items`;
+
+        e.dataTransfer.effectAllowed = 'copyMove';
+        const payload = workspacePaths.join('\n');
+
+        e.dataTransfer.setData('text/plain', payload);
+        e.dataTransfer.setData('application/x-workspace-file', payload);
+        e.dataTransfer.setData('text/uri-list', payload);
 
         if (e.dataTransfer.setDragImage) {
             const dragImage = document.createElement('div');
-            dragImage.textContent = fileName;
+            dragImage.textContent = primaryName;
             dragImage.style.position = 'absolute';
             dragImage.style.top = '-1000px';
             dragImage.style.padding = '4px 8px';
@@ -321,10 +350,21 @@ export class LyraFileBrowser extends LyraPart {
         if (!treeElement) return;
 
         const dragOverHandler = (e: DragEvent) => {
-            if (!e.dataTransfer?.types.includes('Files')) return;
+            const types = e.dataTransfer?.types;
+            if (!types) return;
+
+            const isOsFileDrop = types.includes('Files');
+            const isWorkspaceDrop = types.includes('application/x-workspace-file');
+            if (!isOsFileDrop && !isWorkspaceDrop) return;
 
             e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy';
+            if (e.dataTransfer) {
+                if (isWorkspaceDrop) {
+                    e.dataTransfer.dropEffect = (e.ctrlKey || e.metaKey) ? 'copy' : 'move';
+                } else {
+                    e.dataTransfer.dropEffect = 'copy';
+                }
+            }
 
             treeElement.classList.add('drag-over');
 
@@ -339,7 +379,12 @@ export class LyraFileBrowser extends LyraPart {
         };
 
         const dragEnterHandler = (e: DragEvent) => {
-            if (!e.dataTransfer?.types.includes('Files')) return;
+            const types = e.dataTransfer?.types;
+            if (!types) return;
+
+            const isOsFileDrop = types.includes('Files');
+            const isWorkspaceDrop = types.includes('application/x-workspace-file');
+            if (!isOsFileDrop && !isWorkspaceDrop) return;
 
             e.preventDefault();
             treeElement.classList.add('drag-over');
@@ -365,11 +410,20 @@ export class LyraFileBrowser extends LyraPart {
 
             if (!e.dataTransfer || !this.workspaceDir) return;
 
-            const files = Array.from(e.dataTransfer.files);
-            if (files.length === 0) return;
-
             const targetDir = await this.getDropTarget(e);
-            await this.handleFilesDrop(files, targetDir);
+            const types = e.dataTransfer.types;
+
+            if (types.includes('Files')) {
+                const files = Array.from(e.dataTransfer.files);
+                if (files.length === 0) return;
+                await this.handleFilesDrop(files, targetDir);
+                return;
+            }
+
+            if (types.includes('application/x-workspace-file')) {
+                await this.handleWorkspaceDrop(e, targetDir);
+                return;
+            }
         };
 
         treeElement.removeEventListener('dragover', dragOverHandler as any);
@@ -401,6 +455,60 @@ export class LyraFileBrowser extends LyraPart {
         }
 
         return this.workspaceDir!;
+    }
+
+    private async handleWorkspaceDrop(e: DragEvent, targetDir: Directory) {
+        if (!e.dataTransfer) return;
+
+        const payload = e.dataTransfer.getData('application/x-workspace-file');
+        if (!payload) return;
+
+        const paths = payload
+            .split(/\r?\n/)
+            .map(p => p.trim())
+            .filter(p => !!p);
+
+        if (paths.length === 0) return;
+
+        const workspace = await workspaceService.getWorkspace();
+        if (!workspace) {
+            logger.warn('Workspace drop ignored because no workspace is connected');
+            return;
+        }
+
+        const moveWithinSameBackend = async (src: Resource): Promise<boolean> => {
+            const srcRoot = src.getWorkspace();
+            const destRoot = targetDir.getWorkspace();
+            if (!srcRoot || !destRoot) return false;
+
+            // Only allow move when source and destination share the same backend root.
+            return srcRoot === destRoot && !(e.ctrlKey || e.metaKey);
+        };
+
+        let processed = 0;
+        let failed = 0;
+
+        for (const path of paths) {
+            try {
+                const src = await workspace.getResource(path);
+                if (!src) {
+                    logger.warn(`Workspace drop: source not found for path "${path}"`);
+                    failed++;
+                    continue;
+                }
+
+                const move = await moveWithinSameBackend(src);
+                await workspaceService.copyResource(src, targetDir, { move });
+                processed++;
+            } catch (error) {
+                logger.error(`Failed to handle workspace drop for "${path}":`, error);
+                failed++;
+            }
+        }
+
+        logger.info(`Workspace drop completed: ${processed}/${paths.length} items copied${failed > 0 ? `, ${failed} failed` : ''}`);
+
+        await this.loadWorkspace(this.workspaceDir, true);
     }
 
     private async handleFilesDrop(files: globalThis.File[], targetDir: Directory) {

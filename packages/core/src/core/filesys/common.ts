@@ -609,6 +609,60 @@ export class WorkspaceService {
         publish(TOPIC_WORKSPACE_CONNECTED, undefined as any);
         logger.info('Workspace disconnected');
     }
+
+    /**
+     * Copy (and optionally move) a resource into a target directory within the
+     * current workspace. This helper is connection-agnostic: it always resolves
+     * paths via the composite workspace root so it can copy across different
+     * backend folders.
+     */
+    public async copyResource(
+        src: Resource,
+        destDir: Directory,
+        options?: { move?: boolean; newName?: string }
+    ): Promise<void> {
+        await this.initPromise;
+        const workspace = this._currentWorkspace;
+        if (!workspace) {
+            throw new Error('No workspace connected.');
+        }
+
+        const targetName = options?.newName ?? src.getName();
+        const destDirPath = destDir.getWorkspacePath();
+        const targetBasePath = destDirPath ? `${destDirPath}/${targetName}` : targetName;
+
+        const copyFileToPath = async (file: File, targetPath: string): Promise<void> => {
+            const contents = await file.getContents({ blob: true });
+            const targetFile = await workspace.getResource(targetPath, { create: true }) as File | null;
+            if (!targetFile) {
+                throw new Error(`Failed to create target file: ${targetPath}`);
+            }
+            await targetFile.saveContents(contents);
+        };
+
+        const copyDirectoryToPath = async (dir: Directory, targetPath: string): Promise<void> => {
+            for (const child of await dir.listChildren(false)) {
+                const childTargetPath = `${targetPath}/${child.getName()}`;
+                if (child instanceof File) {
+                    await copyFileToPath(child, childTargetPath);
+                } else if (child instanceof Directory) {
+                    await copyDirectoryToPath(child, childTargetPath);
+                }
+            }
+        };
+
+        if (src instanceof File) {
+            await copyFileToPath(src, targetBasePath);
+        } else if (src instanceof Directory) {
+            await copyDirectoryToPath(src, targetBasePath);
+        } else {
+            throw new Error('Unsupported resource type for copy operation.');
+        }
+
+        if (options?.move) {
+            await src.delete(undefined, true);
+        }
+    }
 }
 
 export const workspaceService = new WorkspaceService();

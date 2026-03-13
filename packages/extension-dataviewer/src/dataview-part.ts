@@ -12,9 +12,6 @@ export class DataViewPart extends LyraPart {
   @property({ attribute: false })
   dataview: DataView | null = null;
 
-  @property({ type: Boolean })
-  standalone = false;
-
   @state()
   private persistedList: DataviewListEntry[] = [];
 
@@ -62,9 +59,8 @@ export class DataViewPart extends LyraPart {
       const safeTitle = dv.title?.trim() || 'dataview';
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const fileName = `${safeTitle.replace(/[^a-zA-Z0-9-_]+/g, '_')}-${timestamp}.csv`;
-      const targetDir = await this.chooseExportDirectory();
+      const targetDir = await filebrowserDialog('directory');
       if (!targetDir) return;
-      // @ts-ignore executeCommand is available via LyraPart/LyraWidget
       this.executeCommand('touch', {
         path: `${targetDir}/${fileName}`,
         contents: csv,
@@ -72,10 +68,6 @@ export class DataViewPart extends LyraPart {
     } catch (err) {
       toastError(err instanceof Error ? err.message : String(err));
     }
-  }
-
-  private async chooseExportDirectory(): Promise<string | null> {
-    return filebrowserDialog('directory');
   }
 
   protected async doInitUI() {
@@ -175,7 +167,6 @@ export class DataViewPart extends LyraPart {
   }
 
   protected renderToolbar() {
-    if (this.standalone) return html``;
     const current = this.selectedView ?? this.dataview;
     const selectedMeta = this.persistedList.find((e) => e.storageKey === this.selectedStorageKey);
     const baseTitle = selectedMeta?.title ?? current?.title ?? (this.persistedList.length > 0 ? 'Latest data view' : 'No data');

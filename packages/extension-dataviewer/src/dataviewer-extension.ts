@@ -36,15 +36,15 @@ editorRegistry.registerEditorInputHandler({
     const name = input.getName();
     const text = (await input.getContents()) as string;
     const { columns, rows } = parseCsv(text ?? '');
-    const dataView: DataView = { title: name, data: { columns, rows } };
+    const data = { columns, rows };
     const editorInput: EditorInput = {
       title: name,
-      data: dataView,
+      data,
       key: name,
       icon: 'table',
       noOverflow: false,
       state: {},
-      component: () => html`<lyra-dataview .dataview=${dataView} .standalone=${true}></lyra-dataview>`,
+      component: () => html`<lyra-data-table .data=${data}></lyra-data-table>`,
     };
     return editorInput;
   },

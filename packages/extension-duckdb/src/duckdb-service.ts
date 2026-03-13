@@ -1,4 +1,6 @@
-import { createLogger } from '@eclipse-lyra/core';
+import { createLogger, workspaceService } from '@eclipse-lyra/core';
+import type { File } from '@eclipse-lyra/core';
+import * as DuckDBWasm from '@duckdb/duckdb-wasm';
 import * as duckdb from '@duckdb/duckdb-wasm';
 
 const logger = createLogger('DuckDBService');
@@ -9,6 +11,7 @@ const IN_MEMORY_KEY = '__memory__';
 const OPFS_DB_DIR = 'duckdb-databases';
 const EXTENSION_NAME_REGEX = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 const DB_NAME_REGEX = /^[a-zA-Z0-9_.-]+$/;
+const WORKSPACE_PREFIX = '/workspace/';
 
 function pathFor(name: string): string {
   return `opfs://${OPFS_DB_DIR}/${name}.duckdb`;
@@ -16,6 +19,7 @@ function pathFor(name: string): string {
 
 type AsyncDuckDB = duckdb.AsyncDuckDB;
 type AsyncDuckDBConnection = Awaited<ReturnType<AsyncDuckDB['connect']>>;
+type DuckDBDataProtocol = DuckDBWasm.DuckDBDataProtocol;
 
 /** Plain JS result: columns in order, rows as array of value arrays. */
 export interface DuckDBQueryResult {
@@ -74,11 +78,61 @@ async function createConnection(path: string | null): Promise<{
   return { db, conn, worker };
 }
 
+async function registerWorkspaceFilesForQuery(
+  db: AsyncDuckDB,
+  sql: string,
+  alreadyRegistered: Set<string>,
+): Promise<void> {
+  const literalRegex = /'\/workspace\/([^']+)'/g;
+  const matches = new Map<string, string>();
+
+  let match: RegExpExecArray | null;
+  while ((match = literalRegex.exec(sql)) !== null) {
+    const relPath = match[1];
+    if (!matches.has(relPath)) {
+      matches.set(relPath, `${WORKSPACE_PREFIX}${relPath}`);
+    }
+  }
+
+  if (matches.size === 0) return;
+
+  const workspaceRoot = await workspaceService.getWorkspace();
+  if (!workspaceRoot) {
+    throw new Error('Workspace is not available');
+  }
+
+  for (const [relPath, vfsPath] of matches) {
+    if (alreadyRegistered.has(vfsPath)) {
+      // Already registered for this database, skip.
+      // If the underlying workspace file changes, users can reopen the connection.
+      // This keeps query overhead low.
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    const resource = await workspaceRoot.getResource(relPath);
+    if (!resource) {
+      throw new Error(`Workspace file not found: ${relPath}`);
+    }
+
+    const file = resource as File;
+    const url = await file.getContents({ uri: true });
+
+    if (typeof url !== 'string') {
+      throw new Error(`Unable to obtain URL for workspace file: ${relPath}`);
+    }
+
+    await db.registerFileURL(vfsPath, url, DuckDBWasm.DuckDBDataProtocol.HTTP, false);
+    alreadyRegistered.add(vfsPath);
+  }
+}
+
 /**
  * Abstraction over a single DuckDB database. Use runQuery, enableExtension, close, or delete.
  */
 export class DuckDBDatabase {
   private readonly key: string;
+  private readonly registeredWorkspaceFiles = new Set<string>();
 
   constructor(
     readonly name: string | null,
@@ -96,6 +150,7 @@ export class DuckDBDatabase {
     if (!trimmed) return { rows: [], columns: [] };
 
     try {
+      await registerWorkspaceFilesForQuery(this.db, trimmed, this.registeredWorkspaceFiles);
       const table = await this.conn.query(trimmed);
       return tableToPlainArrays(table);
     } catch (err) {

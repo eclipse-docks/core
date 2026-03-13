@@ -1,4 +1,4 @@
-import {css, html} from 'lit'
+import {css, html, nothing} from 'lit'
 import {customElement, property, state} from 'lit/decorators.js'
 import {LyraElement} from "./element";
 import {styleMap} from 'lit/directives/style-map.js';
@@ -13,6 +13,7 @@ import {
 import {Signal} from '@lit-labs/signals';
 import {unsafeHTML} from "lit/directives/unsafe-html.js";
 import {subscribe} from "../core/events";
+import { parseIconSpec } from "../core/icon-utils";
 
 const RESIZE_DEBOUNCE_MS = 150;
 
@@ -193,12 +194,13 @@ export class LyraToolbar extends LyraElement {
         if ("command" in contribution) {
             const commandContribution = contribution as CommandContribution;
             const showLabel = !this.compact && !!commandContribution.showLabel;
+            const { name: iconName, library: iconLibrary } = parseIconSpec(commandContribution.icon ?? '');
             return html`
                 <wa-button @click=${() => this.executeCommand(commandContribution.command, commandContribution.params || {})}
                            title=${commandContribution.label}
                            ?disabled="${(commandContribution.disabled as Signal.Computed<boolean>)?.get()}"
                            appearance="plain" size=${this.size}>
-                    <wa-icon name=${commandContribution.icon} label="${commandContribution.label}"></wa-icon>
+                    <wa-icon library=${iconLibrary ?? nothing} name=${iconName} label="${commandContribution.label}"></wa-icon>
                     ${showLabel ? commandContribution.label : ''}
                 </wa-button>
             `;

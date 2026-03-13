@@ -1,5 +1,6 @@
 import { TOOLBAR_MAIN, appLoaderService, contributionRegistry, type HTMLContribution } from '@eclipse-lyra/core';
 import { html } from '@eclipse-lyra/core/externals/lit';
+import { fetchReleases } from "@eclipse-lyra/extension-github-service";
 void import.meta.glob('../../extension-*/src/index.ts', { eager: true });
 
 import './dashboard-layout';
@@ -31,6 +32,13 @@ appLoaderService.registerApp(
     name: 'Eclipse Lyra',
     description: 'Eclipse Lyra demo app with default extensions.',
     layoutId: 'standard-full',
+    metadata: {
+      github: {
+        owner: 'eclipse-lyra',
+        repo: 'core',
+      },
+    },
+    releaseHistory: fetchReleases,
     extensions: [
       '@eclipse-lyra/extension-utils',
       '@eclipse-lyra/extension-command-palette',

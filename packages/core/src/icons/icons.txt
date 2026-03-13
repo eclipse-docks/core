@@ -5,3 +5,4 @@
 - layout-standard-bottom-panel.svg: Licence=Project-internal, Author=Lyra Team
 - layout-standard-bottom-sidebar.svg: Licence=Project-internal, Author=Lyra Team
 - layout-standard-full.svg: Licence=Project-internal, Author=Lyra Team
+- mark-github.svg: Licence=MIT, Author=GitHub, Source=https://github.com/primer/octicons (icons/mark-github-16.svg)

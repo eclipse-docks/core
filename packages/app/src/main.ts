@@ -1,8 +1,8 @@
 import { TOOLBAR_MAIN, appLoaderService, contributionRegistry, type HTMLContribution } from '@eclipse-lyra/core';
 import { html } from '@eclipse-lyra/core/externals/lit';
 import { fetchReleases } from "@eclipse-lyra/extension-github-service";
-void import.meta.glob('../../extension-*/src/index.ts', { eager: true });
 
+import './extensions';
 import './dashboard-layout';
 
 contributionRegistry.registerContribution(TOOLBAR_MAIN, {

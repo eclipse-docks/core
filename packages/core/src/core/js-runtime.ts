@@ -2,7 +2,7 @@
  * Scoped JS execution: one worker runs code in its global scope so state persists across
  * execute() calls. Single source of truth for in-worker JS (e.g. notebook kernel, js command).
  */
-import JsRuntimeWorker from './js-runtime-worker?worker';
+import JsRuntimeWorker from './js-runtime-worker.js?worker&inline';
 
 export interface JsRuntime {
   execute(code: string): Promise<unknown>;

@@ -1,5 +1,6 @@
 import { appLoaderService, contributionRegistry, type HTMLContribution, TOOLBAR_MAIN } from '@eclipse-lyra/core';
-void import.meta.glob('../../extension-*/src/index.ts', { eager: true });
+
+import './extensions';
 
 contributionRegistry.registerContribution(TOOLBAR_MAIN, {
   label: 'Brand',

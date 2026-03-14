@@ -5,10 +5,9 @@ import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { marked } from "marked";
-import * as monaco from 'monaco-editor';
-import monacoStyles from "monaco-editor/min/vs/editor/editor.main.css?raw";
 import type { EditorInput } from "@eclipse-lyra/core";
-import { File, createLogger, LyraPart, contributionRegistry, subscribe, unsubscribe, TOPIC_CONTRIBUTEIONS_CHANGED } from "@eclipse-lyra/core";
+import { LyraMonacoWidget } from "@eclipse-lyra/extension-monaco-editor/widget";
+import { createLogger, File, LyraPart, contributionRegistry, subscribe, unsubscribe, TOPIC_CONTRIBUTEIONS_CHANGED } from "@eclipse-lyra/core";
 import type { NotebookCell, NotebookData, NotebookEditorLike } from "./notebook-types";
 import type { NotebookKernel, NotebookKernelContribution } from "./notebook-kernel-api";
 import { TARGET_NOTEBOOK_KERNELS } from "./notebook-kernel-api";
@@ -64,26 +63,17 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
     public focusedCellIndex: number = -1;
     private cancelRunAll: boolean = false;
 
-    private monacoEditors: Map<number, monaco.editor.IStandaloneCodeEditor> = new Map();
-    private cellRefs: Map<number, Ref<HTMLElement>> = new Map();
-    private themeObserver?: MutationObserver;
+    private cellWidgetRefs: Map<number, Ref<LyraMonacoWidget>> = new Map();
+    @state() private cellHeights: Map<number, number> = new Map();
 
     protected doClose() {
         this.input = undefined;
         this.notebook = undefined;
         this.cellOutputs.clear();
         this.executingCells.clear();
-
-        // Dispose Monaco editors
-        this.monacoEditors.forEach(editor => editor.dispose());
-        this.monacoEditors.clear();
-        this.cellRefs.clear();
+        this.cellWidgetRefs.clear();
+        this.cellHeights.clear();
         this.focusedCellIndex = -1;
-
-        if (this.themeObserver) {
-            this.themeObserver.disconnect();
-            this.themeObserver = undefined;
-        }
 
         if (this.unsubscribeContributionsToken) {
             unsubscribe(this.unsubscribeContributionsToken);
@@ -298,7 +288,6 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
     }
 
     protected async doInitUI() {
-        this.setupThemeObserver();
         this.unsubscribeContributionsToken = subscribe(TOPIC_CONTRIBUTEIONS_CHANGED, (event: { target?: string }) => {
             if (event?.target === TARGET_NOTEBOOK_KERNELS) {
                 void this.refreshKernels();
@@ -408,25 +397,6 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
         }
 
         void this.refreshKernels();
-    }
-
-    private setupThemeObserver() {
-        const rootElement = document.documentElement;
-        let currentTheme = this.getMonacoTheme();
-
-        this.themeObserver = new MutationObserver(() => {
-            const newTheme = this.getMonacoTheme();
-            // Only update if theme actually changed
-            if (newTheme !== currentTheme) {
-                currentTheme = newTheme;
-                monaco.editor.setTheme(newTheme);
-            }
-        });
-
-        this.themeObserver.observe(rootElement, {
-            attributes: true,
-            attributeFilter: ['class']
-        });
     }
 
     private getCellSource(cell: NotebookCell): string {
@@ -551,8 +521,9 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
                 return;
             }
 
-            const editor = this.monacoEditors.get(cellIndex);
-            const code = editor ? editor.getValue() : this.getCellSource(cell);
+            const widget = this.getCellWidgetRef(cellIndex).value;
+            const code = widget ? widget.getContent() : this.getCellSource(cell);
+            if (code === null || code === undefined) return;
 
             const result = await k.execute(code);
 
@@ -795,12 +766,11 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
     private renderCodeCell(cell: NotebookCell, index: number) {
         const output = this.cellOutputs.get(index);
         const isExecuting = this.executingCells.has(index);
-
-        // Create or get ref for this cell
-        if (!this.cellRefs.has(index)) {
-            this.cellRefs.set(index, createRef());
-        }
-        const cellRef = this.cellRefs.get(index)!;
+        const source = this.getCellSource(cell);
+        const language = this.kernel?.language ?? 'javascript';
+        const notebookPath = (this.input?.data as File)?.getWorkspacePath?.() ?? 'notebook';
+        const cellUri = `${notebookPath}-cell-${index}`;
+        const cellHeight = this.cellHeights.get(index) ?? Math.max(100, source.split('\n').length * 19 + 10);
 
         const runButton = isExecuting ? html`
             <wa-button 
@@ -842,7 +812,23 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
                             </span>
                             ${this.renderHeaderActions(index, runButton)}
                         </div>
-                        <div class="cell-input monaco-container" ${ref(cellRef)} data-cell-index="${index}"></div>
+                        <div
+                            class="cell-input monaco-container"
+                            style=${styleMap({ height: `${cellHeight}px` })}
+                            @wheel=${(e: WheelEvent) => this.onCellWheel(index, e)}
+                        >
+                            <lyra-monaco-widget
+                                .value=${source}
+                                .language=${language}
+                                .uri=${cellUri}
+                                ?autoLayout=${true}
+                                @content-change=${() => this.markDirty(true)}
+                                @editor-focus=${() => { this.focusedCellIndex = index; }}
+                                @editor-blur=${() => { if (this.focusedCellIndex === index) this.focusedCellIndex = -1; }}
+                                @content-height-changed=${(e: CustomEvent<{ height: number }>) => this.onCellHeightChange(index, e.detail.height)}
+                                ${ref(this.getCellWidgetRef(index))}
+                            ></lyra-monaco-widget>
+                        </div>
                         ${output ? html`
                             <div class="cell-output ${output.type === 'error' ? 'output-error' : ''}">
                                 <div class="output-label">Out [${index + 1}]:</div>
@@ -931,20 +917,17 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
     }
 
     private saveEditorContents() {
-        // Update cell contents from Monaco editors
-        this.monacoEditors.forEach((editor, index) => {
-            const cell = this.notebook!.cells[index];
-            if (cell && cell.cell_type === 'code') {
-                cell.source = this.stringToSourceArray(editor.getValue());
+        this.notebook?.cells.forEach((cell, index) => {
+            if (cell.cell_type !== 'code') return;
+            const widget = this.getCellWidgetRef(index).value;
+            const value = widget?.getContent();
+            if (value !== undefined && value !== null) {
+                cell.source = this.stringToSourceArray(value);
             }
         });
     }
 
     private resetCellState() {
-        // Clear Monaco editors and refs since indices have changed
-        this.monacoEditors.forEach(editor => editor.dispose());
-        this.monacoEditors.clear();
-        this.cellRefs.clear();
         this.markDirty(true);
     }
 
@@ -995,85 +978,42 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
         shiftMap(this.cellOutputs);
         shiftSet(this.executingCells);
         shiftSet(this.editingMarkdownCells);
+        shiftMap(this.cellWidgetRefs);
+        shiftMap(this.cellHeights);
     }
 
-    private initializeMonacoEditor(container: HTMLElement, cell: NotebookCell, index: number) {
-        const source = this.getCellSource(cell);
-        const lineCount = source.split('\n').length;
-        const lineHeight = 19;
+    private getCellWidgetRef(index: number): Ref<LyraMonacoWidget> {
+        if (!this.cellWidgetRefs.has(index)) {
+            this.cellWidgetRefs.set(index, createRef());
+        }
+        return this.cellWidgetRefs.get(index)!;
+    }
+
+    private onCellHeightChange(index: number, height: number): void {
         const padding = 10;
         const minHeight = 100;
-        const calculatedHeight = Math.max(minHeight, lineCount * lineHeight + padding);
-
-        container.style.height = `${calculatedHeight}px`;
-
-        const language = this.kernel?.language ?? 'javascript';
-        const editor = monaco.editor.create(container, {
-            value: source,
-            language,
-            theme: this.getMonacoTheme(),
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            lineNumbers: 'on',
-            renderLineHighlight: 'all',
-            automaticLayout: true,
-            fontSize: 14,
-            tabSize: 4,
-            wordWrap: 'on',
-        });
-
-        let isEditorFocused = false;
-        editor.onDidFocusEditorText(() => { 
-            isEditorFocused = true;
-            this.focusedCellIndex = index;
-        });
-        editor.onDidBlurEditorText(() => { 
-            isEditorFocused = false;
-            if (this.focusedCellIndex === index) {
-                this.focusedCellIndex = -1;
-            }
-        });
-
-        container.addEventListener('wheel', (e: WheelEvent) => {
-            if (!isEditorFocused) {
-                const scrollTop = editor.getScrollTop();
-                const scrollHeight = editor.getScrollHeight();
-                const contentHeight = editor.getContentHeight();
-                const canScroll = scrollHeight > contentHeight;
-                const atBoundary = (e.deltaY < 0 && scrollTop <= 0) || 
-                                 (e.deltaY > 0 && scrollTop + contentHeight >= scrollHeight);
-
-                if (!canScroll || atBoundary) {
-                    e.stopImmediatePropagation();
-                }
-            }
-        }, { passive: true, capture: true });
-
-        editor.onDidContentSizeChange(() => {
-            const contentHeight = editor.getContentHeight();
-            container.style.height = `${Math.max(minHeight, contentHeight + padding)}px`;
-            editor.layout();
-        });
-
-        editor.onDidChangeModelContent(() => {
-            const currentValue = editor.getValue();
-            const originalValue = this.getCellSource(cell);
-            if (currentValue !== originalValue) {
-                this.markDirty(true);
-            }
-        });
-
-        this.monacoEditors.set(index, editor);
+        const newHeight = Math.max(minHeight, height + padding);
+        const current = this.cellHeights.get(index);
+        if (current === newHeight) return;
+        this.cellHeights = new Map(this.cellHeights);
+        this.cellHeights.set(index, newHeight);
+        this.requestUpdate();
+        this.updateComplete.then(() => (this.getCellWidgetRef(index).value as { layout?: () => void })?.layout?.());
     }
 
-    private getMonacoTheme(): string {
-        const rootElement = document.documentElement;
-        if (rootElement.classList.contains('wa-dark')) {
-            return 'vs-dark';
-        } else if (rootElement.classList.contains('wa-light')) {
-            return 'vs';
+    private onCellWheel(index: number, e: WheelEvent): void {
+        const widget = this.getCellWidgetRef(index).value;
+        const editor = widget?.getEditor();
+        if (!editor) return;
+        const scrollTop = editor.getScrollTop();
+        const scrollHeight = editor.getScrollHeight();
+        const contentHeight = editor.getContentHeight();
+        const canScroll = scrollHeight > contentHeight;
+        const atBoundary = (e.deltaY < 0 && scrollTop <= 0) ||
+            (e.deltaY > 0 && scrollTop + contentHeight >= scrollHeight);
+        if (!canScroll || atBoundary) {
+            e.stopImmediatePropagation();
         }
-        return 'vs-dark';
     }
 
     private openPackageManager() {
@@ -1114,17 +1054,6 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
         ) {
             this.updateToolbar();
         }
-
-        if (this.notebook?.cells) {
-            this.notebook.cells.forEach((cell, index) => {
-                if (cell.cell_type === 'code') {
-                    const ref = this.cellRefs.get(index);
-                    if (ref?.value && !this.monacoEditors.has(index)) {
-                        this.initializeMonacoEditor(ref.value, cell, index);
-                    }
-                }
-            });
-        }
     }
 
     protected render() {
@@ -1133,9 +1062,6 @@ export class LyraNotebookEditor extends LyraPart implements NotebookEditorLike {
         }
 
         return html`
-            <style>
-                ${monacoStyles}
-            </style>
             <div class="noteboocells">
                 ${repeat(
                     this.notebook.cells,

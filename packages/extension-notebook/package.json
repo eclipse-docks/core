@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@eclipse-lyra/core": "*",
-    "marked": "^12.0.0 || ^16.4.1",
-    "monaco-editor": "0.55.1"
+    "@eclipse-lyra/extension-monaco-editor": "*",
+    "marked": "^12.0.0 || ^16.4.1"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

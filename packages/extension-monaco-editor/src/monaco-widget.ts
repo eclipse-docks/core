@@ -40,10 +40,14 @@ export class LyraMonacoWidget extends LitElement {
     @property()
     theme: string = 'vs-dark';
 
+    @property({ type: Boolean, attribute: 'auto-layout' })
+    autoLayout = false;
+
     private containerRef = createRef<HTMLElement>();
     private editor?: monaco.editor.IStandaloneCodeEditor;
     private model?: monaco.editor.ITextModel;
     private themeObserver?: MutationObserver;
+    private resizeObserver?: ResizeObserver;
 
     private getMonacoTheme(): string {
         const root = document.documentElement;
@@ -79,13 +83,27 @@ export class LyraMonacoWidget extends LitElement {
         this.model = monaco.editor.createModel(this.value, this.language, uri);
         this.editor = monaco.editor.create(container, {
             theme: this.getMonacoTheme(),
-            automaticLayout: false,
+            automaticLayout: this.autoLayout,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
         });
         this.model.onDidChangeContent(() => {
             if (this.readOnly) return;
             this.dispatchEvent(new CustomEvent('content-change', { bubbles: true, composed: true }));
         });
         this.editor.setModel(this.model);
+        this.editor.onDidFocusEditorText(() => {
+            this.dispatchEvent(new CustomEvent('editor-focus', { bubbles: true, composed: true }));
+        });
+        this.editor.onDidBlurEditorText(() => {
+            this.dispatchEvent(new CustomEvent('editor-blur', { bubbles: true, composed: true }));
+        });
+        this.editor.onDidContentSizeChange(() => {
+            const height = this.editor?.getContentHeight() ?? 0;
+            this.dispatchEvent(new CustomEvent('content-height-changed', { detail: { height }, bubbles: true, composed: true }));
+        });
+        this.resizeObserver = new ResizeObserver(() => this.editor?.layout());
+        this.resizeObserver.observe(container);
         this.setupThemeObserver();
     }
 
@@ -107,6 +125,8 @@ export class LyraMonacoWidget extends LitElement {
     }
 
     public dispose() {
+        this.resizeObserver?.disconnect();
+        this.resizeObserver = undefined;
         this.themeObserver?.disconnect();
         this.themeObserver = undefined;
         this.model?.dispose();
@@ -117,6 +137,14 @@ export class LyraMonacoWidget extends LitElement {
 
     public getEditor(): monaco.editor.IStandaloneCodeEditor | undefined {
         return this.editor;
+    }
+
+    public getContentHeight(): number {
+        return this.editor?.getContentHeight() ?? 0;
+    }
+
+    public layout(): void {
+        this.editor?.layout();
     }
 
     public getModel(): monaco.editor.ITextModel | undefined {
@@ -182,6 +210,8 @@ export class LyraMonacoWidget extends LitElement {
             position: relative;
             width: 100%;
             height: 100%;
+            min-height: 0;
+            overflow: hidden;
         }
         div.monaco-editor-container {
             position: absolute;
@@ -189,6 +219,7 @@ export class LyraMonacoWidget extends LitElement {
             left: 0;
             right: 0;
             bottom: 0;
+            overflow: hidden;
         }
     `;
 }

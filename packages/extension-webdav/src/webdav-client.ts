@@ -67,8 +67,14 @@ export class WebDAVClient {
         return await response.blob();
     }
 
-    async putFile(path: string, content: string | Blob | ArrayBuffer): Promise<void> {
-        const body = typeof content === 'string' ? new Blob([content]) : content;
+    async putFile(path: string, content: string | Blob | ArrayBuffer | ReadableStream): Promise<void> {
+        let body: Blob | ArrayBuffer | string;
+        if (content instanceof ReadableStream) {
+            const res = new Response(content);
+            body = await res.blob();
+        } else {
+            body = typeof content === 'string' ? new Blob([content]) : content;
+        }
         const response = await fetch(new URL(path, this.baseUrl).href, {
             method: 'PUT',
             headers: this.buildHeaders({

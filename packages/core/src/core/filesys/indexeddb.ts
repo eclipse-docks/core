@@ -329,6 +329,10 @@ export class IDBFileResource extends File {
         } else if (typeof contents === 'string') {
             mimeType = 'text/plain';
             blob = new Blob([contents], { type: mimeType });
+        } else if (contents instanceof ReadableStream) {
+            const response = new Response(contents);
+            blob = await response.blob();
+            mimeType = response.headers.get('content-type') ?? undefined;
         } else {
             const text = String(contents ?? '');
             mimeType = 'text/plain';

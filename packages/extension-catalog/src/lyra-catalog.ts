@@ -93,8 +93,16 @@ export class LyraCatalog extends LyraPart {
     }
 
     onItemDblClicked(event: Event) {
-        const url = (event.currentTarget as any).model.data.url;
-        if (url) this.executeCommand("wget", { url });
+        const item = event.currentTarget as HTMLElement & { model?: TreeNode; expanded?: boolean };
+        const node = item?.model;
+        if (!node) return;
+        if (node.data?.url) {
+            this.executeCommand("wget", { url: node.data.url });
+            return;
+        }
+        if (!node.leaf && "expanded" in item) {
+            item.expanded = !item.expanded;
+        }
     }
 
     private runWgetForSelection() {

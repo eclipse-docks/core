@@ -19,7 +19,7 @@
     "publish:packages": "./scripts/publish-packages.sh",
     "dev": "npm run dev -w @eclipse-lyra/app",
     "build": "npm run build -w @eclipse-lyra/core && npm run build:extensions",
-    "build:app": "npm run build -w @eclipse-lyra/app",
+    "build:app": "npm run build && npm run build -w @eclipse-lyra/app",
     "preview": "npm run preview -w @eclipse-lyra/app",
     "type-check": "npm run type-check -w @eclipse-lyra/core",
     "test": "npm run test -w @eclipse-lyra/core",

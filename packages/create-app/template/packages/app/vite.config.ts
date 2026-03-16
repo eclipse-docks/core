@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import mkcert from 'vite-plugin-mkcert';
 import crossOriginIsolation from 'vite-plugin-cross-origin-isolation';
 import { resolveDepVersionsPlugin } from '@eclipse-lyra/core/vite-plugin-resolve-deps';
+import { localAliasesPlugin } from '@eclipse-lyra/core/vite-plugin-local-aliases';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -14,7 +15,17 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@eclipse-lyra/core'],
   },
-  plugins: [resolveDepVersionsPlugin(), mkcert(), crossOriginIsolation()],
+  plugins: [
+    resolveDepVersionsPlugin(),
+    localAliasesPlugin({
+      useSrcInDev: true,
+      patterns: [
+        { folderPrefix: 'extension-' },
+      ],
+    }),
+    mkcert(),
+    crossOriginIsolation(),
+  ],
   esbuild: {
     tsconfigRaw: {
       compilerOptions: {

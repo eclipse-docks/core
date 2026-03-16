@@ -11,83 +11,85 @@
 
 # Eclipse Lyra
 
-Eclipse Lyra provides a TypeScript- and Lit-based web framework for building extensible developer tools and applications. It includes an extension system with lifecycle management, a declarative way to add UI elements (such as tabs, toolbars, and commands), a context-aware command system usable by both users and AI agents, workspace and file-system abstractions, and services for editors and tasks, with optional components such as AI chat, notebooks, a terminal, and the Monaco editor.
+Eclipse Lyra is a runtime web platform for building modular, extensible desktop- and dashboard-style web applications, running fully in the browser and integrating with any existing backend.
 
 **Demo app:** [https://app.kispace.de](https://app.kispace.de)
 
 **Docs:** [https://app.kispace.de/docs/](https://app.kispace.de/docs/)
 
-**DeepWiki Docs**: [talk to the code](https://deepwiki.com/eclipse-lyra/core)
-
----
-## Used by
-
-Downstream domain-specific apps:
-
-**geo!space** — geospatial workflows (WebGIS): [https://geo.kispace.de](https://geo.kispace.de)
-
-**neuro!space** — neuroimaging workflows: [https://neuro.kispace.de](https://neuro.kispace.de)
+**DeepWiki (interactive docs):** [talk to the code and architecture](https://deepwiki.com/eclipse-lyra/core) — the recommended way to explore internals and ask questions about the codebase.
 
 ---
 
-## Screenshots
+## How to get started
 
-**IDE layout (dark)**  
-![IDE layout, dark theme](docs/screenshots/ide-dark.png)
+### Create a new Lyra app (recommended)
 
-**Dashboard (dark)**  
-![Dashboard, dark theme](docs/screenshots/dashboard-dark.png)
+Use the official scaffolder to create a new Eclipse Lyra app (monorepo with app + example extension):
 
-**Dashboard (light)**  
-![Dashboard, light theme](docs/screenshots/dashboard-lite.png)
-
-**Extensions**  
-![Extensions](docs/screenshots/extensions.png)
-
-**Notebook with Python**  
-![Notebook with Python](docs/screenshots/notebook-python.png)
-
----
-
-## Architecture
-
-### Layers
-
+```bash
+npm create @eclipse-lyra/app my-app
+cd my-app
+npm run dev
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Applications (packages/app, or custom apps)                 │
-│  – AppDefinition: extensions, optional layout (id or { id, props }) │
-│  – Layouts registered via LayoutContribution (system.layouts)│
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  App Loader (core)                                          │
-│  – App registration & lifecycle  – Extension enable/disable │
-│  – Layout resolution & preferred layout  – Render layout root│
-└─────────────────────────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-┌───────────────┐   ┌─────────────────┐   ┌───────────────┐
-│  Extensions   │   │  Contributions   │   │   Commands    │
-│  Registry     │   │  Registry       │   │   Registry    │
-│  (per-app)    │   │  (tabs, toolbars)│   │   (handlers)  │
-└───────────────┘   └─────────────────┘   └───────────────┘
-        │                     │                     │
-        └─────────────────────┼─────────────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  UI (core)                                                   │
-│  lyra-standard-layout · lyra-tabs · lyra-toolbar · lyra-filebrowser · …    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Core services                                               │
-│  Workspace · Settings · Editor registry · Tasks · Events · DI│
-└─────────────────────────────────────────────────────────────┘
+
+This gives you a project with:
+
+- `packages/app` — your Lyra app (configure logo, layout, and extensions).
+- `packages/example-extension` — a sample extension that adds a view to the left sidebar.
+
+Common places to start customizing:
+
+- Update app metadata, logo, and the extensions list in the app entry file under `packages/app/src/`.
+- Use `packages/example-extension` as a template for your own domain-specific extensions.
+
+### Explore and learn the internals
+
+- Use **DeepWiki** at [https://deepwiki.com/eclipse-lyra/core](https://deepwiki.com/eclipse-lyra/core) to ask questions about architecture, services, and extension points directly against the codebase.
+- Browse the docs at [https://app.kispace.de/docs/](https://app.kispace.de/docs/) for conceptual overviews and examples.
+
+### Advanced: work on this repo
+
+If you want to work on the Lyra core itself or run the default example app from this repository:
+
+```bash
+git clone https://github.com/eclipse-lyra/core.git
+cd core
+npm install
+npm run dev
 ```
+
+This builds core, then starts the default app (Vite dev server). Open the URL shown in the terminal (e.g. `http://localhost:5173`).
+
+To build for production:
+
+```bash
+npm run build        # build core only
+npm run build:app    # build the default app (depends on core)
+```
+
+---
+
+## Architecture (for app authors)
+
+At a high level, a downstream Lyra app wires together an app definition, extensions, and the core services and UI components.
+
+```mermaid
+flowchart TD
+  app["DownstreamApp (packages/app)"] --> appLoader["AppLoader"]
+  app --> extensions["Extensions (packages/extension-*)"]
+  appLoader --> registries["Registries (extensions, contributions, commands)"]
+  registries --> ui["UI Components (Lit + WebAwesome)"]
+  ui --> coreServices["Core Services (workspace, settings, editors, tasks)"]
+```
+
+- **App** — defines which extensions are enabled, which layout to use, and high-level contributions (tabs, toolbars, views).
+- **Extensions** — feature bundles that register views, commands, and services for your domain.
+- **Registries** — keep track of extensions, UI contributions, and commands so they can be enabled, disabled, or remapped per app.
+- **UI components** — Lit-based `lyra-*` components plus WebAwesome UI primitives.
+- **Core services** — workspace, settings, editors, tasks, events, and dependency injection.
+
+For a deeper, more detailed tour of the architecture (including concepts like contribution remapping), use **DeepWiki** on the `eclipse-lyra/core` project or see the docs under `docs/concepts/`.
 
 ### Monorepo layout
 
@@ -109,53 +111,16 @@ Downstream domain-specific apps:
 
 ---
 
-## How to get started
-
-### Prerequisites
-
-- Node.js 18+
-- npm or pnpm
-
-### Run the default app
-
-```bash
-git clone https://github.com/eclipse-lyra/core.git
-cd core
-npm install
-npm run dev
-```
-
-This builds core, then starts the default app (Vite dev server). Open the URL shown in the terminal (e.g. `http://localhost:5173`).
-
-### Build for production
-
-```bash
-npm run build        # build core only
-npm run build:app    # build the default app (depends on core)
-```
-
-### Create your own app
-
-Use the official scaffolder to create a new Eclipse Lyra app (monorepo with app + example extension):
-
-```bash
-npm create @eclipse-lyra/app my-app
-cd my-app
-npm run dev
-```
-
-This creates a project with **`packages/app`** (the Lyra app) and **`packages/example-extension`** (a sample extension that adds a view to the left sidebar). Customize the app in `packages/app/src/main.ts` (extensions list, logo) and use the example extension as a reference for adding your own extensions.
-
----
-
 ## Technology stack
 
-- **Lit** — Web components (core and extensions)
-- **TypeScript** — Typed API
-- **WebAwesome** — UI primitives
-- **Vite** — Build and dev server
+Eclipse Lyra is built on a lightweight, browser-native stack:
 
-Other extensions add: Monaco editor, Pyodide, WebLLM, WebMCP, RxDB, Xenova transformers, etc.
+- **Lit** — Web components for core and extensions ([Lit docs](https://lit.dev/)).
+- **WebAwesome** — UI primitives and theming.
+- **TypeScript** — Typed public APIs.
+- **Vite** — Build and dev server.
+
+Optional extensions add capabilities like the Monaco editor, Pyodide, WebLLM, WebMCP, RxDB, and Xenova transformers.
 
 ---
 
@@ -186,14 +151,6 @@ For those comparing frameworks, here is how Eclipse Lyra lines up with Angular, 
 | **Layouts / App modes** | Layout contributions (slot `system.layouts`); default `standard` (IDE); optional layouts (e.g. dashboard); layout switcher in toolbar | App shell + router-outlet | App shell + router; layout is component tree | App shell + router; layout is component tree |
 | **Primary use case** | IDE-like apps and dashboard-like apps (tabs, workspace, editors, views, AI, extensions) | Enterprise SPAs, large teams | SPAs, dashboards, content apps | SPAs, progressive enhancement |
 | **License** | EPL-2.0 | MIT | MIT | MIT |
-
-### Summary
-
-- **Where Eclipse Lyra aligns**: TypeScript, components, state (signals), i18n, testing (Vitest), Vite build, theming (via WebAwesome), DI, strong typing; **browser-native stack** (Lit, standard DOM, Web APIs) and **lightweight runtime footprint**.
-- **Where Eclipse Lyra differs by design**: No URL routing (IDE-style navigation); no built-in forms/HTTP; client-only (no SSR); focus on IDE-like experiences and extensions rather than content-focused SPAs.
-- **Unique to Eclipse Lyra**: Focus on **browser-native, lightweight runtime**; contribution targets (sidebars, toolbars, editor area), command registry + keybindings, extension registry with enable/disable at runtime; **extension marketplace** — install external extensions from catalog URLs; workspace/service layer; **layout contributions** (slot `system.layouts`) with preferred layout and toolbar layout switcher (IDE vs dashboard or custom shells); first-class IDE UX (tabs, resizable layout, file browser, Monaco) and dashboard-style views.
-
----
 
 ## Repository and license
 

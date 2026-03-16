@@ -74,3 +74,5 @@ registerIconLibrary('lyra', {
         svg.setAttribute('stroke', 'currentColor');
     }
 });
+
+export { registerIconLibrary };

@@ -12,9 +12,6 @@ const packagesDir = path.resolve(__dirname, '..');
 export default defineConfig({
   root: __dirname,
   base: process.env.VITE_BASE_PATH || '/',
-  optimizeDeps: {
-    exclude: ['@electric-sql/pglite'],
-  },
   server: {
     watch: {
       ignored: ['**/node_modules/**', '**/dist/**'],
@@ -56,13 +53,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-      },
-      output: {
-        manualChunks(id) {
-          if (id.includes('monaco-editor')) return 'monaco';
-          if (id.includes('@electric-sql/pglite') || id.includes('pglite')) return 'pglite';
-          if (id.includes('node_modules')) return 'vendor';
-        },
       },
     },
   },

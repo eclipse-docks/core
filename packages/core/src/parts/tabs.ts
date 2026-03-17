@@ -351,10 +351,16 @@ export class LyraTabs extends LyraContainer {
         const contentDiv = tabPanel.querySelector('.tab-content');
         const part = contentDiv?.firstElementChild;
         if (!(part instanceof LyraPart)) return;
+
+        // Always update the active part to reflect current focus
         activePartSignal.set(null as unknown as LyraPart);
-        activeEditorSignal.set(null as unknown as LyraPart);
         activePartSignal.set(part);
+
+        // Only update the active editor when an editor in the main editor area changes.
+        // Do NOT clear the existing active editor when non-editor parts gain focus so
+        // commands depending on the active editor keep working while other views are active.
         if (this.containerId === EDITOR_AREA_MAIN && part.isEditor) {
+            activeEditorSignal.set(null as unknown as LyraPart);
             activeEditorSignal.set(part);
         }
     }

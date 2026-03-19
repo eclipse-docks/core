@@ -151,6 +151,10 @@ async function idbDeleteTree(rootId: string, rootPath: string): Promise<void> {
     });
 }
 
+async function idbDeleteRoot(rootId: string): Promise<void> {
+    await idbDeleteTree(rootId, '');
+}
+
 async function idbRenameTree(rootId: string, oldPath: string, newPath: string): Promise<void> {
     const db = await getWorkspaceIDB();
     const tx = db.transaction(IDB_WORKSPACE_STORE_NAME, 'readwrite');
@@ -436,8 +440,10 @@ export class IDBDirectoryResource extends Directory {
             throw new Error('No path provided');
         }
 
+        const isDirectoryIntent = path.endsWith('/');
         const segments = path.split('/').filter(s => s.trim());
         let currentDir: IDBDirectoryResource = this;
+        let workspaceChanged = false;
 
         for (let i = 0; i < segments.length; i++) {
             const segment = segments[i];
@@ -453,18 +459,25 @@ export class IDBDirectoryResource extends Directory {
                     return null;
                 }
 
-                if (isLast) {
+                if (isLast && !isDirectoryIntent) {
                     await idbPut(rootId, candidatePath, { type: 'file', content: new Blob([]) });
-                    publish(TOPIC_WORKSPACE_CHANGED, workspaceService.getWorkspaceSync() ?? this.getWorkspace());
+                    workspaceChanged = true;
                     return new IDBFileResource(candidatePath, currentDir);
                 }
 
                 await idbPut(rootId, candidatePath, { type: 'dir' });
+                workspaceChanged = true;
                 currentDir = new IDBDirectoryResource(candidatePath, currentDir);
                 continue;
             }
 
             if (isLast) {
+                if (isDirectoryIntent) {
+                    if (entry.type !== 'dir') {
+                        return null;
+                    }
+                    return new IDBDirectoryResource(candidatePath, currentDir);
+                }
                 if (entry.type === 'dir') {
                     return new IDBDirectoryResource(candidatePath, currentDir);
                 }
@@ -476,6 +489,10 @@ export class IDBDirectoryResource extends Directory {
             }
 
             currentDir = new IDBDirectoryResource(candidatePath, currentDir);
+        }
+
+        if (workspaceChanged) {
+            publish(TOPIC_WORKSPACE_CHANGED, workspaceService.getWorkspaceSync() ?? this.getWorkspace());
         }
 
         return currentDir;
@@ -596,5 +613,17 @@ workspaceService.registerContribution({
         return null;
     }
 });
+
+/**
+ * Deletes all persisted IndexedDB workspace data for the provided root.
+ * Returns true when deletion was performed, false when the directory is not an IndexedDB root.
+ */
+export async function deleteIndexedDbWorkspaceData(directory: Directory): Promise<boolean> {
+    if (!(directory instanceof IDBRootDirectory)) {
+        return false;
+    }
+    await idbDeleteRoot(directory.getRootId());
+    return true;
+}
 
 

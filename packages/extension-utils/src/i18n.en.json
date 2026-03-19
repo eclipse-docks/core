@@ -7,6 +7,8 @@
   "CMD_UNZIP_DESC": "Extract a zip archive from the workspace.",
   "CMD_P12SPLIT_NAME": ".p12 file splitter",
   "CMD_P12SPLIT_DESC": "Split a .p12 certificate file into separate PEM files.",
+  "CREATE_FILE": "Create File...",
+  "CREATE_FOLDER": "Create Folder...",
   "RENAME": "Rename",
   "DELETE": "Delete"
 }

@@ -32,6 +32,10 @@ const WORKSPACE_CHANGED_DEBOUNCE_MS = 250;
 @customElement('lyra-filebrowser')
 export class LyraFileBrowser extends LyraPart {
 
+    private static readonly SETTINGS_VERSION = 1;
+    private static readonly SETTINGS_KEY_SELECTED_PATH = 'selectedPath';
+    private settingsLoaded = false;
+
     @state()
     private root?: TreeNode;
     @state()
@@ -142,9 +146,75 @@ export class LyraFileBrowser extends LyraPart {
         this.workspaceDir = workspaceDir
         if (!workspaceDir) {
             this.root = undefined
+            if (this.settingsLoaded) {
+                await this.persistSelectedPath(null);
+            }
         } else {
             this.root = await this.resourceToTreeNode(workspaceDir, true, forceRefresh)
+            await this.restoreSelectionFromSettings();
         }
+    }
+
+    private async persistSelectedPath(path: string | null) {
+        await this.setDialogSetting({
+            v: LyraFileBrowser.SETTINGS_VERSION,
+            [LyraFileBrowser.SETTINGS_KEY_SELECTED_PATH]: path
+        });
+    }
+
+    private async restoreSelectionFromSettings() {
+        if (this.settingsLoaded) {
+            return;
+        }
+        this.settingsLoaded = true;
+
+        const persisted = await this.getDialogSetting();
+        const selectedPath = persisted?.[LyraFileBrowser.SETTINGS_KEY_SELECTED_PATH];
+        if (typeof selectedPath !== 'string' || selectedPath.length === 0) {
+            return;
+        }
+
+        await this.updateComplete;
+
+        const tree = this.treeRef.value?.querySelector('wa-tree') as any | null;
+        if (!tree) return;
+
+        if (typeof selectedPath === 'string' && selectedPath.length > 0) {
+            const items = Array.from(tree.querySelectorAll('wa-tree-item')) as Array<any>;
+            const match = items.find((item) => {
+                const data = item?.model?.data as Resource | undefined;
+                const path = data?.getWorkspacePath?.();
+                return typeof path === 'string' && path === selectedPath;
+            });
+            if (match) {
+                await this.selectTreeItem(match);
+                return;
+            }
+        }
+
+        await this.selectFirstConnectedFolder(tree);
+    }
+
+    private async selectTreeItem(item: any) {
+        let parent = (item.parentElement as HTMLElement | null)?.closest?.('wa-tree-item') as any | null;
+        while (parent) {
+            parent.expanded = true;
+            parent = (parent.parentElement as HTMLElement | null)?.closest?.('wa-tree-item') as any | null;
+        }
+
+        item.selected = true;
+        await this.syncTreeSelection();
+    }
+
+    private async selectFirstConnectedFolder(tree: any) {
+        const topLevelItems = Array.from(tree.children).filter(
+            (child) => child instanceof HTMLElement && child.tagName.toLowerCase() === 'wa-tree-item'
+        ) as Array<any>;
+        if (topLevelItems.length === 0) return;
+
+        const firstFolderItem = topLevelItems.find((item) => item?.model?.data instanceof Directory);
+        const fallbackItem = firstFolderItem ?? topLevelItems[0];
+        await this.selectTreeItem(fallbackItem);
     }
 
     private async syncTreeSelection() {
@@ -350,6 +420,12 @@ export class LyraFileBrowser extends LyraPart {
             const node: TreeNode = selection[0].model
             const data = node.data
             activeSelectionSignal.set(data)
+            const path = (data as any)?.getWorkspacePath?.();
+            if (typeof path === 'string') {
+                this.persistSelectedPath(path);
+            } else {
+                this.persistSelectedPath(null);
+            }
             if (data instanceof File) {
                 this.fileEditorOptions = editorRegistry.getEditorOptionsForInput(data)
             } else {
@@ -357,11 +433,34 @@ export class LyraFileBrowser extends LyraPart {
             }
         } else {
             activeSelectionSignal.set(undefined)
+            this.persistSelectedPath(null);
             this.fileEditorOptions = []
         }
     }
 
     private currentDropTarget?: HTMLElement;
+
+    private getDirectoryDropTargetFromEvent(e: DragEvent): Directory | undefined {
+        if (!this.workspaceDir) return undefined;
+
+        const target = e.target as HTMLElement;
+        const treeItem = target.closest('wa-tree-item');
+        if (!treeItem) {
+            const connectedRoots = this.root?.children ?? [];
+            if (connectedRoots.length !== 1) {
+                return undefined;
+            }
+            const singleRootResource = connectedRoots[0]?.data;
+            return singleRootResource instanceof Directory ? singleRootResource : undefined;
+        }
+
+        const node: TreeNode | undefined = (treeItem as any).model;
+        const resource = node?.data as Resource | undefined;
+        if (resource instanceof Directory) {
+            return resource;
+        }
+        return undefined;
+    }
 
     private setupDragAndDrop() {
         const treeElement = this.treeRef.value;
@@ -374,6 +473,14 @@ export class LyraFileBrowser extends LyraPart {
             const isOsFileDrop = types.includes('Files');
             const isWorkspaceDrop = types.includes('application/x-workspace-file');
             if (!isOsFileDrop && !isWorkspaceDrop) return;
+
+            const targetDir = this.getDirectoryDropTargetFromEvent(e);
+            if (!targetDir) {
+                this.currentDropTarget?.classList.remove('drop-target');
+                this.currentDropTarget = undefined;
+                treeElement.classList.remove('drag-over');
+                return;
+            }
 
             e.preventDefault();
             if (e.dataTransfer) {
@@ -389,7 +496,13 @@ export class LyraFileBrowser extends LyraPart {
             const target = e.target as HTMLElement;
             const treeItem = target.closest('wa-tree-item') as HTMLElement;
 
-            if (treeItem && treeItem !== this.currentDropTarget) {
+            if (!treeItem) {
+                this.currentDropTarget?.classList.remove('drop-target');
+                this.currentDropTarget = undefined;
+                return;
+            }
+
+            if (treeItem !== this.currentDropTarget) {
                 this.currentDropTarget?.classList.remove('drop-target');
                 this.currentDropTarget = treeItem;
                 treeItem.classList.add('drop-target');
@@ -403,6 +516,9 @@ export class LyraFileBrowser extends LyraPart {
             const isOsFileDrop = types.includes('Files');
             const isWorkspaceDrop = types.includes('application/x-workspace-file');
             if (!isOsFileDrop && !isWorkspaceDrop) return;
+
+            const targetDir = this.getDirectoryDropTargetFromEvent(e);
+            if (!targetDir) return;
 
             e.preventDefault();
             treeElement.classList.add('drag-over');
@@ -428,7 +544,8 @@ export class LyraFileBrowser extends LyraPart {
 
             if (!e.dataTransfer || !this.workspaceDir) return;
 
-            const targetDir = await this.getDropTarget(e);
+            const targetDir = this.getDirectoryDropTargetFromEvent(e);
+            if (!targetDir) return;
             const types = e.dataTransfer.types;
 
             if (types.includes('Files')) {
@@ -453,26 +570,6 @@ export class LyraFileBrowser extends LyraPart {
         treeElement.addEventListener('dragenter', dragEnterHandler);
         treeElement.addEventListener('dragleave', dragLeaveHandler);
         treeElement.addEventListener('drop', dropHandler);
-    }
-
-    private async getDropTarget(e: DragEvent): Promise<Directory> {
-        const target = e.target as HTMLElement;
-        const treeItem = target.closest('wa-tree-item');
-
-        if (treeItem) {
-            const node: TreeNode = (treeItem as any).model;
-            const resource = node.data as Resource;
-
-            if (resource instanceof Directory) {
-                return resource;
-            }
-            const parent = resource.getParent();
-            if (parent) {
-                return parent;
-            }
-        }
-
-        return this.workspaceDir!;
     }
 
     private async handleWorkspaceDrop(e: DragEvent, targetDir: Directory) {

@@ -1,9 +1,9 @@
-import {registerAll, type ExecutionContext} from "../core/commandregistry";
-import {File, workspaceService, Directory} from "../core/filesys";
-import {toastError, toastInfo} from "../core/toast";
-import {activeSelectionSignal} from "../core/appstate";
-import {editorRegistry, EditorContentProvider} from "../core/editorregistry";
-import logger from "../core/logger";
+import { activeSelectionSignal } from "../core/appstate";
+import { registerAll, type ExecutionContext } from "../core/commandregistry";
+import { EditorContentProvider, editorRegistry } from "../core/editorregistry";
+import { Directory, File, deleteIndexedDbWorkspaceData, workspaceService } from "../core/filesys";
+import { toastError, toastInfo } from "../core/toast";
+import { confirmDialog } from "../dialogs";
 
 async function getWorkspaceAndPath(params: any, requirePath: boolean = true): Promise<{workspace: Directory, path: string} | null> {
     const workspace = await workspaceService.getWorkspace()
@@ -121,6 +121,17 @@ registerAll({
                 return
             }
             try {
+                const folderInfo = await workspaceService.getFolderInfoForDirectory(selection);
+                if (folderInfo?.type === 'indexeddb') {
+                    const deleteData = await confirmDialog(
+                        `Also delete "${folderInfo.name}" from browser storage?\n\nIf not deleted, the folder data and blobs remain in IndexedDB.`
+                    );
+                    if (!deleteData) {
+                        return;
+                    }
+                    await deleteIndexedDbWorkspaceData(selection);
+                    toastInfo(`Deleted IndexedDB data for ${folderInfo.name}.`);
+                }
                 await workspaceService.disconnectFolder(selection)
             } catch (err: any) {
                 toastError(err.message)

@@ -4,4 +4,17 @@ import "./global";
 import "./js";
 import "./open-view-as-editor";
 import "./version-info";
+import "./cat";
+import "./exists";
+import "./filebrowser-contributions";
+import "./head";
+import "./ls";
+import "./mkdir";
+import "./mv";
+import "./rm";
+import "./tail";
+import "./touch";
+import "./unzip";
+import "./wc";
+import "./wget";
 

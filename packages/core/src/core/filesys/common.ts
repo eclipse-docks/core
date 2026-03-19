@@ -88,6 +88,16 @@ export interface FileContentsOptions {
 }
 
 export interface GetResourceOptions {
+    /**
+     * When true, missing path segments MUST be created.
+     *
+     * Creation intent is encoded in the path:
+     * - `path` without trailing slash => file intent for the last segment
+     * - `path/` with trailing slash   => directory intent for the last segment
+     *
+     * Backend implementations MUST preserve this behavior so callers (e.g. `mkdir`)
+     * can force directory creation consistently across all backends.
+     */
     create?: boolean
 }
 
@@ -102,6 +112,17 @@ export abstract class File extends Resource {
 export abstract class Directory extends Resource {
     public abstract listChildren(forceRefresh: boolean): Promise<Resource[]>;
 
+    /**
+     * Resolve a resource relative to this directory.
+     *
+     * Contract for backend implementations:
+     * - Empty/invalid input should throw (or return null by backend convention).
+     * - With `{ create: true }`, missing segments must be created.
+     * - Trailing slash (`path.endsWith('/')`) means directory intent for final segment.
+     * - No trailing slash means file intent for final segment when creation is needed.
+     * - If the resolved/created resource type conflicts with intent, return null.
+     * - If creation mutates workspace contents, publish `TOPIC_WORKSPACE_CHANGED`.
+     */
     public abstract getResource(path: string, options?: GetResourceOptions): Promise<Resource | null>;
 
     public abstract touch(): void;

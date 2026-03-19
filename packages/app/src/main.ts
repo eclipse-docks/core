@@ -40,7 +40,6 @@ appLoaderService.registerApp(
     },
     releaseHistory: fetchReleases,
     extensions: [
-      '@eclipse-lyra/extension-utils',
       '@eclipse-lyra/extension-command-palette',
       '@eclipse-lyra/extension-command-shell',
       '@eclipse-lyra/extension-catalog',

@@ -135,8 +135,10 @@ export class WebDAVDirectoryResource extends Directory {
             throw new Error("No path provided");
         }
 
+        const isDirectoryIntent = path.endsWith("/");
         const segments = path.split("/").filter(s => s.trim());
         let currentResource: Resource = this;
+        let workspaceChanged = false;
 
         for (let i = 0; i < segments.length; i++) {
             const segment = segments[i];
@@ -153,8 +155,8 @@ export class WebDAVDirectoryResource extends Directory {
                 if (!next && options?.create) {
                     const fullPath = this.buildPath(currentResource.resource.href, segment);
                     
-                    // If not the last segment, create directory
-                    if (i < segments.length - 1) {
+                    // If not the last segment (or directory intent), create directory.
+                    if (i < segments.length - 1 || isDirectoryIntent) {
                         await this.client.createDirectory(fullPath);
                         const newResource: WebDAVResource = {
                             href: fullPath,
@@ -163,6 +165,7 @@ export class WebDAVDirectoryResource extends Directory {
                         };
                         next = new WebDAVDirectoryResource(this.client, newResource, currentResource);
                         currentResource.children.set(segment, next);
+                        workspaceChanged = true;
                     } else {
                         // Last segment - create file
                         await this.client.putFile(fullPath, '');
@@ -174,8 +177,7 @@ export class WebDAVDirectoryResource extends Directory {
                         };
                         next = new WebDAVFileResource(this.client, newResource, currentResource);
                         currentResource.children.set(segment, next);
-                        publish(TOPIC_WORKSPACE_CHANGED, workspaceService.getWorkspaceSync() ?? this.getWorkspace());
-                        return next;
+                        workspaceChanged = true;
                     }
                 }
 
@@ -183,8 +185,16 @@ export class WebDAVDirectoryResource extends Directory {
                     return null;
                 }
 
+                if (i === segments.length - 1 && isDirectoryIntent && next instanceof WebDAVFileResource) {
+                    return null;
+                }
+
                 currentResource = next;
             }
+        }
+
+        if (workspaceChanged) {
+            publish(TOPIC_WORKSPACE_CHANGED, workspaceService.getWorkspaceSync() ?? this.getWorkspace());
         }
 
         return currentResource;

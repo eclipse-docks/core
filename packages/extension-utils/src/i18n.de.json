@@ -7,6 +7,8 @@
   "CMD_UNZIP_DESC": "Ein Zip-Archiv im Arbeitsbereich entpacken.",
   "CMD_P12SPLIT_NAME": ".p12-Datei aufteilen",
   "CMD_P12SPLIT_DESC": "Eine .p12-Zertifikatsdatei in separate PEM-Dateien aufteilen.",
+  "CREATE_FILE": "Datei erstellen...",
+  "CREATE_FOLDER": "Ordner erstellen...",
   "RENAME": "Umbenennen",
   "DELETE": "Löschen"
 }

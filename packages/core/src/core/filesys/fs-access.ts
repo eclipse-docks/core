@@ -61,7 +61,7 @@ export class FileSysFileHandleResource extends File {
         }
     }
 
-    async saveContents(contents: any, _options?: FileContentsOptions) {
+    async saveContents(contents: any, _options?: FileContentsOptions): Promise<void> {
         const writable = await this.fileHandle.createWritable();
 
         if (contents && typeof contents.pipeTo === 'function') {
@@ -74,6 +74,7 @@ export class FileSysFileHandleResource extends File {
                 await writer.close();
             }
         }
+        publish(TOPIC_WORKSPACE_CHANGED, workspaceService.getWorkspaceSync() ?? this.getWorkspace());
     }
 
     async copyTo(targetPath: string): Promise<void> {
@@ -179,18 +180,12 @@ export class FileSysDirHandleResource extends Directory {
         if (!path) {
             throw new Error("No path provided");
         }
-        const segments = path.split("/");
+        const segments = path.split("/").filter(s => s.trim());
         let currentResource: Resource = this;
         let workspaceChanged = false;
         try {
             for (let i = 0; i < segments.length; i++) {
-                let segment = segments[i];
-                if (segment) {
-                    segment = segment.trim();
-                }
-                if (!segment) {
-                    break;
-                }
+                const segment = segments[i].trim();
                 if (currentResource instanceof FileSysDirHandleResource) {
                     await currentResource.listChildren();
                     if (!currentResource.files) {
@@ -235,6 +230,8 @@ export class FileSysDirHandleResource extends Directory {
                     } else {
                         currentResource = next;
                     }
+                } else {
+                    return null;
                 }
             }
         } finally {

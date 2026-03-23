@@ -462,6 +462,7 @@ export class IDBDirectoryResource extends Directory {
                 if (isLast && !isDirectoryIntent) {
                     await idbPut(rootId, candidatePath, { type: 'file', content: new Blob([]) });
                     workspaceChanged = true;
+                    publish(TOPIC_WORKSPACE_CHANGED, workspaceService.getWorkspaceSync() ?? this.getWorkspace());
                     return new IDBFileResource(candidatePath, currentDir);
                 }
 

@@ -1,1 +1,0 @@
-var e=`Befehle ausführen`,t=`Geben Sie einen Befehl ein und drücken Sie Enter.`,n=`Löschen`,r={COMMANDSHELL_PROMPT:e,COMMANDSHELL_EMPTY:t,COMMANDSHELL_CLEAR:n};export{n as COMMANDSHELL_CLEAR,t as COMMANDSHELL_EMPTY,e as COMMANDSHELL_PROMPT,r as default};

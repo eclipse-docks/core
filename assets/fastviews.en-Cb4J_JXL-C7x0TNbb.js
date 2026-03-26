@@ -1,1 +1,0 @@
-var e=`Fast Views`,t={FAST_VIEWS:e};export{e as FAST_VIEWS,t as default};

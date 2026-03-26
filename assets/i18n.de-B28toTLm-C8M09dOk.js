@@ -1,1 +1,0 @@
-var e=`Befehlsshell`,t=`Shell-ähnliche Oberfläche zum Ausführen von Framework-Befehlen`,n={EXT_COMMANDSHELL_NAME:e,EXT_COMMANDSHELL_DESC:t};export{t as EXT_COMMANDSHELL_DESC,e as EXT_COMMANDSHELL_NAME,n as default};

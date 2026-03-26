@@ -1,1 +1,0 @@
-var e=`Run commands`,t=`Type a command and press Enter. Examples: open_editor path=test.txt, touch xy.txt && open_editor xy.txt`,n=`Clear`,r={COMMANDSHELL_PROMPT:e,COMMANDSHELL_EMPTY:t,COMMANDSHELL_CLEAR:n};export{n as COMMANDSHELL_CLEAR,t as COMMANDSHELL_EMPTY,e as COMMANDSHELL_PROMPT,r as default};

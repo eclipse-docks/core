@@ -1,1 +1,0 @@
-var e=`Active Tasks`,t=`Active tasks: {taskCount}. Click to view details.`,n={ACTIVE_TASKS:e,ACTIVE_TASKS_TITLE:t};export{e as ACTIVE_TASKS,t as ACTIVE_TASKS_TITLE,n as default};

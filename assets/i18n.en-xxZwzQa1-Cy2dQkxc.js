@@ -1,0 +1,1 @@
+var e=`Linux terminal`,t=`Linux terminal view`,n={EXT_LINUXTERMINAL_NAME:e,EXT_LINUXTERMINAL_DESC:t};export{t as EXT_LINUXTERMINAL_DESC,e as EXT_LINUXTERMINAL_NAME,n as default};

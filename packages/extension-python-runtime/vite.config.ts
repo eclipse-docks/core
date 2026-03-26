@@ -33,7 +33,7 @@ export default defineConfig({
       formats: ['es'],
       fileName: (_, name) => `${name}.js`,
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: isExternal,
       output: { format: 'es' },
     },

@@ -10,7 +10,7 @@ const isExternal = (id: string): boolean =>
 export default defineConfig({
   build: {
     lib: { entry: path.resolve(__dirname, 'src/index.ts'), formats: ['es'], fileName: 'index' },
-    rollupOptions: { external: isExternal, output: { format: 'es' } },
+    rolldownOptions: { external: isExternal, output: { format: 'es' } },
     outDir: 'dist',
     sourcemap: true,
     minify: false,

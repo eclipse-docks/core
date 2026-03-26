@@ -45,7 +45,7 @@ export default defineConfig({
       formats: ['es'],
       fileName: (format, entryName) => `${entryName}.js`,
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: isExternal,
       output: {
         preserveModules: false,

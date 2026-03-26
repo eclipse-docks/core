@@ -26,21 +26,13 @@ export default defineConfig({
     mkcert(),
     crossOriginIsolation(),
   ],
-  esbuild: {
-    tsconfigRaw: {
-      compilerOptions: {
-        experimentalDecorators: true,
-        useDefineForClassFields: false,
-      },
-    },
-  },
   worker: {
     format: 'es',
   },
   build: {
     outDir: path.resolve(__dirname, 'dist'),
     assetsInlineLimit: 0,
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
       },

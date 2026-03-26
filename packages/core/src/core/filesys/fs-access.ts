@@ -148,12 +148,13 @@ export class FileSysDirHandleResource extends Directory {
                     const files: ResourceMap = {};
 
                     try {
-                        // @ts-ignore
+                        // @ts-ignore -- TS 6 lib.dom provides `values()` via merged FileSystemDirectoryHandle declarations;
+                        // IDE/lint can miss the merge and falsely report it missing while tsc is correct.
                         for await (const entry of this.dirHandle.values()) {
-                            const isFile = (<FileSystemHandle>entry).kind === "file";
-                            const child = isFile
-                                ? new FileSysFileHandleResource(entry, this)
-                                : new FileSysDirHandleResource(entry, this);
+                            const child =
+                                entry.kind === "file"
+                                    ? new FileSysFileHandleResource(entry, this)
+                                    : new FileSysDirHandleResource(entry, this);
                             files[child.getName()] = child;
                         }
                     } catch (error: any) {

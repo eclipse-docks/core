@@ -21,7 +21,7 @@
     "@eclipse-lyra/core": "*"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.0",
     "vite": "^8.0.0",
     "vite-plugin-dts": "^4.5.4"
   },

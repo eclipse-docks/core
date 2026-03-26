@@ -12,10 +12,9 @@
     "sourceMap": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
-    "baseUrl": ".",
     "paths": {
-      "@eclipse-lyra/core": ["src"],
-      "@eclipse-lyra/core/*": ["src/*"]
+      "@eclipse-lyra/core": ["./src"],
+      "@eclipse-lyra/core/*": ["./src/*"]
     },
     "typeRoots": ["./node_modules/@types"]
   },

@@ -3,6 +3,12 @@ import {
     type TreeContribution,
 } from "@eclipse-lyra/core";
 
+/** Leaf item state: optional filename when URL is not path-shaped (e.g. data: in production bundles). */
+export type CatalogResourceState = {
+    url: string;
+    filename?: string;
+};
+
 export interface CatalogContribution extends TreeContribution {
     items?: CatalogContribution[];
 }

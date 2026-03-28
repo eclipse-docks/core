@@ -11,8 +11,8 @@ const PGLITE_CATALOG: CatalogContribution = {
             icon: "file-lines",
             contributionId: "catalog.pglite.basics",
             items: [
-                { label: "Hello PostgreSQL", icon: "file-code", state: { url: new URL("./catalog/hello-pglite.sql", import.meta.url).href } },
-                { label: "Tables and constraints", icon: "file-code", state: { url: new URL("./catalog/tables-and-constraints.sql", import.meta.url).href } },
+                { label: "Hello PostgreSQL", icon: "file-code", state: { url: new URL("./catalog/hello-pglite.sql", import.meta.url).href, filename: "hello-pglite.sql" } },
+                { label: "Tables and constraints", icon: "file-code", state: { url: new URL("./catalog/tables-and-constraints.sql", import.meta.url).href, filename: "tables-and-constraints.sql" } },
             ],
         },
         {
@@ -20,7 +20,7 @@ const PGLITE_CATALOG: CatalogContribution = {
             icon: "file-lines",
             contributionId: "catalog.pglite.queries",
             items: [
-                { label: "Joins and subqueries", icon: "file-code", state: { url: new URL("./catalog/joins-and-subqueries.sql", import.meta.url).href } },
+                { label: "Joins and subqueries", icon: "file-code", state: { url: new URL("./catalog/joins-and-subqueries.sql", import.meta.url).href, filename: "joins-and-subqueries.sql" } },
             ],
         },
     ],

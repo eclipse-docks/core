@@ -11,7 +11,7 @@ const NOTEBOOK_CATALOG: CatalogContribution = {
             icon: "file-code",
             contributionId: "catalog.notebooks.javascript",
             items: [
-                { label: "JavaScript basics", icon: "lyra jupyter", state: { url: new URL("./catalog/javascript-basics.ipynb", import.meta.url).href } },
+                { label: "JavaScript basics", icon: "lyra jupyter", state: { url: new URL("./catalog/javascript-basics.ipynb", import.meta.url).href, filename: "javascript-basics.ipynb" } },
             ],
         },
         {
@@ -19,7 +19,7 @@ const NOTEBOOK_CATALOG: CatalogContribution = {
             icon: "file-code",
             contributionId: "catalog.notebooks.duckdb",
             items: [
-                { label: "DuckDB in notebooks", icon: "lyra jupyter", state: { url: new URL("./catalog/duckdb-sample.ipynb", import.meta.url).href } },
+                { label: "DuckDB in notebooks", icon: "lyra jupyter", state: { url: new URL("./catalog/duckdb-sample.ipynb", import.meta.url).href, filename: "duckdb-sample.ipynb" } },
             ],
         },
         {
@@ -27,7 +27,7 @@ const NOTEBOOK_CATALOG: CatalogContribution = {
             icon: "file-code",
             contributionId: "catalog.notebooks.pglite",
             items: [
-                { label: "PostgreSQL in notebooks", icon: "lyra jupyter", state: { url: new URL("./catalog/pglite-sample.ipynb", import.meta.url).href } },
+                { label: "PostgreSQL in notebooks", icon: "lyra jupyter", state: { url: new URL("./catalog/pglite-sample.ipynb", import.meta.url).href, filename: "pglite-sample.ipynb" } },
             ],
         },
     ],

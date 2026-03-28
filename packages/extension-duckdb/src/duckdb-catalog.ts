@@ -11,8 +11,8 @@ const DUCKDB_CATALOG: CatalogContribution = {
             icon: "file-lines",
             contributionId: "catalog.duckdb.basics",
             items: [
-                { label: "Hello DuckDB", icon: "file-code", state: { url: new URL("./catalog/hello-duckdb.sql", import.meta.url).href } },
-                { label: "Aggregations and filters", icon: "file-code", state: { url: new URL("./catalog/aggregations.sql", import.meta.url).href } },
+                { label: "Hello DuckDB", icon: "file-code", state: { url: new URL("./catalog/hello-duckdb.sql", import.meta.url).href, filename: "hello-duckdb.sql" } },
+                { label: "Aggregations and filters", icon: "file-code", state: { url: new URL("./catalog/aggregations.sql", import.meta.url).href, filename: "aggregations.sql" } },
             ],
         },
         {
@@ -20,7 +20,7 @@ const DUCKDB_CATALOG: CatalogContribution = {
             icon: "file-lines",
             contributionId: "catalog.duckdb.types",
             items: [
-                { label: "Types and built-in functions", icon: "file-code", state: { url: new URL("./catalog/types-and-functions.sql", import.meta.url).href } },
+                { label: "Types and built-in functions", icon: "file-code", state: { url: new URL("./catalog/types-and-functions.sql", import.meta.url).href, filename: "types-and-functions.sql" } },
             ],
         },
     ],

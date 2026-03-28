@@ -64,7 +64,9 @@ registerAll({
                 return;
             }
 
-            const defaultFileName = fileNameFromUrl(url);
+            const explicitName =
+                typeof context.params?.filename === "string" ? context.params.filename.trim() : "";
+            const defaultFileName = explicitName || fileNameFromUrl(url);
             let savePath: string;
             const targetPath = context.params?.targetPath;
 

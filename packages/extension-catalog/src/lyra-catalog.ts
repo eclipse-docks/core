@@ -93,12 +93,22 @@ export class LyraCatalog extends LyraPart {
         });
     }
 
+    private wgetParamsFromCatalogData(data: { url?: string; filename?: string }) {
+        if (!data?.url) return null;
+        const params: { url: string; filename?: string } = { url: data.url };
+        if (typeof data.filename === "string" && data.filename.trim()) {
+            params.filename = data.filename.trim();
+        }
+        return params;
+    }
+
     onItemDblClicked(event: Event) {
         const item = event.currentTarget as HTMLElement & { model?: TreeNode; expanded?: boolean };
         const node = item?.model;
         if (!node) return;
-        if (node.data?.url) {
-            this.executeCommand("wget", { url: node.data.url });
+        const wgetParams = this.wgetParamsFromCatalogData(node.data);
+        if (wgetParams) {
+            this.executeCommand("wget", wgetParams);
             return;
         }
         if (!node.leaf && "expanded" in item) {
@@ -108,8 +118,9 @@ export class LyraCatalog extends LyraPart {
 
     private runWgetForSelection() {
         const item = activeSelectionSignal.get();
-        if (item && "url" in item && item.url) {
-            this.executeCommand("wget", { url: item.url });
+        const wgetParams = item && this.wgetParamsFromCatalogData(item as { url?: string; filename?: string });
+        if (wgetParams) {
+            this.executeCommand("wget", wgetParams);
         }
     }
 

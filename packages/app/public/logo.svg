@@ -1,7 +1,7 @@
 <svg width="180" height="40" viewBox="0 0 180 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect x="4" y="4" width="14" height="14" rx="3" fill="#0d6efd"/>
-  <rect x="22" y="4" width="14" height="14" rx="3" fill="#e9ecef" stroke="#dee2e6" stroke-width="1"/>
-  <rect x="4" y="22" width="14" height="14" rx="3" fill="#e9ecef" stroke="#dee2e6" stroke-width="1"/>
-  <rect x="22" y="22" width="14" height="14" rx="3" fill="#e9ecef" stroke="#dee2e6" stroke-width="1"/>
+  <rect x="4" y="4" width="14" height="14" rx="3" fill="#0d6efd" stroke="#000" stroke-width="1"/>
+  <rect x="22" y="4" width="14" height="14" rx="3" fill="#cfe2ff" stroke="#000" stroke-width="1"/>
+  <rect x="4" y="22" width="14" height="14" rx="3" fill="#cfe2ff" stroke="#000" stroke-width="1"/>
+  <rect x="22" y="22" width="14" height="14" rx="3" fill="#cfe2ff" stroke="#000" stroke-width="1"/>
   <text x="48" y="26" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#0d6efd">Eclipse Docks</text>
 </svg>

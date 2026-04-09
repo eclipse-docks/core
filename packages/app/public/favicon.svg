@@ -1,6 +1,6 @@
 <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="4" y="4" width="14" height="14" rx="3" fill="#0d6efd"/>
-  <rect x="22" y="4" width="14" height="14" rx="3" fill="#e9ecef" stroke="#dee2e6" stroke-width="1"/>
-  <rect x="4" y="22" width="14" height="14" rx="3" fill="#e9ecef" stroke="#dee2e6" stroke-width="1"/>
-  <rect x="22" y="22" width="14" height="14" rx="3" fill="#e9ecef" stroke="#dee2e6" stroke-width="1"/>
+  <rect x="4" y="4" width="14" height="14" rx="3" fill="#0d6efd" stroke="#000" stroke-width="1"/>
+  <rect x="22" y="4" width="14" height="14" rx="3" fill="#cfe2ff" stroke="#000" stroke-width="1"/>
+  <rect x="4" y="22" width="14" height="14" rx="3" fill="#cfe2ff" stroke="#000" stroke-width="1"/>
+  <rect x="22" y="22" width="14" height="14" rx="3" fill="#cfe2ff" stroke="#000" stroke-width="1"/>
 </svg>

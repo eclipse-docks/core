@@ -3,7 +3,7 @@
 # Requires: npm@11.10.0+, 2FA enabled on npm account, packages already published at least once.
 # Usage: ./scripts/setup-npm-trusted-publishing.sh [--dry-run] [package]
 #   package: optional — package name (e.g. @eclipse-docks/extension-foo) or path (e.g. packages/extension-foo).
-#   If omitted, configures all publishable packages (core + extensions).
+#   If omitted, configures all publishable packages (core, extensions, create-app).
 # See: https://docs.npmjs.com/cli/v11/commands/npm-trust
 
 set -e
@@ -53,7 +53,7 @@ process.exit(1);
 fi
 
 ROOT_PKG_NAME=$(node -p "require('$ROOT/package.json').name" 2>/dev/null || true)
-for pkg_dir in packages/core packages/extension-*; do
+for pkg_dir in packages/core packages/extension-* packages/create-app; do
   [ -d "$pkg_dir" ] || continue
   [ -f "$pkg_dir/package.json" ] || continue
   if grep -q '"private":\s*true' "$pkg_dir/package.json" 2>/dev/null; then

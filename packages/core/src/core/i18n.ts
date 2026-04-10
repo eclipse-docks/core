@@ -2,6 +2,26 @@ import { signal, Signal } from '@lit-labs/signals';
 import { appSettings, TOPIC_SETTINGS_CHANGED } from "./settingsservice";
 import { subscribe } from "./events";
 
+/**
+ * Why this custom i18n layer exists (instead of directly using @lit/localize):
+ *
+ * - Architecture fit: this system localizes not only Lit templates, but also
+ *   runtime metadata (for example extension names/descriptions) that can be
+ *   consumed outside component render paths.
+ * - Plugin ergonomics: each feature can ship co-located locale JSON files and
+ *   load them lazily via import.meta.glob.
+ * - Low process overhead: simple JSON dictionaries are easy to maintain and
+ *   work well with AI-assisted translation workflows without XLIFF tooling.
+ *
+ * Trade-offs versus Lit Localize:
+ *
+ * - We do not get Lit Localize's extraction/build pipeline and XLIFF workflow
+ *   out of the box.
+ * - We own validation/consistency guarantees (key parity, placeholder parity,
+ *   locale completeness) and must enforce them in our own checks.
+ * - Message interpolation is intentionally simple ({param} replacement), which
+ *   is less expressive than template-aware localization APIs.
+ */
 export const SETTINGS_KEY_LANGUAGE = 'language';
 
 export const DEFAULT_LANGUAGE = 'en';

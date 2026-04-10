@@ -95,7 +95,7 @@ export class DocksFileBrowser extends DocksPart {
         return html`
             <docks-command icon="folder-open" title="${t.CONNECT_WORKSPACE}" dropdown="filebrowser.connections"></docks-command>
             <docks-command cmd="refresh_resource" icon="repeat" title="${t.REFRESH_RESOURCE}"></docks-command>
-            <docks-command cmd="touch" icon="docks file-plus" title="${t.CREATE_NEW}" dropdown="filebrowser.create"></docks-command>
+            <docks-command icon="docks file-plus" title="${t.CREATE_NEW}" dropdown="filebrowser.create"></docks-command>
         `;
     }
 
@@ -120,7 +120,7 @@ export class DocksFileBrowser extends DocksPart {
                     `)}
                 </wa-dropdown-item>
             ` : nothing}
-            <docks-command cmd="touch" icon="docks file-plus" dropdown="filebrowser.create">${t.CREATE_NEW}</docks-command>
+            <docks-command icon="docks file-plus" dropdown="filebrowser.create">${t.CREATE_NEW}</docks-command>
         `;
     }
 

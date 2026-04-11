@@ -48,6 +48,7 @@ appLoaderService.registerApp(
       '@eclipse-docks/extension-media-viewer',
       '@eclipse-docks/extension-settings-tree',
       '@eclipse-docks/extension-memory-usage',
+      '@eclipse-docks/extension-pwa',
       '@eclipse-docks/extension-ai-system',
       '@eclipse-docks/extension-dataviewer',
     ],

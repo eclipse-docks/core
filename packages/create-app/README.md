@@ -52,7 +52,7 @@ From the created project root, `npm run dev` runs the app (Vite). Use `npm run b
 ## What you get
 
 - A **monorepo** with two workspace packages:
-  - **`packages/app`** – the Docks app (Vite, core + extensions from npm).
+  - **`packages/app`** – the Docks app (Vite, core + extensions from npm), including **PWA** (web app manifest, injectManifest service worker, `@eclipse-docks/extension-pwa` for install/update in the toolbar).
   - **`packages/example-extension`** – a minimal example extension you can copy or extend.
 - The app registers a **logo contribution** on the left main toolbar (slot `start`) with the text `my!app`; you can change it in `packages/app/src/main.ts`.
 - The example extension is loaded by the app and adds an "Example" view in the left side panel.

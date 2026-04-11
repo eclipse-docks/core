@@ -1,0 +1,4 @@
+{
+  "EXT_PWA_NAME": "PWA",
+  "EXT_PWA_DESC": "Service-Worker-Update und Installationshinweis in der unteren Symbolleiste, wenn der Browser das unterstützt."
+}

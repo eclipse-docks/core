@@ -2,7 +2,11 @@
  * Explicit imports of workspace extensions so they are included in the bundle.
  * Replaces import.meta.glob('../../extension-XXX/src/index.ts') to avoid .ts paths
  * in module URLs (servers often map .ts to video/mp2t MIME type).
+ *
+ * PWA is imported first: its entry registers a `beforeinstallprompt` listener as early
+ * as possible. Extension registry order does not matter for that—only module load order.
  */
+import '@eclipse-docks/extension-pwa';
 import '@eclipse-docks/extension-ai-system';
 import '@eclipse-docks/extension-command-palette';
 import '@eclipse-docks/extension-command-shell';

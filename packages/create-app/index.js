@@ -54,6 +54,15 @@ function main() {
   mainTs = mainTs.replace(/\{\{APP_NAME\}\}/g, appName);
   writeFileSync(mainTsPath, mainTs);
 
+  function escapeForSingleQuotedTs(s) {
+    return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  }
+  const viteConfigPath = join(targetDir, 'packages', 'app', 'vite.config.ts');
+  let viteConfig = readFileSync(viteConfigPath, 'utf8');
+  viteConfig = viteConfig.replace(/\{\{APP_NAME\}\}/g, escapeForSingleQuotedTs(appName));
+  viteConfig = viteConfig.replace(/\{\{APP_DESCRIPTION\}\}/g, escapeForSingleQuotedTs(appDescription));
+  writeFileSync(viteConfigPath, viteConfig);
+
   const logoSvgPath = join(targetDir, 'packages', 'app', 'public', 'logo.svg');
   let logoSvg = readFileSync(logoSvgPath, 'utf8');
   logoSvg = logoSvg.replace(/\{\{APP_NAME\}\}/g, appName);

@@ -13,6 +13,7 @@ appLoaderService.registerApp(
   {
     extensions: [
       '@eclipse-docks/extension-utils',
+      '@eclipse-docks/extension-pwa',
       '@eclipse-docks/extension-command-palette',
       '@eclipse-docks/extension-catalog',
       '@eclipse-docks/extension-md-editor',

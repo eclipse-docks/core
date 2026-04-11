@@ -12,13 +12,11 @@
   "dependencies": {
     "@eclipse-docks/core": "*",
     "@eclipse-docks/extension-ai-system": "*",
+    "@eclipse-docks/extension-catalog": "*",
     "@eclipse-docks/extension-command-palette": "*",
     "@eclipse-docks/extension-command-shell": "*",
-    "@eclipse-docks/extension-catalog": "*",
     "@eclipse-docks/extension-dataviewer": "*",
-    "@eclipse-docks/extension-sqleditor": "*",
     "@eclipse-docks/extension-duckdb": "*",
-    "@eclipse-docks/extension-pglite": "*",
     "@eclipse-docks/extension-github-service": "*",
     "@eclipse-docks/extension-howto-system": "*",
     "@eclipse-docks/extension-in-browser-ml": "*",
@@ -28,9 +26,12 @@
     "@eclipse-docks/extension-memory-usage": "*",
     "@eclipse-docks/extension-monaco-editor": "*",
     "@eclipse-docks/extension-notebook": "*",
+    "@eclipse-docks/extension-pglite": "*",
+    "@eclipse-docks/extension-pwa": "*",
     "@eclipse-docks/extension-python-runtime": "*",
     "@eclipse-docks/extension-rag-system": "*",
     "@eclipse-docks/extension-settings-tree": "*",
+    "@eclipse-docks/extension-sqleditor": "*",
     "@eclipse-docks/extension-utils": "*",
     "@eclipse-docks/extension-webdav": "*",
     "@eclipse-docks/extension-webllm": "*",
@@ -40,7 +41,8 @@
     "typescript": "^6.0.0",
     "vite": "^8.0.0",
     "vite-plugin-cross-origin-isolation": "^0.1.6",
-    "vite-plugin-mkcert": "^1.17.9"
+    "vite-plugin-mkcert": "^1.17.9",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "marketplace": {
     "catalogUrls": [

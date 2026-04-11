@@ -31,6 +31,7 @@ export default defineConfig({
         text: 'Concepts',
         items: [
           { text: 'Architecture', link: '/concepts/architecture' },
+          { text: 'Docks vs Theia', link: '/concepts/docks-vs-theia' },
           { text: 'Apps', link: '/concepts/apps' },
           { text: 'Extensions', link: '/concepts/extensions' },
           { text: 'Security and safety', link: '/concepts/security' },

@@ -56,4 +56,4 @@
 - **Contributions** — Declarative UI: tabs (sidebars, editor area), toolbar buttons, HTML blocks. Targets include `SIDEBAR_MAIN`, `SIDEBAR_AUXILIARY`, `TOOLBAR_MAIN_RIGHT`, `TOOLBAR_BOTTOM_END`, `SYSTEM_LAYOUTS`, etc.
 - **Commands** — Id and handlers (optional `canExecute`). Toolbars and menus reference commands; the command palette and AI can execute them.
 
-Next: [Apps](/concepts/apps), [Extensions](/concepts/extensions), [Security and safety](/concepts/security), [Contributions](/concepts/contributions), [Commands](/concepts/commands).
+Next: [Apps](/concepts/apps), [Extensions](/concepts/extensions), [Docks vs Theia](/concepts/docks-vs-theia), [Security and safety](/concepts/security), [Contributions](/concepts/contributions), [Commands](/concepts/commands).

@@ -10,4 +10,4 @@ Eclipse Docks is a **modular web framework** for building IDE-like applications.
 
 You can build a **downstream app** by defining an `AppDefinition` and choosing which extensions to enable, or author **new extensions** that register with `extensionRegistry`, `contributionRegistry`, and `commandRegistry`.
 
-See [Architecture](/concepts/architecture), [Security and safety](/concepts/security), and the [Guide](/guide/getting-started) for details.
+See [Architecture](/concepts/architecture), [Docks vs Theia](/concepts/docks-vs-theia), [Security and safety](/concepts/security), and the [Guide](/guide/getting-started) for details.

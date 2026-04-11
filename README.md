@@ -132,6 +132,26 @@ Optional extensions add capabilities like the Monaco editor, Pyodide, WebLLM, We
 
 ---
 
+## Eclipse Docks vs Eclipse Theia
+
+Both are **Eclipse Foundation** technology projects, but they target different architectures: **Theia** is a **VS Code–oriented** platform with a **Node** backend; **Docks** is a **browser-first** shell you connect to **your** APIs.
+
+| | **Eclipse Docks** | **Eclipse Theia** |
+| --- | --- | --- |
+| **Runtime** | **Browser SPA** — UI and extensions in the client. | **Frontend + Node backend** ([architecture](https://theia-ide.org/docs/architecture/)). |
+| **Hosting & scale** | **Static assets** (e.g. CDN); no Docks server tier for the shell. | **Scale the Node** tier for cloud / multi-user IDE setups. |
+| **Extensions** | **npm** packages + registries; **planned:** [Open VSX](https://open-vsx.org/) **browser** extensions, **subset** `vscode` API. | **Theia + VS Code** extensions; **Open VSX** first-class ([extensions](https://theia-ide.org/docs/extensions/)). |
+| **Product fit** | **Composable** IDE-like / dashboard apps with a **small** core. | **Full IDE** products (desktop **Electron**, remote, VS Code–class). |
+| **PWA / offline** | **PWA-ready** — add manifest + service worker; **offline** for the client shell and caches can be implemented. | Desktop **Electron** is common; web deployments usually assume a **reachable backend**. |
+
+**Rule of thumb:** need **VS Code–class** backend + extension host → **Theia**. Need a **lightweight web shell** and **your** backends → **Docks**.
+
+For **browser standards**, PWA, and **long-term** positioning (vs VS Code–aligned stacks), see the **Standards & longevity** section in the full comparison.
+
+**Full comparison:** [Eclipse Docks vs Eclipse Theia](https://app.kispace.de/docs/concepts/docks-vs-theia) (or [`docs/concepts/docks-vs-theia.md`](docs/concepts/docks-vs-theia.md) in this repo).
+
+---
+
 ## Comparison with other frameworks
 
 For those comparing frameworks, here is how Eclipse Docks lines up with Angular, React, and Vue on common dimensions.

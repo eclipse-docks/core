@@ -1,0 +1,3 @@
+# LCOV from Vitest runs in packages/core with paths like SF:src/...
+fixes:
+  - "src/::packages/core/src/"

@@ -34,8 +34,10 @@
     "build:extensions": "node scripts/build-extensions.cjs"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.4",
     "typedoc": "^0.28.0",
     "typescript": "^6.0.0",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "vitest": "^4.1.4"
   }
 }

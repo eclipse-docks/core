@@ -5,6 +5,7 @@
 <p align="center">
   <a href="https://deepwiki.com/eclipse-docks/core"><img src="https://deepwiki.com/badge.svg" alt="DeepWiki" /></a>
   <a href="https://github.com/eclipse-docks/core/actions/workflows/ci.yml"><img src="https://github.com/eclipse-docks/core/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://codecov.io/gh/eclipse-docks/core"><img src="https://codecov.io/gh/eclipse-docks/core/graph/badge.svg?branch=main" alt="codecov" /></a>
   <a href="https://www.npmjs.com/package/@eclipse-docks/core"><img src="https://img.shields.io/npm/v/@eclipse-docks/core" alt="npm @eclipse-docks/core" /></a>
   <a href="https://github.com/eclipse-docks/core/blob/main/LICENSE"><img src="https://img.shields.io/github/license/eclipse-docks/core" alt="License EPL-2.0" /></a>
 </p>

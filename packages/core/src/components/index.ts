@@ -1,5 +1,6 @@
 import "./filebrowser"
 import "./tasks"
+import "./document-title"
 import "./part-name"
 import "./extensions"
 import "./log-terminal"

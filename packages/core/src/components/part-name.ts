@@ -2,10 +2,11 @@ import {customElement} from "lit/decorators.js";
 import {DocksElement} from "../parts/element";
 import {html} from "lit";
 import {activePartSignal} from "../core/appstate";
+import {getActivePartDisplayName} from "./document-title";
 import {contributionRegistry, HTMLContribution} from "../core/contributionregistry";
 import {TOOLBAR_BOTTOM_CENTER} from "../core/constants";
 import { icon } from '../core/icon-utils';
-import {i18n} from "../core/i18n";
+import { i18n } from '../core/i18n';
 
 const t = await i18n(import.meta.glob('./partname*.json'));
 
@@ -21,15 +22,6 @@ export class DocksPartName extends DocksElement {
         });
     }
     
-    private getPartName(): string {
-        const activePart = activePartSignal.get();
-        if (!activePart) {
-            return t.NO_PART;
-        }
-
-        return activePart.tabContribution?.label || activePart.getAttribute('id') || t.NO_PART;
-    }
-
     protected render() {
         const activePart = activePartSignal.get();
         const partIcon = activePart?.tabContribution?.icon || "box";
@@ -40,7 +32,7 @@ export class DocksPartName extends DocksElement {
                 size="small"
                 title="${t.ACTIVE_PART}">
                 ${icon(partIcon, { label: 'Part', slot: 'start' })}
-                ${this.getPartName()}
+                ${getActivePartDisplayName()}
             </wa-button>
         `;
     }

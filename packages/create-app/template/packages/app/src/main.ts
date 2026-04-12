@@ -17,7 +17,7 @@ appLoaderService.registerApp(
       '@eclipse-docks/extension-command-palette',
       '@eclipse-docks/extension-catalog',
       '@eclipse-docks/extension-md-editor',
-      '@eclipse-docks/extension-monaco-editor',
+      '@eclipse-docks/extension-plain-editor',
       '@eclipse-docks/extension-media-viewer',
       '@eclipse-docks/extension-settings-tree',
       '@eclipse-docks/extension-memory-usage',

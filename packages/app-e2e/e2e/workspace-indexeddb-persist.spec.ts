@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Workspace (IndexedDB) persistence', () => {
     test.describe.configure({ timeout: 120_000 });
 
-    test('create text file, edit in Monaco, save, reopen — content matches', async ({ page }) => {
+    test('create text file, edit in plain editor, save, reopen — content matches', async ({ page }) => {
         const fileName = `e2e-persist-${Date.now()}.txt`;
         const uniqueLine = `E2E persist ${Date.now()} hello`;
 
@@ -42,13 +42,14 @@ test.describe('Workspace (IndexedDB) persistence', () => {
         await expect(fileRow).toBeVisible({ timeout: 15_000 });
         await fileRow.dblclick();
 
-        // Monaco: system.monaco-editor; save via global save command (Ctrl+S).
-        const editorHost = page.locator('docks-tabs#editor-area-main docks-monaco-editor');
+        // Plain editor: system.plain-editor (default for generic files); save via global save (Ctrl+S).
+        const editorHost = page.locator('docks-tabs#editor-area-main docks-plain-editor');
         await expect(editorHost).toBeVisible({ timeout: 120_000 });
 
-        const monaco = page.locator('docks-monaco-editor .monaco-editor');
-        await expect(monaco).toBeVisible({ timeout: 120_000 });
-        await monaco.click();
+        const textSurface = editorHost.locator('docks-texteditor wa-textarea');
+        await expect(textSurface).toBeVisible({ timeout: 120_000 });
+        const innerTextarea = textSurface.locator('textarea').first();
+        await innerTextarea.click();
         await page.keyboard.press('ControlOrMeta+a');
         await page.keyboard.type(uniqueLine);
 
@@ -60,15 +61,14 @@ test.describe('Workspace (IndexedDB) persistence', () => {
 
         await expect(editorHost).toBeHidden({ timeout: 15_000 });
 
-        // Reopen from tree; assert persisted bytes via rendered Monaco text.
+        // Reopen from tree; assert persisted content via plain text editor.
         const fileRowAgain = fileBrowser.locator('wa-tree-item').filter({ hasText: fileName }).first();
         await fileRowAgain.dblclick();
 
-        const editorAfterReopen = page.locator('docks-tabs#editor-area-main docks-monaco-editor');
+        const editorAfterReopen = page.locator('docks-tabs#editor-area-main docks-plain-editor');
         await expect(editorAfterReopen).toBeVisible({ timeout: 120_000 });
-        await expect(editorAfterReopen.locator('.monaco-editor')).toBeVisible({ timeout: 120_000 });
+        await expect(editorAfterReopen.locator('docks-texteditor wa-textarea')).toBeVisible({ timeout: 120_000 });
 
-        // Monaco keeps document text in the view layer, not the IME textarea — assert rendered content.
         await expect(editorAfterReopen).toContainText(uniqueLine, { timeout: 30_000 });
     });
 });

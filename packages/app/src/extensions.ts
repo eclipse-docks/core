@@ -23,6 +23,7 @@ import '@eclipse-docks/extension-memory-usage';
 import '@eclipse-docks/extension-monaco-editor';
 import '@eclipse-docks/extension-notebook';
 import '@eclipse-docks/extension-pglite';
+import '@eclipse-docks/extension-plain-editor';
 import '@eclipse-docks/extension-python-runtime';
 import '@eclipse-docks/extension-rag-system';
 import '@eclipse-docks/extension-settings-tree';

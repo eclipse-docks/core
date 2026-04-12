@@ -14,7 +14,7 @@
   "dependencies": {
     "@eclipse-docks/core": "*",
     "@eclipse-docks/extension-ai-system": "*",
-    "@eclipse-docks/extension-monaco-editor": "*"
+    "@eclipse-docks/extension-plain-editor": "*"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.0",

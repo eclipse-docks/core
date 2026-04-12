@@ -27,6 +27,7 @@
     "@eclipse-docks/extension-monaco-editor": "*",
     "@eclipse-docks/extension-notebook": "*",
     "@eclipse-docks/extension-pglite": "*",
+    "@eclipse-docks/extension-plain-editor": "*",
     "@eclipse-docks/extension-pwa": "*",
     "@eclipse-docks/extension-python-runtime": "*",
     "@eclipse-docks/extension-rag-system": "*",

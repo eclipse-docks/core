@@ -1,0 +1,6 @@
+{
+  "EXT_PLAIN_NAME": "Einfacher Texteditor",
+  "EXT_PLAIN_DESC": "Standard-Text- und Hex-Editor für Workspace-Dateien",
+  "HEX_VIEW_LABEL": "Hex-Ansicht",
+  "BINARY_VIEW_TRUNCATED": "Es werden nur die ersten {shown} von {total} Bytes angezeigt (schreibgeschützt)."
+}

@@ -18,6 +18,7 @@
     "@eclipse-docks/extension-media-viewer": "^0.x",
     "@eclipse-docks/extension-memory-usage": "^0.x",
     "@eclipse-docks/extension-monaco-editor": "^0.x",
+    "@eclipse-docks/extension-plain-editor": "^0.x",
     "@eclipse-docks/extension-pwa": "^0.x",
     "@eclipse-docks/extension-notebook": "^0.x",
     "@eclipse-docks/extension-python-runtime": "^0.x",

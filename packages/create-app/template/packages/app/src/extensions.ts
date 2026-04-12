@@ -14,6 +14,7 @@ import '@eclipse-docks/extension-md-editor';
 import '@eclipse-docks/extension-media-viewer';
 import '@eclipse-docks/extension-memory-usage';
 import '@eclipse-docks/extension-monaco-editor';
+import '@eclipse-docks/extension-plain-editor';
 import '@eclipse-docks/extension-settings-tree';
 import '@eclipse-docks/extension-utils';
 import 'example-extension';

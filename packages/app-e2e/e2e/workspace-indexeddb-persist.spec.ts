@@ -69,6 +69,8 @@ test.describe('Workspace (IndexedDB) persistence', () => {
         await expect(editorAfterReopen).toBeVisible({ timeout: 120_000 });
         await expect(editorAfterReopen.locator('docks-texteditor wa-textarea')).toBeVisible({ timeout: 120_000 });
 
-        await expect(editorAfterReopen).toContainText(uniqueLine, { timeout: 30_000 });
+        // Value lives under nested shadow (wa-textarea); host toContainText does not include it reliably.
+        const reopenedTextarea = editorAfterReopen.locator('docks-texteditor wa-textarea').locator('textarea').first();
+        await expect(reopenedTextarea).toHaveValue(uniqueLine, { timeout: 30_000 });
     });
 });

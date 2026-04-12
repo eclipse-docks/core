@@ -31,13 +31,15 @@ if [ "$DRY_RUN" = true ]; then
     echo ""
 fi
 
-echo "Running pre-release health checks (type-check, test, build, app build)..."
+echo "Running pre-release health checks (type-check, test, build, app build, Playwright e2e)..."
 echo ""
 
 npm run type-check
 npm run test
 npm run build
 npm run build:app
+npm run playwright:install-chromium
+npm run test:e2e
 
 echo ""
 echo "✅ Pre-release health checks passed"

@@ -2,7 +2,6 @@ import { TOOLBAR_MAIN, appLoaderService, contributionRegistry, type HTMLContribu
 import { html } from '@eclipse-docks/core/externals/lit';
 import { fetchReleases } from "@eclipse-docks/extension-github-service";
 
-import './extensions';
 import './dashboard-layout';
 
 contributionRegistry.registerContribution(TOOLBAR_MAIN, {

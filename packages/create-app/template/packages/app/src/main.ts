@@ -1,7 +1,6 @@
 import { appLoaderService, contributionRegistry, type HTMLContribution, TOOLBAR_MAIN } from '@eclipse-docks/core';
 
-import './extensions';
-
+/** Which extensions the shell offers; keep in sync with `@eclipse-docks/extension-*` entries in package.json (those are auto side-effect-imported in vite.config.ts). */
 contributionRegistry.registerContribution(TOOLBAR_MAIN, {
   label: 'Brand',
   slot: 'start',

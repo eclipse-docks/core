@@ -21,7 +21,7 @@ Minimal Docks shell for Playwright only (not the public demo app in `packages/ap
 Entry is [src/main.ts](./src/main.ts): `registerApp` plus auxiliary/toolbar contributions as specs require.
 
 - **Extensions:** list them in `AppDefinition.extensions` (e.g. `@eclipse-docks/extension-ai-system`, `@eclipse-docks/extension-monaco-editor` for workspace file editing in E2E).
-- **Static side-effect import:** [src/extensions.ts](./src/extensions.ts) loads the AI extension’s registration module **before** `main.ts` registers E2E auxiliary tabs so order is **`[aiview, …e2e tabs]`**. That avoids `wa-tab-group` “first tab” fallbacks being mistaken for successful `coupledEditors` coupling.
+- **Side-effect imports:** [vite.config.ts](./vite.config.ts) uses `resolveDepVersionsPlugin()` (automatic `@eclipse-docks/extension-*` side-effect imports are on by default). [src/main.ts](./src/main.ts) additionally imports the in-repo [`extension-ai-system/src/ai-system-extension.ts`](../../packages/extension-ai-system/src/ai-system-extension.ts) so that registration runs after the package entry and **before** the rest of `main.ts` adds E2E auxiliary tabs — order **`[aiview, …e2e tabs]`** — avoiding `wa-tab-group` “first tab” fallbacks being mistaken for successful `coupledEditors` coupling.
 
 ### `coupledEditors` example
 

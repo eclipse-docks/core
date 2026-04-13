@@ -1,3 +1,9 @@
+/**
+ * In-repo AI extension registration (after package entry from resolveDepVersionsPlugin’s default extension side-effects).
+ * Keeps auxiliary tab order before E2E contributions (see README).
+ */
+import '../../extension-ai-system/src/ai-system-extension';
+
 import {
     TOOLBAR_MAIN,
     SIDEBAR_AUXILIARY,
@@ -7,7 +13,6 @@ import {
 } from '@eclipse-docks/core';
 import { html } from '@eclipse-docks/core/externals/lit';
 
-import './extensions';
 import './e2e-coupled-panel';
 
 contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {

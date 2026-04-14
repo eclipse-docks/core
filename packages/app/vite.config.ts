@@ -1,9 +1,9 @@
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
+import { createDocksPwaPlugin } from '@eclipse-docks/extension-pwa/vite';
 import crossOriginIsolation from 'vite-plugin-cross-origin-isolation';
 import mkcert from 'vite-plugin-mkcert';
-import { VitePWA } from 'vite-plugin-pwa';
 import { appSplashPlugin } from '../core/src/vite-plugin-app-splash';
 import { localAliasesPlugin } from '../core/src/vite-plugin-local-aliases';
 import { resolveDepVersionsPlugin } from '../core/src/vite-plugin-resolve-deps';
@@ -33,46 +33,14 @@ export default defineConfig({
     }),
     mkcert(),
     crossOriginIsolation(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'inline',
-      strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.ts',
-      manifest: {
-        name: 'Eclipse Docks',
-        short_name: 'Docks',
-        description:
-          'A modular, extensible web application framework for IDE-like applications built on Eclipse Docks.',
-        theme_color: '#1a1a1a',
-        background_color: '#1a1a1a',
-        display: 'standalone',
-        start_url: basePath,
-        scope: basePath,
-        icons: [
-          {
-            src: 'logo.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any',
-          },
-          {
-            src: 'favicon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'monochrome',
-          },
-        ],
-      },
-      includeAssets: ['favicon.svg', 'logo.svg', 'logo-loading.svg'],
-      injectManifest: {
-        // CereusDB full worker can exceed 139 MiB in prod builds.
-        maximumFileSizeToCacheInBytes: 200 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,woff,ttf,wasm}'],
-      },
-      devOptions: {
-        enabled: false,
-      },
+    createDocksPwaPlugin({
+      basePath,
+      appName: 'Eclipse Docks',
+      shortName: 'Docks',
+      appDescription:
+        'A modular, extensible web application framework for IDE-like applications.',
+      // CereusDB full worker can exceed 139 MiB in prod builds.
+      maximumFileSizeToCacheInBytes: 200 * 1024 * 1024,
     }),
     {
       name: 'watch-workspace-packages',

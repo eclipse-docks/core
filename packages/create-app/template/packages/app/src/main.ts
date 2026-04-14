@@ -21,7 +21,7 @@ appLoaderService.registerApp(
       '@eclipse-docks/extension-settings-tree',
       '@eclipse-docks/extension-memory-usage',
       '@eclipse-docks/extension-ai-system',
-      'example-extension',
+      'extension-example',
     ],
   },
   { autoStart: true, hostConfig: true, container: appRoot },

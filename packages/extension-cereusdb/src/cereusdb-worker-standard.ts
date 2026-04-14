@@ -1,9 +1,10 @@
 import { CereusDB } from '@cereusdb/standard';
-import wasmUrl from '@cereusdb/standard/wasm?url';
-import { runCereusWorker } from './cereusdb-worker-runtime';
+import { cereusWasmUrl, runCereusWorker } from './cereusdb-worker-runtime';
 
 runCereusWorker(async () => {
-  return (await CereusDB.create({ wasmUrl })) as Awaited<
+  return (await CereusDB.create({
+    wasmUrl: cereusWasmUrl('@cereusdb/standard'),
+  })) as Awaited<
     ReturnType<typeof CereusDB.create>
   >;
 });

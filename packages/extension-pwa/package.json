@@ -7,10 +7,17 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./vite": {
+      "import": "./src/vite.ts"
+    },
+    "./sw": {
+      "import": "./src/sw.ts"
     }
   },
   "dependencies": {
-    "@eclipse-docks/core": "*"
+    "@eclipse-docks/core": "*",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
     "typescript": "^6.0.0",
@@ -20,7 +27,10 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "src/sw.ts",
+    "src/vite.ts",
+    "src/vite-pwa-plugin.ts"
   ],
   "scripts": {
     "build": "vite build"

@@ -11,7 +11,7 @@ contributionRegistry.registerContribution(SIDEBAR_MAIN, {
   component: (_id: string) => html`
     <div style="padding: var(--wa-space-l);">
       <h2>Example extension</h2>
-      <p>This view is contributed by the <code>example-extension</code> package to the left side panel.</p>
+      <p>This view is contributed by the <code>extension-example</code> package to the left side panel.</p>
     </div>
   `,
 } as TabContribution);

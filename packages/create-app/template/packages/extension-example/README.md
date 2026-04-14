@@ -1,4 +1,4 @@
-# example-extension
+# extension-example
 
 Example Eclipse Docks extension that adds a view to the **left side panel** – the same tab bar as **Workspace** (file browser). You get an "Example" tab next to the workspace; use it as a reference to build your own extensions.
 

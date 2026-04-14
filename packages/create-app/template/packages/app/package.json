@@ -24,7 +24,7 @@
     "@eclipse-docks/extension-python-runtime": "^0.x",
     "@eclipse-docks/extension-settings-tree": "^0.x",
     "@eclipse-docks/extension-utils": "^0.x",
-    "example-extension": "*"
+    "extension-example": "*"
   },
   "devDependencies": {
     "typescript": "^6.0.0",

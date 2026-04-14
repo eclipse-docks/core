@@ -1,5 +1,5 @@
 {
-  "name": "example-extension",
+  "name": "extension-example",
   "version": "0.0.0",
   "type": "module",
   "main": "./src/index.ts",

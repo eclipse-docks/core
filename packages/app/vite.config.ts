@@ -66,8 +66,8 @@ export default defineConfig({
       },
       includeAssets: ['favicon.svg', 'logo.svg', 'logo-loading.svg'],
       injectManifest: {
-        // CereusDB worker chunk + WASM can exceed 12 MiB; keep above largest precached asset.
-        maximumFileSizeToCacheInBytes: 60 * 1024 * 1024,
+        // CereusDB full worker can exceed 139 MiB in prod builds.
+        maximumFileSizeToCacheInBytes: 200 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,woff,ttf,wasm}'],
       },
       devOptions: {

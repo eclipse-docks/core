@@ -1,1 +1,1 @@
-export { createDocksPwaPlugin } from './vite-pwa-plugin.ts';
+export { createDocksPwaPlugin } from './vite-pwa-plugin.js';

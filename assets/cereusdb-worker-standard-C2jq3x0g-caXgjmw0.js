@@ -1,1 +1,0 @@
-function e(e){return new Worker(`/assets/cereusdb-worker-standard-DGgtrddH.js`,{type:`module`,name:e?.name})}export{e as default};

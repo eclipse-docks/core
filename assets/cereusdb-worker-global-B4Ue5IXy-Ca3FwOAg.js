@@ -1,1 +1,0 @@
-function e(e){return new Worker(`/assets/cereusdb-worker-global-BgcED4W5.js`,{type:`module`,name:e?.name})}export{e as default};

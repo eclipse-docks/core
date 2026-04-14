@@ -1,0 +1,1 @@
+function e(e){return new Worker(`/assets/cereusdb-worker-global-BaPnxEYT.js`,{type:`module`,name:e?.name})}export{e as default};

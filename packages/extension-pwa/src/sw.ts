@@ -15,6 +15,7 @@ type SwUpdateProgressMessage = {
   completed: number;
   total: number;
   done: boolean;
+  currentFile?: string;
 };
 
 const PRECACHE_MANIFEST = self.__WB_MANIFEST;
@@ -26,13 +27,14 @@ const updateProgressFetched = new Set<string>();
 async function broadcastUpdateProgress(
   completed: number,
   total: number,
+  currentFile?: string,
   done = false,
 ): Promise<void> {
   if (total <= 0) {
     return;
   }
   const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-  const message: SwUpdateProgressMessage = { type: 'SW_UPDATE_PROGRESS', completed, total, done };
+  const message: SwUpdateProgressMessage = { type: 'SW_UPDATE_PROGRESS', completed, total, done, currentFile };
   clients.forEach((client) => client.postMessage(message));
 }
 
@@ -71,7 +73,8 @@ addPlugins([
         !updateProgressFetched.has(request.url)
       ) {
         updateProgressFetched.add(request.url);
-        void broadcastUpdateProgress(updateProgressFetched.size, PRECACHE_TOTAL);
+        const currentFile = new URL(request.url).pathname;
+        void broadcastUpdateProgress(updateProgressFetched.size, PRECACHE_TOTAL, currentFile);
       }
       return withCoopCoep(response);
     },

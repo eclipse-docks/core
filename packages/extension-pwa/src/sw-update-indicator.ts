@@ -8,6 +8,7 @@ type SwUpdateProgressMessage = {
   completed: number;
   total: number;
   done?: boolean;
+  currentFile?: string;
 };
 
 /**
@@ -25,6 +26,8 @@ export class DocksSwUpdateIndicator extends DocksElement {
   private updateProgress = 0;
   @state()
   private updateProgressVisible = false;
+  @state()
+  private updateCurrentFile = '';
 
   private pendingReload = false;
   private registration: ServiceWorkerRegistration | null = null;
@@ -51,7 +54,24 @@ export class DocksSwUpdateIndicator extends DocksElement {
     const ratio = Math.max(0, Math.min(1, data.completed / data.total));
     this.updateProgress = ratio;
     this.updateProgressVisible = !this.updateAvailable && !data.done && ratio < 1;
+    this.updateCurrentFile = this.toDisplayFileName(data.currentFile);
   };
+
+  private toDisplayFileName(pathname?: string): string {
+    if (!pathname) {
+      return '';
+    }
+    const normalized = pathname.split('?')[0].split('#')[0];
+    const raw = normalized.split('/').filter(Boolean).at(-1) ?? normalized;
+    if (!raw) {
+      return '';
+    }
+    const decoded = decodeURIComponent(raw);
+    if (decoded.length <= 32) {
+      return decoded;
+    }
+    return `${decoded.slice(0, 29)}...`;
+  }
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -110,6 +130,7 @@ export class DocksSwUpdateIndicator extends DocksElement {
     this.updateAvailable = false;
     this.updateProgress = 0;
     this.updateProgressVisible = false;
+    this.updateCurrentFile = '';
   }
 
   /**
@@ -123,6 +144,7 @@ export class DocksSwUpdateIndicator extends DocksElement {
     if (this.updateAvailable) {
       this.updateProgress = 1;
       this.updateProgressVisible = false;
+      this.updateCurrentFile = '';
     }
   }
 
@@ -142,6 +164,7 @@ export class DocksSwUpdateIndicator extends DocksElement {
     if (navigator.serviceWorker.controller) {
       this.updateProgress = 0;
       this.updateProgressVisible = true;
+      this.updateCurrentFile = '';
     }
     const signal = this.attachAbort?.signal;
     if (!signal) {
@@ -153,6 +176,7 @@ export class DocksSwUpdateIndicator extends DocksElement {
         if (installing.state === 'redundant') {
           this.updateProgress = 0;
           this.updateProgressVisible = false;
+          this.updateCurrentFile = '';
           return;
         }
         if (installing.state !== 'installed') {
@@ -205,14 +229,24 @@ export class DocksSwUpdateIndicator extends DocksElement {
 
   protected render() {
     if (this.updateProgressVisible && !this.updateAvailable) {
+      const percent = Math.round(this.updateProgress * 100);
       return html`
         <div
-          style="display: inline-flex; align-items: center; gap: 0.5rem; min-width: 170px;"
+          style="display: inline-flex; align-items: center; gap: 0.5rem; min-width: 210px;"
           title="Downloading the latest update..."
           aria-label="Downloading the latest update"
         >
-          <wa-progress-bar value=${Math.round(this.updateProgress * 100)}></wa-progress-bar>
-          <span style="font-size: 0.8rem; opacity: 0.8;">${Math.round(this.updateProgress * 100)}%</span>
+          <wa-progress-bar value=${percent}></wa-progress-bar>
+          <div style="display: inline-flex; flex-direction: column; gap: 0.1rem; max-width: 140px;">
+            <span style="font-size: 0.75rem; opacity: 0.8;">${percent}%</span>
+            ${this.updateCurrentFile
+              ? html`<span
+                  style="font-size: 0.7rem; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                  title=${this.updateCurrentFile}
+                  >${this.updateCurrentFile}</span
+                >`
+              : html``}
+          </div>
         </div>
       `;
     }

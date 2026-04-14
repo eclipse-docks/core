@@ -15,6 +15,7 @@
     "@eclipse-docks/extension-catalog": "*",
     "@eclipse-docks/extension-command-palette": "*",
     "@eclipse-docks/extension-command-shell": "*",
+    "@eclipse-docks/extension-cereusdb": "*",
     "@eclipse-docks/extension-dataviewer": "*",
     "@eclipse-docks/extension-duckdb": "*",
     "@eclipse-docks/extension-github-service": "*",

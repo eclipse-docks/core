@@ -38,11 +38,22 @@ export interface LocalAliasesOptions {
   alwaysUseSrc?: boolean;
 }
 
-const discoverLocalAliases = (
+interface EclipseDocksPackageJson {
+  name?: string;
+  /**
+   * Optional: extra `optimizeDeps.exclude` entries for this workspace package
+   * (e.g. heavy WASM npm deps that must not be pre-bundled in dev).
+   */
+  eclipseDocks?: {
+    viteOptimizeDepsExclude?: string[];
+  };
+}
+
+function discoverLocalAliasesAndExtraExcludes(
   cfg: Pick<UserConfig, 'root'>,
   mode: string,
   options: LocalAliasesOptions = {},
-): Record<string, string> => {
+): { aliases: Record<string, string>; extraOptimizeDepsExclude: string[] } {
   const useSrcInDev = options.useSrcInDev ?? true;
   const alwaysUseSrc = options.alwaysUseSrc ?? false;
 
@@ -58,9 +69,12 @@ const discoverLocalAliases = (
       ? options.patterns
       : [{ folderPrefix: 'extension-' }];
 
-  return entries.reduce<Record<string, string>>((aliases, entry) => {
+  const aliases: Record<string, string> = {};
+  const extraOptimizeDepsExclude: string[] = [];
+
+  for (const entry of entries) {
     if (!entry.isDirectory()) {
-      return aliases;
+      continue;
     }
 
     const pattern = patterns.find((p) =>
@@ -68,26 +82,26 @@ const discoverLocalAliases = (
     );
 
     if (!pattern) {
-      return aliases;
+      continue;
     }
 
     const pkgDir = path.join(packagesRoot, entry.name);
     const pkgPath = path.join(pkgDir, 'package.json');
     if (!fs.existsSync(pkgPath)) {
-      return aliases;
+      continue;
     }
 
     const pkgJson = fs.readFileSync(pkgPath, 'utf8');
-    const pkg = JSON.parse(pkgJson) as { name?: string };
+    const pkg = JSON.parse(pkgJson) as EclipseDocksPackageJson;
     if (!pkg.name) {
-      return aliases;
+      continue;
     }
 
     if (
       pattern.packageNamePrefix &&
       !pkg.name.startsWith(pattern.packageNamePrefix)
     ) {
-      return aliases;
+      continue;
     }
 
     const entryPoint = useSrc
@@ -95,9 +109,19 @@ const discoverLocalAliases = (
       : path.join(pkgDir, 'dist');
 
     aliases[pkg.name] = entryPoint;
-    return aliases;
-  }, {});
-};
+
+    const more = pkg.eclipseDocks?.viteOptimizeDepsExclude;
+    if (Array.isArray(more)) {
+      for (const id of more) {
+        if (typeof id === 'string' && id.length > 0) {
+          extraOptimizeDepsExclude.push(id);
+        }
+      }
+    }
+  }
+
+  return { aliases, extraOptimizeDepsExclude };
+}
 
 export const localAliasesPlugin = (
   options: LocalAliasesOptions = {},
@@ -105,7 +129,8 @@ export const localAliasesPlugin = (
   return {
     name: 'local-aliases',
     config(config, env) {
-      const aliases = discoverLocalAliases(config, env.mode, options);
+      const { aliases, extraOptimizeDepsExclude } =
+        discoverLocalAliasesAndExtraExcludes(config, env.mode, options);
 
       config.resolve ??= {};
       const existingAlias = config.resolve.alias ?? {};
@@ -119,7 +144,11 @@ export const localAliasesPlugin = (
       const existingExclude = config.optimizeDeps.exclude ?? [];
 
       config.optimizeDeps.exclude = [
-        ...new Set([...existingExclude, ...Object.keys(aliases)]),
+        ...new Set([
+          ...existingExclude,
+          ...Object.keys(aliases),
+          ...extraOptimizeDepsExclude,
+        ]),
       ];
     },
   };

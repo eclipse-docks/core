@@ -3,7 +3,7 @@ import { css, html, TemplateResult } from "lit";
 import { PropertyValues } from "lit";
 import { createRef, ref } from "lit/directives/ref.js";
 import { repeat } from "lit/directives/repeat.js";
-import { DocksPart } from "@eclipse-docks/core";
+import { DocksPart, icon } from "@eclipse-docks/core";
 import type { EditorInput } from "@eclipse-docks/core";
 import { appSettings, TOPIC_SETTINGS_CHANGED } from "@eclipse-docks/core";
 import type { SettingsJsonSchema } from "@eclipse-docks/core";
@@ -506,7 +506,7 @@ export class DocksSettingsTree extends DocksPart {
         if (!this.selectedPath) {
             return html`
                 <div class="detail-placeholder">
-                    <wa-icon name="gear"></wa-icon>
+                    ${icon("docks settings", { label: "Settings" })}
                     <p>Select a category from the tree</p>
                 </div>
             `;
@@ -675,7 +675,7 @@ export class DocksSettingsTree extends DocksPart {
                         <wa-scroller class="tree-scroller" orientation="vertical">
                             ${this.categoryTree.length === 0 ? html`
                                 <div class="empty-state">
-                                    <wa-icon name="gear"></wa-icon>
+                                    ${icon("docks settings", { label: "Settings" })}
                                     <p>No settings.</p>
                                 </div>
                             ` : html`

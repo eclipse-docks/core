@@ -77,7 +77,7 @@ contributionRegistry.registerContribution("dashboard-views-toolbar-bottom", {
 
 contributionRegistry.registerContribution("dashboard-views-toolbar-bottom", {
     label: "Settings",
-    icon: "gear",
+    icon: "docks settings",
     command: "open_settings"
 });
 

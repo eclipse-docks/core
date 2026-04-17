@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+  <line x1="1.5" y1="5.5" x2="22.5" y2="5.5" stroke="var(--wa-color-brand-fill-loud)" stroke-opacity="0.45" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="1.5" y1="12" x2="22.5" y2="12" stroke="var(--wa-color-brand-fill-loud)" stroke-opacity="0.45" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="1.5" y1="18.5" x2="22.5" y2="18.5" stroke="var(--wa-color-brand-fill-loud)" stroke-opacity="0.45" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="16.75" cy="5.5" r="3.5" fill="var(--wa-color-success-fill-loud)" fill-opacity="0.85" stroke="var(--wa-color-success-fill-loud)" stroke-opacity="1" stroke-width="1"/>
+  <circle cx="7.25" cy="12" r="3.5" fill="var(--wa-color-success-fill-loud)" fill-opacity="0.85" stroke="var(--wa-color-success-fill-loud)" stroke-opacity="1" stroke-width="1"/>
+  <circle cx="14.25" cy="18.5" r="3.5" fill="var(--wa-color-success-fill-loud)" fill-opacity="0.85" stroke="var(--wa-color-success-fill-loud)" stroke-opacity="1" stroke-width="1"/>
+</svg>

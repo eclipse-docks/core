@@ -198,8 +198,8 @@ class ExtensionRegistry {
                 logger.info(`Registered extension from URL: ${id}`);
             }
             
-            this.enable(id, false);
-            
+            await this.enableAsync(id, false);
+
             logger.info(`Successfully enabled extension from URL: ${finalUrl}`);
             return id;
         } catch (error) {
@@ -248,11 +248,11 @@ class ExtensionRegistry {
             return
         }
         logger.debug(`Loading extension: ${extensionId}`)
-        this.load(extensionId).then(() => {
-            this.updateEnablement(extensionId, true, informUser)
-        }).catch(_e => {
-            logger.error(`Could not load extension: ${extensionId}: ${_e}`)
-        })
+        this.load(extensionId)
+            .then(() => this.updateEnablementAsync(extensionId, true, informUser))
+            .catch(_e => {
+                logger.error(`Could not load extension: ${extensionId}: ${_e}`)
+            })
     }
 
     /** Like enable() but returns a Promise that resolves when the extension is loaded. Use when the caller must wait for commands/contributions to be registered (e.g. before rendering the app). */
@@ -263,7 +263,7 @@ class ExtensionRegistry {
         logger.debug(`Loading extension: ${extensionId}`)
         try {
             await this.load(extensionId)
-            this.updateEnablement(extensionId, true, informUser)
+            await this.updateEnablementAsync(extensionId, true, informUser)
         } catch (e) {
             logger.error(`Could not load extension: ${extensionId}: ${e}`)
             throw e
@@ -341,17 +341,17 @@ class ExtensionRegistry {
                     }
                 })
 
-                // Mark as loaded BEFORE executing the module
-                this.loadedExtensions.add(extensionId)
-
                 if (module?.default instanceof Function) {
                     try {
-                        module.default(uiContext.getProxy())
+                        const activationResult = module.default(uiContext.getProxy())
+                        await Promise.resolve(activationResult)
                     } catch (error) {
                         logger.error(`Error executing extension function for ${extensionId}: ${error}`)
                         throw error
                     }
                 }
+
+                this.loadedExtensions.add(extensionId)
                 
             } catch (error) {
                 // If loading failed, remove from loaded set
@@ -371,28 +371,8 @@ class ExtensionRegistry {
         if (!this.isEnabled(extensionId)) {
             return
         }
-        this.updateEnablement(extensionId, false, informUser)
-    }
-
-    private updateEnablement(extensionId: string, enabled: boolean, informUser: boolean) {
-        this.checkExtensionsConfig().then(() => {
-            const extension = this.extensionsSettings?.find(e => e.id == extensionId)
-            if (extension) {
-                extension.enabled = enabled
-            } else {
-                this.extensionsSettings?.push({id: extensionId, enabled: enabled})
-            }
-            appSettings.set(KEY_EXTENSIONS_CONFIG, this.extensionsSettings).then(() => {
-                if (informUser) {
-                    const extObj = this.extensions[extensionId]
-                    if (enabled) {
-                        toastInfo(extObj.name + " enabled.")
-                    } else {
-                        toastInfo(extObj.name + " disabled " + " - Please restart to take effect")
-                    }
-                }
-                publish(TOPIC_EXTENSIONS_CHANGED, this.extensionsSettings)
-            })
+        void this.updateEnablementAsync(extensionId, false, informUser).catch((e) => {
+            logger.error(`Could not persist disable for extension ${extensionId}: ${e}`)
         })
     }
 

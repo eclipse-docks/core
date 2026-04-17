@@ -18,7 +18,7 @@ import {
 contributionRegistry.registerContribution(SIDEBAR_MAIN, {
     name: VIEW_FILEBROWSER,
     label: "Workspace",
-    icon: "folder-open",
+    icon: "folder",
     component: (id: string) => html`<docks-filebrowser id="${id}"></docks-filebrowser>`
 });
 

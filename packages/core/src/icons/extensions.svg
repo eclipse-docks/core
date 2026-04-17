@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+  <rect x="9.5" y="0.5" width="8" height="8" rx="1"
+        fill="var(--wa-color-brand-fill-loud)" fill-opacity="0.28"
+        stroke="var(--wa-color-brand-fill-loud)" stroke-opacity="0.9"
+        stroke-width="1" stroke-linejoin="round"/>
+  <rect x="0.5" y="9.5" width="8" height="8" rx="1"
+        fill="var(--wa-color-brand-fill-loud)" fill-opacity="0.28"
+        stroke="var(--wa-color-brand-fill-loud)" stroke-opacity="0.9"
+        stroke-width="1" stroke-linejoin="round"/>
+  <rect x="9.5" y="9.5" width="8" height="8" rx="1"
+        fill="var(--wa-color-brand-fill-loud)" fill-opacity="0.28"
+        stroke="var(--wa-color-brand-fill-loud)" stroke-opacity="0.9"
+        stroke-width="1" stroke-linejoin="round"/>
+  <rect x="0.5" y="0.5" width="8" height="8" rx="1"
+        fill="var(--wa-color-success-fill-loud)" fill-opacity="0.55"
+        stroke="var(--wa-color-success-fill-loud)" stroke-opacity="1" stroke-width="1"/>
+</svg>

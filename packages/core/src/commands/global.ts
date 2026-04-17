@@ -121,18 +121,13 @@ registerAll({
                 title: "Extensions",
                 data: {},
                 key: "system.extensions",
-                icon: "puzzle-piece",
+                icon: "docks extensions",
                 state: {},
                 component: (id: string) => html`<docks-extensions id="${id}"></docks-extensions>`,
             }
             editorRegistry.loadEditor(editorInput, "extensions-editor").then()
         }
     },
-    contribution: {
-        target: TOOLBAR_MAIN_RIGHT,
-        icon: "puzzle-piece",
-        label: "Open Extensions",
-    }
 })
 
 registerAll({

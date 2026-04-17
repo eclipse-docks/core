@@ -139,11 +139,11 @@ export class DocksStandardLayout extends DocksContainer {
                                     id="left-sidebar-split" 
                                     orientation="vertical" 
                                     sizes="50%, 50%">
-                                    <docks-tabs id="${SIDEBAR_MAIN}"></docks-tabs>
-                                    <docks-tabs id="${SIDEBAR_MAIN_BOTTOM}"></docks-tabs>
+                                    <docks-tabs id="${SIDEBAR_MAIN}" placement="start" icon-only with-toolbar></docks-tabs>
+                                    <docks-tabs id="${SIDEBAR_MAIN_BOTTOM}"  placement="start" icon-only></docks-tabs>
                                 </docks-resizable-grid>
                             `
-                            : html`<docks-tabs id="${SIDEBAR_MAIN}"></docks-tabs>`
+                            : html`<docks-tabs id="${SIDEBAR_MAIN}" placement="start" icon-only with-toolbar></docks-tabs>`
                         }
                     `
                     : nothing

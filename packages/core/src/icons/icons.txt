@@ -1,3 +1,6 @@
+# Provenance — bundled icons in this folder (licence, author, source).
+# Used for compliance review and attribution; resolver: registerIconLibrary('docks') in externals/webawesome.ts
+
 - python.svg: Licence=MIT, Author=Garuda Technology, Source=https://www.svgrepo.com/svg/452091/python
 - js.svg: Licence=MIT, Author=Garuda Technology, Source=https://www.svgrepo.com/svg/452045/js
 - jupyter.svg: Licence=Logo License, Author=gilbarbara, Source=https://www.svgrepo.com/svg/353949/jupyter
@@ -7,3 +10,5 @@
 - layout-standard-full.svg: Licence=Project-internal, Author=Eclipse Docks Team
 - mark-github.svg: Licence=MIT, Author=GitHub, Source=https://github.com/primer/octicons (icons/mark-github-16.svg)
 - file-plus.svg: Licence=Project-internal, Author=Eclipse Docks Team
+- settings.svg: Licence=Project-internal, Author=Eclipse Docks Team, Note=Settings; duotone brand tracks + success knobs (sliders motif)
+- extensions.svg: Licence=Project-internal, Author=Eclipse Docks Team, Note=Extensions; 2×2 tile grid like docks favicon (packages/app/public/favicon.svg); one success tile, three brand tiles

@@ -4,7 +4,7 @@ import {
     editorRegistry,
     commandRegistry,
     contributionRegistry,
-    TOOLBAR_MAIN_RIGHT,
+    SIDEBAR_MAIN_TOOLBAR,
 } from "@eclipse-docks/core";
 import "./settings-tree";
 
@@ -29,16 +29,22 @@ export default (_uiContext: unknown) => {
                 title: "Settings",
                 data: {},
                 key: ".system.settings",
-                icon: "gear",
+                icon: "docks settings",
                 state: {},
             } as EditorInput;
             editorRegistry.loadEditor(editorInput);
         },
     });
 
-    contributionRegistry.registerContribution(TOOLBAR_MAIN_RIGHT, {
+    contributionRegistry.registerContribution(SIDEBAR_MAIN_TOOLBAR, {
         command: "open_settings",
-        icon: "gear",
+        icon: "docks settings",
         label: "Settings",
+    });
+
+    contributionRegistry.registerContribution(SIDEBAR_MAIN_TOOLBAR, {
+        command: "open_extensions",
+        icon: "docks extensions",
+        label: "Extensions",
     });
 };

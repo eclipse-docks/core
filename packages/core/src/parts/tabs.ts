@@ -1,6 +1,7 @@
 import {customElement, property, state} from "lit/decorators.js";
 import {css, html, nothing} from "lit";
 import {DocksContainer} from "./container";
+import {appLoaderService} from "../core/apploader";
 import {contributionRegistry, ContributionChangeEvent, TabContribution, TOPIC_CONTRIBUTEIONS_CHANGED} from "../core/contributionregistry";
 import {when} from "lit/directives/when.js";
 import {repeat} from "lit/directives/repeat.js";
@@ -12,8 +13,6 @@ import {MouseButton, EDITOR_AREA_MAIN} from "../core/constants";
 import {activePartSignal, activeEditorSignal, partDirtySignal} from "../core/appstate";
 import {watchSignal} from "../core/signals";
 import {confirmDialog} from "../dialogs";
-import {appLoaderService} from "../core/apploader";
-
 /**
  * DocksTabs - A dynamic tab container component
  * 
@@ -31,6 +30,16 @@ import {appLoaderService} from "../core/apploader";
 export class DocksTabs extends DocksContainer {
     @property({reflect: true})
     placement: "top" | "bottom" | "start" | "end" = "top";
+
+    /** When true, tab contributions show icons only (labels remain on title + wa-icon for a11y). */
+    @property({type: Boolean, reflect: true, attribute: 'icon-only'})
+    iconOnly: boolean = false;
+
+    /**
+     * When true, render a `docks-toolbar` in the tab group `nav` slot after tabs (extensions contribute via id `${containerId}-toolbar`).
+     */
+    @property({type: Boolean, reflect: true, attribute: 'with-toolbar'})
+    withToolbar: boolean = false;
 
     /** Tab contributions for this container */
     @state()
@@ -60,11 +69,14 @@ export class DocksTabs extends DocksContainer {
         this.updateComplete.then(() => this.ensureTabGroupListenersAndActivate());
         
         subscribe(TOPIC_CONTRIBUTEIONS_CHANGED, (event: ContributionChangeEvent) => {
-            if (!this.containerId || event.target !== this.containerId) return;
-            
+            if (!this.containerId) return;
+            const navToolbarId = `${this.containerId}-toolbar`;
+            if (event.target === navToolbarId) return;
+            if (event.target !== this.containerId) return;
+
             this.loadAndResolveContributions();
             this.requestUpdate();
-            
+
             this.updateComplete.then(() => {
                 this.activateNextAvailableTab();
             });
@@ -326,6 +338,11 @@ export class DocksTabs extends DocksContainer {
         return label.slice(0, startLen) + ellipsis + label.slice(-(take - startLen));
     }
 
+    /** Aligns `docks-toolbar` with `placement`: side rails → vertical, top/bottom tab strip → horizontal. */
+    private withToolbarOrientation(): "horizontal" | "vertical" {
+        return this.placement === "start" || this.placement === "end" ? "vertical" : "horizontal";
+    }
+
     private renderEmptyState() {
         const currentApp = appLoaderService.getCurrentApp();
         return html`
@@ -351,6 +368,7 @@ export class DocksTabs extends DocksContainer {
         if (this.contributions.length === 0) {
             return this.renderEmptyState();
         }
+        const navToolbarId = this.containerId ? `${this.containerId}-toolbar` : '';
         return html`
             <wa-tab-group ${ref(this.tabGroup)} placement=${this.placement}>
                 ${repeat(
@@ -364,7 +382,7 @@ export class DocksTabs extends DocksContainer {
                                 title="${fullLabel}"
                                 @auxclick="${(e: MouseEvent) => this.handleTabAuxClick(e, c)}">
                             ${icon(c.icon, { label: fullLabel })}
-                            ${shortLabel}
+                            ${this.iconOnly ? nothing : shortLabel}
                             ${when(c.closable, () => html`
                                 <wa-icon name="xmark" label="Close"  @click="${(e: Event) => this.closeTab(e, c.name)}"></wa-icon>
                             `)}
@@ -375,6 +393,18 @@ export class DocksTabs extends DocksContainer {
                     `;
                     }
                 )}
+                ${this.withToolbar && navToolbarId
+                    ? html`
+                        <div class="nav-toolbar-spacer" slot="nav" aria-hidden="true"></div>
+                        <docks-toolbar
+                            slot="nav"
+                            id=${navToolbarId}
+                            orientation=${this.withToolbarOrientation()}
+                            align="center"
+                            size="large"
+                        ></docks-toolbar>
+                    `
+                    : nothing}
             </wa-tab-group>
         `;
     }
@@ -388,13 +418,20 @@ export class DocksTabs extends DocksContainer {
         wa-tab-group {
             height: 100%;
             width: 100%;
+            min-height: 0;
         }
 
-        wa-tab-group::part(base) {
+        :host(:is([placement="top"], [placement="bottom"])) wa-tab-group::part(base) {
             display: grid;
             grid-template-rows: auto minmax(0, 1fr);
             height: 100%;
             width: 100%;
+        }
+
+        :host(:is([placement="start"], [placement="end"])) wa-tab-group::part(base) {
+            height: 100%;
+            width: 100%;
+            min-height: 0;
         }
 
         wa-tab-panel[active] {
@@ -416,6 +453,56 @@ export class DocksTabs extends DocksContainer {
             padding: 3px 0.5rem;
         }
 
+        :host([icon-only]) wa-tab::part(base) {
+            justify-content: center;
+        }
+
+        :host([icon-only]:is([placement="top"], [placement="bottom"])) wa-tab::part(base) {
+            padding: var(--wa-space-s);
+        }
+
+        :host([icon-only]:is([placement="start"], [placement="end"])) wa-tab::part(base) {
+            padding-inline: 0;
+            padding-block: var(--wa-space-s);
+        }
+
+        :host([icon-only]) wa-tab wa-icon {
+            font-size: var(--wa-font-size-l);
+        }
+
+        :host([icon-only]:is([placement="start"], [placement="end"])) wa-tab-group::part(nav),
+        :host([icon-only]:is([placement="start"], [placement="end"])) wa-tab-group::part(tabs) {
+            padding: 0;
+            margin: 0;
+        }
+
+        :host([icon-only]:is([placement="start"], [placement="end"])) wa-tab-group::part(nav) {
+            flex: 0 0 auto;
+        }
+
+        :host([with-toolbar]) .nav-toolbar-spacer {
+            flex: 1 1 auto;
+            min-height: 0;
+            min-width: 0;
+            pointer-events: none;
+        }
+
+        :host([with-toolbar]:is([placement="start"], [placement="end"])) wa-tab-group::part(nav) {
+            display: grid;
+            grid-template-rows: 1fr;
+            height: 100%;
+            min-height: 0;
+        }
+
+        :host([with-toolbar]:is([placement="start"], [placement="end"])) wa-tab-group::part(tabs) {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            height: 100%;
+            flex: 1 1 auto;
+            align-self: stretch;
+        }
+
         wa-tab-panel {
             --padding: 0px;
         }
@@ -431,7 +518,6 @@ export class DocksTabs extends DocksContainer {
             justify-content: center;
             width: 100%;
             height: 100%;
-            grid-row: 2;
         }
 
         .empty-content {

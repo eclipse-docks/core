@@ -108,6 +108,40 @@ describe('extensionRegistry', () => {
     await expect(extensionRegistry.load('a')).rejects.toThrow('Circular dependency detected');
   });
 
+  it('enableAsync loads when enabled in settings but a prior load attempt failed', async () => {
+    appSettingsMock.get.mockImplementation(async (key: string) => {
+      if (key === 'extensions') {
+        return [{ id: 'late', enabled: true }];
+      }
+      if (key === 'extensions.external') return [];
+      return undefined;
+    });
+
+    const { extensionRegistry } = await import('../../src/core/extensionregistry');
+
+    extensionRegistry.registerExtension({
+      id: 'late',
+      name: 'Late',
+      loader: async () => {
+        throw new Error('simulated first load failure');
+      },
+    });
+
+    await extensionRegistry.loadEnabledExtensions();
+
+    expect(extensionRegistry.isLoaded('late')).toBe(false);
+
+    extensionRegistry.registerExtension({
+      id: 'late',
+      name: 'Late',
+      loader: async () => ({}),
+    });
+
+    await extensionRegistry.enableAsync('late', false);
+
+    expect(extensionRegistry.isLoaded('late')).toBe(true);
+  });
+
   it('reuses in-flight load promise for concurrent load calls', async () => {
     const loader = vi.fn(
       async () =>

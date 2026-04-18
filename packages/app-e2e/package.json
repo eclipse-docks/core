@@ -1,19 +1,21 @@
 {
   "name": "@eclipse-docks/app-e2e",
   "version": "0.0.0",
-  "description": "Minimal Docks shell used only for Playwright E2E (not the demo app).",
+  "description": "Minimal Docks shell for Playwright (preview harness, not the demo app).",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:e2e": "playwright test",
+    "test:e2e": "E2E_STORY= playwright test",
+    "test:e2e:stories": "E2E_STORY=1 playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@eclipse-docks/core": "*",
     "@eclipse-docks/extension-ai-system": "*",
+    "@eclipse-docks/extension-monaco-editor": "*",
     "@eclipse-docks/extension-notebook": "*",
     "@eclipse-docks/extension-plain-editor": "*",
     "@eclipse-docks/extension-python-runtime": "*"

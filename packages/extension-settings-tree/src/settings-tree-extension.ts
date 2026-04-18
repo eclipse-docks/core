@@ -41,10 +41,4 @@ export default (_uiContext: unknown) => {
         icon: "docks settings",
         label: "Settings",
     });
-
-    contributionRegistry.registerContribution(SIDEBAR_MAIN_TOOLBAR, {
-        command: "open_extensions",
-        icon: "docks extensions",
-        label: "Extensions",
-    });
 };

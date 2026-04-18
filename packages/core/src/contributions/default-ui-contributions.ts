@@ -3,6 +3,7 @@ import { contributionRegistry, type HTMLContribution } from "../core/contributio
 import {
     PANEL_BOTTOM,
     SIDEBAR_MAIN,
+    SIDEBAR_MAIN_TOOLBAR,
     TOOLBAR_BOTTOM_END,
     TOOLBAR_MAIN_RIGHT
 } from "../core/constants";
@@ -55,3 +56,8 @@ contributionRegistry.registerContribution(TOOLBAR_MAIN_RIGHT, {
     component: () => html`<docks-layout-switcher></docks-layout-switcher>`
 } as HTMLContribution);
 
+contributionRegistry.registerContribution(SIDEBAR_MAIN_TOOLBAR, {
+    command: "open_extensions",
+    icon: "docks extensions",
+    label: "Extensions",
+});

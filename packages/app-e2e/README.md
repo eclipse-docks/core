@@ -5,11 +5,14 @@ Minimal Docks shell for Playwright only (not the public demo app in `packages/ap
 ## Commands
 
 - **From repo root:** `npm run test:e2e` / `npm run test:e2e:ui` (UI mode).
+- **Story specs** (`story-*.spec.ts`, clips + coverage): `npm run test:e2e:stories` — see [e2e/story-tests.md](./e2e/story-tests.md).
 - **Browsers:** first-time setup from repo root: `npm run playwright:install-chromium`. On Linux CI images use `npm run playwright:install-chromium-ci` (installs Chromium plus system dependencies).
 
 ## Config
 
-- [playwright.config.ts](./playwright.config.ts) — `webServer` builds core + this package, then serves preview on `127.0.0.1:4173`; `use.baseURL` matches that origin.
+- [playwright.config.ts](./playwright.config.ts) — `webServer` runs **`npm run build -w @eclipse-docks/core && npm run build -w @eclipse-docks/app-e2e`**, then `vite preview` on `127.0.0.1:4173`; `use.baseURL` matches that origin.
+- **When that runs:** Playwright executes `webServer.command` whenever it **starts** the preview server. **Locally**, if something is already responding on `4173`, `reuseExistingServer` skips that command (faster reruns, but **no rebuild** — you may be testing stale assets). Stop the old preview or set **`PW_E2E_REUSE_SERVER=0`** when you change harness or core and need a fresh build. **CI** never reuses a server.
+- **`E2E_STORY`:** `npm run test:e2e` runs with **`E2E_STORY` cleared** so a leftover export in your shell does not turn on story video/pacing. `npm run test:e2e:stories` sets `E2E_STORY=1` and runs only tests whose title matches **`--grep Storyboard`** (use a `test.describe('Storyboard: …')` block in story specs).
 - **Artifacts:** `screenshot: 'on'`, `trace: 'on-first-retry'`; outputs under `test-results/` (gitignored).
 
 ## CI
@@ -21,7 +24,8 @@ Minimal Docks shell for Playwright only (not the public demo app in `packages/ap
 Entry is [src/main.ts](./src/main.ts): `registerApp` plus auxiliary/toolbar contributions as specs require.
 
 - **Extensions:** list them in `AppDefinition.extensions` (e.g. `@eclipse-docks/extension-ai-system`, `@eclipse-docks/extension-monaco-editor` for workspace file editing in E2E).
-- **Side-effect imports:** [vite.config.ts](./vite.config.ts) uses `resolveDepVersionsPlugin()` (automatic `extension-*` / `@scope/extension-*` side-effect imports are on by default). [src/main.ts](./src/main.ts) additionally imports the in-repo [`extension-ai-system/src/ai-system-extension.ts`](../../packages/extension-ai-system/src/ai-system-extension.ts) so that registration runs after the package entry and **before** the rest of `main.ts` adds E2E auxiliary tabs — order **`[aiview, …e2e tabs]`** — avoiding `wa-tab-group` “first tab” fallbacks being mistaken for successful `coupledEditors` coupling.
+- **Harness vs preview build:** Do not import `ai-system-extension` directly in [src/main.ts](./src/main.ts) while also listing `@eclipse-docks/extension-ai-system` in `AppDefinition.extensions` — the bundler can load that module twice (different chunks), and Lit `@customElement` registration throws (“already been used”). E2E auxiliary contributions are registered in **`initialize()`** so they run **after** extensions load, preserving tab order **`[aiview, …e2e tabs]`** without a duplicate import.
+- **Side-effect imports:** [vite.config.ts](./vite.config.ts) uses `resolveDepVersionsPlugin()` (automatic `extension-*` / `@scope/extension-*` side-effect imports are on by default).
 
 ### `coupledEditors` example
 

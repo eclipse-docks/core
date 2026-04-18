@@ -1,9 +1,8 @@
 /**
- * In-repo AI extension registration (after package entry from resolveDepVersionsPlugin’s default extension side-effects).
- * Keeps auxiliary tab order before E2E contributions (see README).
+ * E2E harness contributions are registered in initialize() so they run after extensions load.
+ * That keeps auxiliary tab order [aiview, …e2e tabs] without a second import of ai-system-extension
+ * (eager import + enableAsync caused duplicate custom element registration in preview builds).
  */
-import '../../extension-ai-system/src/ai-system-extension';
-
 import {
     TOOLBAR_MAIN,
     SIDEBAR_AUXILIARY,
@@ -15,28 +14,29 @@ import { html } from '@eclipse-docks/core/externals/lit';
 
 import './e2e-coupled-panel';
 
-contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {
-    name: 'e2e-coupled-ai-config',
-    label: 'E2E Coupled',
-    icon: 'link',
-    closable: false,
-    coupledEditors: ['system.ai-config-editor'],
-    component: (id: string) => html`<e2e-coupled-panel id="${id}"></e2e-coupled-panel>`,
-});
+function registerE2eHarnessContributions(): void {
+    contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {
+        name: 'e2e-coupled-ai-config',
+        label: 'E2E Coupled',
+        icon: 'link',
+        closable: false,
+        coupledEditors: ['system.ai-config-editor'],
+        component: (id: string) => html`<e2e-coupled-panel id="${id}"></e2e-coupled-panel>`,
+    });
 
-contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {
-    name: 'e2e-decoy-coupled-ai-config',
-    label: 'E2E Decoy',
-    icon: 'link',
-    closable: false,
-    coupledEditors: ['system.ai-config-editor-FAKE'],
-    component: (id: string) => html`<e2e-coupled-panel id="${id}"></e2e-coupled-panel>`,
-});
+    contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {
+        name: 'e2e-decoy-coupled-ai-config',
+        label: 'E2E Decoy',
+        icon: 'link',
+        closable: false,
+        coupledEditors: ['system.ai-config-editor-FAKE'],
+        component: (id: string) => html`<e2e-coupled-panel id="${id}"></e2e-coupled-panel>`,
+    });
 
-contributionRegistry.registerContribution(TOOLBAR_MAIN, {
-    label: 'Docks E2E',
-    slot: 'start',
-    component: () => html`
+    contributionRegistry.registerContribution(TOOLBAR_MAIN, {
+        label: 'Docks Preview',
+        slot: 'start',
+        component: () => html`
     <div
       style="
         display: inline-flex;
@@ -47,24 +47,29 @@ contributionRegistry.registerContribution(TOOLBAR_MAIN, {
     >
       <img
         src="/logo.svg"
-        alt="Docks E2E"
+        alt="Docks Preview"
         style="display: block; height: 28px; width: auto;"
       />
     </div>
   `,
-} as HTMLContribution);
+    } as HTMLContribution);
+}
 
 const appRoot = document.getElementById('app-root') ?? document.body;
 appLoaderService.registerApp(
     {
-        name: 'Docks E2E',
-        description: 'Playwright harness — not the product demo.',
+        name: 'Docks Preview',
+        description: 'A slim Docks shell for browser tests and story clips — not the full demo app.',
         layoutId: 'standard-full',
         extensions: [
             '@eclipse-docks/extension-ai-system',
+            '@eclipse-docks/extension-monaco-editor',
             '@eclipse-docks/extension-plain-editor',
             '@eclipse-docks/extension-python-runtime',
         ],
+        initialize: () => {
+            registerE2eHarnessContributions();
+        },
     },
     { autoStart: true, hostConfig: true, container: appRoot },
 );

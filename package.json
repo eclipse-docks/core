@@ -25,6 +25,7 @@
     "type-check": "npm run type-check -w @eclipse-docks/core",
     "test": "npm run test -w @eclipse-docks/core",
     "test:e2e": "npm run test:e2e -w @eclipse-docks/app-e2e",
+    "test:e2e:stories": "npm run test:e2e:stories -w @eclipse-docks/app-e2e",
     "test:e2e:ui": "npm run test:e2e:ui -w @eclipse-docks/app-e2e",
     "playwright:install-chromium": "npm exec --workspace=@eclipse-docks/app-e2e -- playwright install chromium",
     "playwright:install-chromium-ci": "npm exec --workspace=@eclipse-docks/app-e2e -- playwright install chromium --with-deps",

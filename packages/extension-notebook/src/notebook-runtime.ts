@@ -530,7 +530,10 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             }
 
             const widget = this.getCellWidgetRef(cellIndex).value;
-            const code = widget ? widget.getContent() : this.getCellSource(cell);
+            const code =
+                widget && typeof (widget as { getContent?: unknown }).getContent === 'function'
+                    ? (widget as DocksMonacoWidget).getContent()
+                    : this.getCellSource(cell);
             if (code === null || code === undefined) return;
 
             const result = await k.execute(code);
@@ -926,7 +929,10 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
         this.notebook?.cells.forEach((cell, index) => {
             if (cell.cell_type !== 'code') return;
             const widget = this.getCellWidgetRef(index).value;
-            const value = widget?.getContent();
+            const value =
+                widget && typeof (widget as { getContent?: unknown }).getContent === 'function'
+                    ? (widget as DocksMonacoWidget).getContent()
+                    : undefined;
             if (value !== undefined && value !== null) {
                 cell.source = this.stringToSourceArray(value);
             }

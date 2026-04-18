@@ -135,7 +135,7 @@ export class DocksToolbar extends DocksElement {
 
     protected doBeforeUI() {
         this.refreshContributions();
-        
+
         subscribe(TOPIC_CONTRIBUTEIONS_CHANGED, (event: ContributionChangeEvent) => {
             const id = this.getAttribute("id");
             if (!id) return;

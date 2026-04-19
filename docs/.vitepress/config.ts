@@ -15,10 +15,7 @@ export default defineConfig({
     sidebar: [
       {
         text: 'Introduction',
-        items: [
-          { text: 'What is Eclipse Docks', link: '/intro' },
-          { text: 'App walkthrough (video)', link: '/videos/' },
-        ],
+        items: [{ text: 'What is Eclipse Docks', link: '/intro' }],
       },
       {
         text: 'Guide',

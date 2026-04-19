@@ -5,7 +5,7 @@ Minimal Docks shell for Playwright only (not the public demo app in `packages/ap
 ## Commands
 
 - **From repo root:** `npm run test:e2e` / `npm run test:e2e:ui` (UI mode).
-- **Story specs** (`story-*.spec.ts`, clips + coverage): `npm run test:e2e:stories` — see [e2e/story-tests.md](./e2e/story-tests.md). The walkthrough clip shipped in the docs site is **`docs/public/videos/app-walkthrough.mov`** (see [docs/videos](https://github.com/eclipse-docks/core/tree/main/docs/videos)); refresh it from `test-results/` after a new story run if needed.
+- **Story specs** (`story-*.spec.ts`, clips + coverage): `npm run test:e2e:stories` — see [e2e/story-tests.md](./e2e/story-tests.md).
 - **Browsers:** first-time setup from repo root: `npm run playwright:install-chromium`. On Linux CI images use `npm run playwright:install-chromium-ci` (installs Chromium plus system dependencies).
 
 ## Config

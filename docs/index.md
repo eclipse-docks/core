@@ -11,10 +11,6 @@ This documentation is for **developers** who want to:
 
 A full app built on Eclipse Docks: [https://app.kispace.de](https://app.kispace.de).
 
-## Walkthrough
-
-Short screen recording of the default shell: [App walkthrough (video)](/videos/).
-
 ## Repository
 
 Source and issue tracker: [github.com/eclipse-docks/core](https://github.com/eclipse-docks/core).

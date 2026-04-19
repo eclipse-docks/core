@@ -1,4 +1,4 @@
-# Story E2E tests (e.g. `docks-walkthrough.spec.ts`, `Storyboard:` + `--grep`)
+# Story E2E tests (e.g. `app-walkthrough.spec.ts`, `Storyboard:` + `--grep`)
 
 Story specs live next to other Playwright files under `e2e/`. They serve **two roles**:
 
@@ -11,7 +11,7 @@ There is no separate Playwright project or ignore list: one `chromium` project r
 
 ## Naming
 
-- **File name:** any `*.spec.ts` under `e2e/`; **`npm run test:e2e:stories`** uses `--grep Storyboard`, so include a top-level `test.describe('Storyboard: …')` (e.g. [`docks-walkthrough.spec.ts`](./docks-walkthrough.spec.ts)).
+- **File name:** any `*.spec.ts` under `e2e/`; **`npm run test:e2e:stories`** uses `--grep Storyboard`, so include a top-level `test.describe('Storyboard: …')` (e.g. [`app-walkthrough.spec.ts`](./app-walkthrough.spec.ts)).
 - **Describe titles:** Prefer readable names such as `Storyboard: …` so traces and reports read well.
 
 ---
@@ -86,8 +86,6 @@ Avoid extra waits in **non-story** runs: `story-utils` already no-ops pacing whe
 ## Artifacts
 
 With video on, Playwright writes recordings under `test-results/` (gitignored). Default config also uses screenshots on failure and trace on first retry — see [`playwright.config.ts`](../playwright.config.ts).
-
-The curated **app walkthrough** recording for the published docs lives at **`docs/public/videos/app-walkthrough.mov`** (WebM bitstream, `.mov` extension for GitHub README compatibility; see [docs/videos](https://github.com/eclipse-docks/core/tree/main/docs/videos) and the VitePress [walkthrough page](https://app.kispace.de/docs/videos/)). After re-recording with `npm run test:e2e:stories`, copy the new `test-results/.../video.webm` from the walkthrough test folder to **`app-walkthrough.mov`** (replace the existing file) if you want the site to match the latest story run.
 
 ---
 

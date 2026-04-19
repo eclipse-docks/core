@@ -22,7 +22,7 @@ Eclipse Docks is a runtime web platform for building modular, extensible desktop
 
 ---
 
-<video controls playsinline muted width="100%" src="https://raw.githubusercontent.com/eclipse-docks/core/main/docs/public/videos/app-walkthrough.webm"></video>
+<video controls playsinline muted width="100%" src="https://raw.githubusercontent.com/eclipse-docks/core/main/docs/public/videos/app-walkthrough.mov"></video>
 
 ## How to get started
 

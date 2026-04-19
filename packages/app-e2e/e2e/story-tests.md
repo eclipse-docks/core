@@ -87,7 +87,7 @@ Avoid extra waits in **non-story** runs: `story-utils` already no-ops pacing whe
 
 With video on, Playwright writes recordings under `test-results/` (gitignored). Default config also uses screenshots on failure and trace on first retry — see [`playwright.config.ts`](../playwright.config.ts).
 
-The curated **app walkthrough** recording for the published docs lives at **`docs/public/videos/app-walkthrough.webm`** (see [docs/videos](https://github.com/eclipse-docks/core/tree/main/docs/videos) and the VitePress [walkthrough page](https://app.kispace.de/docs/videos/)). After re-recording with `npm run test:e2e:stories`, copy the new `test-results/.../video.webm` from the walkthrough test folder over that file if you want the site to match the latest story run.
+The curated **app walkthrough** recording for the published docs lives at **`docs/public/videos/app-walkthrough.mov`** (WebM bitstream, `.mov` extension for GitHub README compatibility; see [docs/videos](https://github.com/eclipse-docks/core/tree/main/docs/videos) and the VitePress [walkthrough page](https://app.kispace.de/docs/videos/)). After re-recording with `npm run test:e2e:stories`, copy the new `test-results/.../video.webm` from the walkthrough test folder to **`app-walkthrough.mov`** (replace the existing file) if you want the site to match the latest story run.
 
 ---
 

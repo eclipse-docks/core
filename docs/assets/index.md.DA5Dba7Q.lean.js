@@ -1,0 +1,1 @@
+import{_ as t,o as a,c as o,ae as i}from"./chunks/framework.BIONGpTb.js";const u=JSON.parse('{"title":"Introduction","description":"","frontmatter":{},"headers":[],"relativePath":"index.md","filePath":"index.md"}'),r={name:"index.md"};function s(n,e,l,c,p,d){return a(),o("div",null,[...e[0]||(e[0]=[i("",10)])])}const m=t(r,[["render",s]]);export{u as __pageData,m as default};

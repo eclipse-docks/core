@@ -21,8 +21,8 @@ type SwUpdateProgressMessage = {
 const PRECACHE_MANIFEST = self.__WB_MANIFEST;
 const PRECACHE_TOTAL = PRECACHE_MANIFEST.length;
 let updateProgressStarted = false;
-const updateProgressSeen = new Set<string>();
-const updateProgressFetched = new Set<string>();
+/** URLs finished during this waiting-SW install (cache hit or network fetch). */
+const precacheInstallDoneUrls = new Set<string>();
 
 async function broadcastUpdateProgress(
   completed: number,
@@ -36,6 +36,38 @@ async function broadcastUpdateProgress(
   const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   const message: SwUpdateProgressMessage = { type: 'SW_UPDATE_PROGRESS', completed, total, done, currentFile };
   clients.forEach((client) => client.postMessage(message));
+}
+
+function pathnameForProgress(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+}
+
+function shouldReportPrecacheInstallProgress(event: ExtendableEvent | undefined): boolean {
+  return Boolean(event?.type === 'install' && self.registration.active && PRECACHE_TOTAL > 0);
+}
+
+function ensureUpdateProgressStarted(): void {
+  if (updateProgressStarted || !self.registration.active || PRECACHE_TOTAL <= 0) {
+    return;
+  }
+  updateProgressStarted = true;
+  void broadcastUpdateProgress(0, PRECACHE_TOTAL);
+}
+
+function markPrecacheUrlDone(requestUrl: string): void {
+  if (precacheInstallDoneUrls.has(requestUrl)) {
+    return;
+  }
+  precacheInstallDoneUrls.add(requestUrl);
+  void broadcastUpdateProgress(
+    precacheInstallDoneUrls.size,
+    PRECACHE_TOTAL,
+    pathnameForProgress(requestUrl),
+  );
 }
 
 function withCoopCoep(response: Response): Response {
@@ -56,25 +88,32 @@ cleanupOutdatedCaches();
 
 addPlugins([
   {
-    cachedResponseWillBeUsed: async ({ cachedResponse }) =>
-      cachedResponse ? withCoopCoep(cachedResponse) : cachedResponse,
-    requestWillFetch: async ({ request }) => {
-      if (!updateProgressStarted && self.registration.active && PRECACHE_TOTAL > 0) {
-        updateProgressStarted = true;
-        void broadcastUpdateProgress(0, PRECACHE_TOTAL);
+    handlerWillStart: async ({ event, request }) => {
+      if (!shouldReportPrecacheInstallProgress(event)) {
+        return;
       }
-      updateProgressSeen.add(request.url);
-      return request;
+      ensureUpdateProgressStarted();
+      void broadcastUpdateProgress(
+        precacheInstallDoneUrls.size,
+        PRECACHE_TOTAL,
+        pathnameForProgress(request.url),
+      );
     },
-    fetchDidSucceed: async ({ request, response }) => {
-      if (
-        updateProgressStarted &&
-        updateProgressSeen.has(request.url) &&
-        !updateProgressFetched.has(request.url)
-      ) {
-        updateProgressFetched.add(request.url);
-        const currentFile = new URL(request.url).pathname;
-        void broadcastUpdateProgress(updateProgressFetched.size, PRECACHE_TOTAL, currentFile);
+    cachedResponseWillBeUsed: async ({ cachedResponse, request, event }) => {
+      if (cachedResponse) {
+        const response = withCoopCoep(cachedResponse);
+        if (shouldReportPrecacheInstallProgress(event)) {
+          ensureUpdateProgressStarted();
+          markPrecacheUrlDone(request.url);
+        }
+        return response;
+      }
+      return cachedResponse;
+    },
+    fetchDidSucceed: async ({ request, response, event }) => {
+      if (shouldReportPrecacheInstallProgress(event)) {
+        ensureUpdateProgressStarted();
+        markPrecacheUrlDone(request.url);
       }
       return withCoopCoep(response);
     },

@@ -19,7 +19,7 @@
     "publish:packages": "./scripts/publish-packages.sh",
     "dev": "npm run dev -w @eclipse-docks/app",
     "build": "npm run build -w @eclipse-docks/core && npm run build:extensions",
-    "build:app": "npm run build && npm run build -w @eclipse-docks/app",
+    "build:app": "npm run build -w @eclipse-docks/app",
     "build:app-e2e": "npm run build -w @eclipse-docks/core && npm run build -w @eclipse-docks/app-e2e",
     "preview": "npm run preview -w @eclipse-docks/app",
     "type-check": "npm run type-check -w @eclipse-docks/core",

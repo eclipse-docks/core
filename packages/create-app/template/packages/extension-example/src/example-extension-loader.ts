@@ -6,7 +6,7 @@ contributionRegistry.registerContribution(SIDEBAR_MAIN, {
   name: 'example-view',
   label: 'Example',
   icon: 'puzzle-piece',
-  closable: true,
+  closable: false,
   toolbar: false,
   component: (_id: string) => html`
     <div style="padding: var(--wa-space-l);">

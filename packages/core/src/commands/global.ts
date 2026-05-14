@@ -1,6 +1,7 @@
 import { registerAll } from "../core/commandregistry";
 import { CommandContribution } from "../core/contributionregistry";
 import { TOOLBAR_MAIN_RIGHT } from "../core/constants";
+import { TOOLBAR_FULLSCREEN, TOOLBAR_THEME_SWITCHER } from "../core/ui-ids";
 import { EditorInput, editorRegistry } from "../core/editorregistry";
 import { html } from "lit";
 import { toastError, toastInfo } from "../core/toast";
@@ -74,6 +75,7 @@ registerAll({
     },
     contribution: {
         target: TOOLBAR_MAIN_RIGHT,
+        name: TOOLBAR_THEME_SWITCHER,
         icon: "circle-half-stroke",
         label: "Theme Switcher",
     }
@@ -103,6 +105,7 @@ registerAll({
     },
     contribution: {
         target: TOOLBAR_MAIN_RIGHT,
+        name: TOOLBAR_FULLSCREEN,
         icon: "expand",
         label: "Fullscreen",
     }

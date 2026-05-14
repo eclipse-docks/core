@@ -10,10 +10,11 @@ import {
 import {
     VIEW_FILEBROWSER,
     VIEW_LOG_TERMINAL,
-    TOOLBAR_APP_SWITCHER,
+    TOOLBAR_LAYOUT_SWITCHER,
     TOOLBAR_FAST_VIEWS,
     TOOLBAR_INFO,
-    TOOLBAR_LANGUAGE_SELECTOR
+    TOOLBAR_LANGUAGE_SELECTOR,
+    SIDEBAR_TOOLBAR_EXTENSIONS
 } from "../core/ui-ids";
 
 contributionRegistry.registerContribution(SIDEBAR_MAIN, {
@@ -51,12 +52,13 @@ contributionRegistry.registerContribution(TOOLBAR_BOTTOM_END, {
 });
 
 contributionRegistry.registerContribution(TOOLBAR_MAIN_RIGHT, {
-    name: TOOLBAR_APP_SWITCHER,
-    label: "App Switcher",
+    name: TOOLBAR_LAYOUT_SWITCHER,
+    label: "Layout Switcher",
     component: () => html`<docks-layout-switcher></docks-layout-switcher>`
 } as HTMLContribution);
 
 contributionRegistry.registerContribution(SIDEBAR_MAIN_TOOLBAR, {
+    name: SIDEBAR_TOOLBAR_EXTENSIONS,
     command: "open_extensions",
     icon: "docks extensions",
     label: "Extensions",

@@ -1,5 +1,6 @@
-import {contributionRegistry, HTMLContribution} from "../core/contributionregistry";
+import {contributionRegistry} from "../core/contributionregistry";
 import {TOOLBAR_BOTTOM_CENTER} from "../core/constants";
+import {TOOLBAR_TASKS} from "../core/ui-ids";
 import {customElement} from "lit/decorators.js";
 import { DocksElement } from "../parts/element";
 import {css, html, render} from "lit";
@@ -10,8 +11,10 @@ import {i18n} from "../core/i18n";
 const t = await i18n(import.meta.glob('./tasks*.json'));
 
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM_CENTER, {
-    component: "<docks-tasks></docks-tasks>"
-} as HTMLContribution)
+    name: TOOLBAR_TASKS,
+    label: "Active Tasks",
+    component: "<docks-tasks></docks-tasks>",
+})
 
 // Singleton dialog container for progress dialog
 let progressDialogContainer: HTMLElement | null = null;

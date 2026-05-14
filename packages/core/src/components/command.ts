@@ -43,6 +43,9 @@ export class DocksCommand extends DocksWidget {
     @property()
     dropdown?: string
 
+    @property({ type: Boolean, attribute: 'with-caret' })
+    withCaret: boolean = true
+
     @property()
     placement: 'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | 'bottom-end' | 'left' | 'left-start' | 'left-end' | 'right' | 'right-start' | 'right-end' = 'bottom-start'
 
@@ -161,7 +164,7 @@ export class DocksCommand extends DocksWidget {
                         variant=${this.variant}
                         size=${this.size}
                         ?disabled=${this.disabled}
-                        with-caret
+                        ?with-caret=${this.withCaret}
                         title=${keybinding ? `${this.title} (${keybinding})` : this.title}>
                         ${icon(this.icon, { label: this.title, slot: 'start' })}
                         <slot></slot>

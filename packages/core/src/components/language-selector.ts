@@ -3,6 +3,7 @@ import { customElement } from "lit/decorators.js";
 import { DocksElement } from "../parts/element";
 import { currentLanguageSignal, supportedLocalesSignal, SETTINGS_KEY_LANGUAGE } from "../core/i18n";
 import { appSettings } from "../core/settingsservice";
+import { icon } from "../core/icon-utils";
 
 function getDialogContainer(): HTMLElement {
     let container = document.getElementById('global-dialog-container');
@@ -128,7 +129,7 @@ export class DocksLanguageSelector extends DocksElement {
     protected render() {
         const currentLanguage = currentLanguageSignal.get();
         const languageName = getLanguageName(currentLanguage);
-        const buttonLabel = `${currentLanguage.toUpperCase()} ${languageName}`;
+        const buttonLabel = `${languageName} ${currentLanguage.toUpperCase()}`;
         
         return html`
             <wa-button 
@@ -136,6 +137,7 @@ export class DocksLanguageSelector extends DocksElement {
                 size="small"
                 title="Current language: ${languageName}"
                 @click=${() => showLanguageSelectorDialog()}>
+                ${icon('language')}
                 ${buttonLabel}
             </wa-button>
         `;

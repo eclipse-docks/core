@@ -41,6 +41,9 @@ export class DocksTabs extends DocksContainer {
     @property({type: Boolean, reflect: true, attribute: 'with-toolbar'})
     withToolbar: boolean = false;
 
+    @property({ type: Boolean, reflect: true, attribute: 'hide-tabs' })
+    hideTabs: boolean = false;
+
     /** Tab contributions for this container */
     @state()
     private contributions: TabContribution[] = [];
@@ -152,17 +155,37 @@ export class DocksTabs extends DocksContainer {
 
     async closeTab(event: Event, tabName: string): Promise<void> {
         event.stopPropagation();
-        
-        if (this.isDirty(tabName) && !await confirmDialog("Unsaved changes will be lost: Do you really want to close?")) {
-            return;
+        await this.tryCloseTab(tabName, true);
+    }
+
+    /**
+     * Closes every tab in this group. Returns false if the user cancels a dirty-tab prompt.
+     */
+    async closeAllTabs(): Promise<boolean> {
+        const names = [...this.contributions.map((c) => c.name)];
+        for (const tabName of names) {
+            const ok = await this.tryCloseTab(tabName, true);
+            if (!ok) return false;
         }
-        
+        return true;
+    }
+
+    /**
+     * @returns false if the user cancelled closing a dirty tab; true if the tab was removed or was absent.
+     */
+    private async tryCloseTab(tabName: string, confirmIfDirty: boolean): Promise<boolean> {
+        if (confirmIfDirty && this.isDirty(tabName)) {
+            if (!await confirmDialog("Unsaved changes will be lost: Do you really want to close?")) {
+                return false;
+            }
+        }
+
         const tabPanel = this.getTabPanel(tabName);
-        if (!tabPanel) return;
-        
+        if (!tabPanel) return true;
+
         const contribution = this.contributions.find(c => c.name === tabName);
-        if (!contribution) return;
-        
+        if (!contribution) return true;
+
         this.cleanupTabInstance(tabPanel);
         this.clearActiveSignalsIfPartInPanel(tabPanel);
 
@@ -172,10 +195,11 @@ export class DocksTabs extends DocksContainer {
         }
 
         this.requestUpdate();
-        
+
         this.updateComplete.then(() => {
             this.activateNextAvailableTab();
         });
+        return true;
     }
 
     markDirty(name: string, dirty: boolean): void {
@@ -419,6 +443,14 @@ export class DocksTabs extends DocksContainer {
             height: 100%;
             width: 100%;
             min-height: 0;
+        }
+
+        :host([hide-tabs]) wa-tab {
+            display: none !important;
+        }
+
+        :host([hide-tabs]:not([with-toolbar])) wa-tab-group::part(nav) {
+            display: none;
         }
 
         :host(:is([placement="top"], [placement="bottom"])) wa-tab-group::part(base) {

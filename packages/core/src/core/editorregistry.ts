@@ -226,11 +226,18 @@ class EditorRegistry {
         } as TabContribution) 
     }
 
-    async openTab(tabContribution: TabContribution) {
+    async openTab(tabContribution: TabContribution, options?: { singleTab?: boolean }) {
         const editorArea = this.getEditorArea();
         
         if (!editorArea) {
             console.error("Editor area not found. The split pane system may not be initialized yet.");
+            return;
+        }
+
+        if (options?.singleTab) {
+            const closed = await editorArea.closeAllTabs();
+            if (!closed) return;
+            editorArea.open(tabContribution);
             return;
         }
 

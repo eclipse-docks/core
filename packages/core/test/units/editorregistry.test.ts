@@ -102,11 +102,13 @@ describe('editorregistry', () => {
   it('openTab activates existing tab or opens new one', async () => {
     const activate = vi.fn();
     const open = vi.fn();
+    const closeAllTabs = vi.fn(async () => true);
     (globalThis as any).document = {
       querySelector: vi.fn(() => ({
         has: (name: string) => name === 'existing',
         activate,
         open,
+        closeAllTabs,
       })),
     };
 
@@ -114,8 +116,47 @@ describe('editorregistry', () => {
     await editorRegistry.openTab({ name: 'existing', label: 'Existing' } as any);
     expect(activate).toHaveBeenCalledWith('existing');
     expect(open).not.toHaveBeenCalled();
+    expect(closeAllTabs).not.toHaveBeenCalled();
 
     await editorRegistry.openTab({ name: 'new-one', label: 'New One' } as any);
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ name: 'new-one' }));
+  });
+
+  it('openTab with singleTab closes all then opens', async () => {
+    const activate = vi.fn();
+    const open = vi.fn();
+    const closeAllTabs = vi.fn(async () => true);
+    (globalThis as any).document = {
+      querySelector: vi.fn(() => ({
+        has: vi.fn(() => false),
+        activate,
+        open,
+        closeAllTabs,
+      })),
+    };
+
+    const { editorRegistry } = await import('../../src/core/editorregistry');
+    await editorRegistry.openTab({ name: 'only', label: 'Only' } as any, { singleTab: true });
+    expect(closeAllTabs).toHaveBeenCalledOnce();
+    expect(open).toHaveBeenCalledWith(expect.objectContaining({ name: 'only' }));
+    expect(activate).not.toHaveBeenCalled();
+  });
+
+  it('openTab with singleTab aborts when closeAllTabs returns false', async () => {
+    const open = vi.fn();
+    const closeAllTabs = vi.fn(async () => false);
+    (globalThis as any).document = {
+      querySelector: vi.fn(() => ({
+        has: vi.fn(() => false),
+        activate: vi.fn(),
+        open,
+        closeAllTabs,
+      })),
+    };
+
+    const { editorRegistry } = await import('../../src/core/editorregistry');
+    await editorRegistry.openTab({ name: 'x', label: 'X' } as any, { singleTab: true });
+    expect(closeAllTabs).toHaveBeenCalledOnce();
+    expect(open).not.toHaveBeenCalled();
   });
 });

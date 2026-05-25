@@ -36,7 +36,10 @@ export type {
 export type {
     NavigableDialogAction,
     FilebrowserDialogMode,
-    FilebrowserDialogState
+    FilebrowserDialogState,
+    FormDialogField,
+    FormDialogFieldType,
+    FormDialogOptions,
 } from '../dialogs';
 export type {
     TreeNode,

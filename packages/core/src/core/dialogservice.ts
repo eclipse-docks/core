@@ -182,8 +182,13 @@ class DialogService {
             }
             const stateWithClose = { ...state, close: cleanup };
 
+            const dialogLabel =
+                state && typeof state === 'object' && typeof (state as { label?: unknown }).label === 'string'
+                    ? (state as { label: string }).label
+                    : (contribution.label || dialogId);
+
             const template = html`
-                <wa-dialog label="${contribution.label || dialogId}" open @wa-request-close=${cleanup}>
+                <wa-dialog label="${dialogLabel}" open @wa-request-close=${cleanup}>
                     <style>
                         .dialog-service-content {
                             display: flex;

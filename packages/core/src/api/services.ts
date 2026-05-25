@@ -35,8 +35,14 @@ export {
     navigableInfoDialog,
     confirmDialog,
     promptDialog,
+    formDialog,
+    formDialogRequired,
+    validateFormDialogFields,
     filebrowserDialog,
-    type NavigableDialogAction
+    type NavigableDialogAction,
+    type FormDialogField,
+    type FormDialogFieldType,
+    type FormDialogOptions,
 } from '../dialogs';
 export { 
     toastInfo,

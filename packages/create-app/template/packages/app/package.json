@@ -30,13 +30,10 @@
     "typescript": "^6.0.0",
     "vite": "^8.0.0",
     "vite-plugin-cross-origin-isolation": "^0.1.6",
-    "vite-plugin-mkcert": "^1.17.9",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-mkcert": "^1.17.9"
   },
   "marketplace": {
     "catalogUrls": [
-      "https://raw.githubusercontent.com/kispace-io/appspace-marketplace/main/catalogs/extensions.json",
-      "https://raw.githubusercontent.com/kispace-io/appspace-marketplace/main/catalogs/apps.json"
     ]
   }
 }

@@ -17,6 +17,10 @@
     "./api": {
       "types": "./dist/api.d.ts",
       "import": "./dist/api.js"
+    },
+    "./table": {
+      "types": "./dist/docks-data-table.d.ts",
+      "import": "./dist/table.js"
     }
   },
   "files": [

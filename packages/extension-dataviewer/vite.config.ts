@@ -22,6 +22,7 @@ export default defineConfig({
       entry: {
         index: path.resolve(__dirname, 'src/index.ts'),
         api: path.resolve(__dirname, 'src/api.ts'),
+        table: path.resolve(__dirname, 'src/docks-data-table.ts'),
       },
       formats: ['es'],
       fileName: (_, name) => `${name}.js`,

@@ -469,11 +469,25 @@ export class DocksTabs extends DocksContainer {
             overflow: hidden;
         }
 
-        :host(:is([placement="top"], [placement="bottom"])) wa-tab-group::part(base) {
+        /* Top: nav (order 0) → row 1 auto, body (order 2) → row 2 1fr. */
+        :host([placement="top"]) wa-tab-group::part(base) {
             display: grid;
             grid-template-rows: auto minmax(0, 1fr);
             height: 100%;
             width: 100%;
+        }
+
+        /* Bottom: body (order 1) → row 1 1fr, nav (order 2) → row 2 auto. */
+        :host([placement="bottom"]) wa-tab-group::part(base) {
+            display: grid;
+            grid-template-rows: minmax(0, 1fr) auto;
+            height: 100%;
+            width: 100%;
+        }
+
+        :host([placement="bottom"]) wa-tab-group::part(body) {
+            min-height: 0;
+            overflow: hidden;
         }
 
         :host(:is([placement="start"], [placement="end"])) wa-tab-group::part(base) {

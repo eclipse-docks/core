@@ -60,6 +60,16 @@ export class DocksCommand extends DocksWidget {
     @state()
     private dropdownContributions: Contribution[] = []
 
+    private closeDropdown(dropdown: { open?: boolean } | null | undefined) {
+        if (dropdown && dropdown.open !== undefined) {
+            dropdown.open = false
+        }
+    }
+
+    private closeParentDropdown() {
+        this.closeDropdown(this.closest('wa-dropdown') as { open?: boolean } | null)
+    }
+
     private handleClick(event?: Event) {
         if (this.disabled) return
 
@@ -67,27 +77,20 @@ export class DocksCommand extends DocksWidget {
             event.stopPropagation()
         }
 
+        this.closeParentDropdown()
+
         if (this.action) {
             this.action(event)
             return
         }
 
         if (this.cmd) {
-            const dropdown = this.closest('wa-dropdown') as any;
-            if (dropdown && dropdown.open !== undefined) {
-                dropdown.open = false;
-            }
             void this.executeCommand(this.cmd, this.params);
         }
     }
 
     private handleSelect(event: CustomEvent) {
-        // Close dropdown immediately when any item is selected
-        // This ensures the dropdown is hidden before the command executes
-        const dropdown = event.target as any;
-        if (dropdown && dropdown.open !== undefined) {
-            dropdown.open = false;
-        }
+        this.closeDropdown(event.target as { open?: boolean })
     }
 
     private isInDropdown(): boolean {

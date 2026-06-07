@@ -13,7 +13,6 @@
 | **@eclipse-docks/extension-media-viewer** | Media (image, etc.) viewer. |
 | **@eclipse-docks/extension-notebook** | Notebook runtime and UI. |
 | **@eclipse-docks/extension-python-runtime** | Python runtime (e.g. Pyodide). |
-| **@eclipse-docks/extension-linuxterminal** | Terminal. |
 | **@eclipse-docks/extension-webllm** | Web LLM integration. |
 | **@eclipse-docks/extension-in-browser-ml** | In-browser ML (e.g. transformers). |
 | **@eclipse-docks/extension-rag-system** | RAG (retrieval-augmented generation) and document indexing. |

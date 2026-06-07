@@ -79,6 +79,8 @@ export interface TabContribution extends Contribution {
      * when any of them becomes the active editor in the main editor area. Omitted or empty = no auto-reveal.
      */
     coupledEditors?: string[];
+    /** Return false to cancel tab close (after dirty-tab prompt, if any). */
+    beforeClose?: () => boolean | Promise<boolean>;
     component?: (id: string) => TemplateResult;
 }
 

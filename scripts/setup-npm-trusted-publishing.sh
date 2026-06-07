@@ -73,10 +73,10 @@ for pkg_dir in packages/core packages/extension-* packages/create-app; do
   fi
 
   if [ "$DRY_RUN" = true ]; then
-    echo "  [dry-run] Would run: npm trust github $PKG_NAME --file $WORKFLOW_FILE --repo $REPO -y"
+    echo "  [dry-run] Would run: npm trust github $PKG_NAME --file $WORKFLOW_FILE --repo $REPO --allow-publish -y"
   else
     echo "  Trust: $PKG_NAME"
-    (npm trust github "$PKG_NAME" --file "$WORKFLOW_FILE" --repo "$REPO" -y) || true
+    (npm trust github "$PKG_NAME" --file "$WORKFLOW_FILE" --repo "$REPO" --allow-publish -y) || true
     sleep 2
   fi
 done

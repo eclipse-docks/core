@@ -12,4 +12,5 @@ extensionRegistry.registerExtension({
     import("./commands"),
   ]),
   icon: "docks python",
+  dependencies: ["@eclipse-docks/extension-terminal"],
 });

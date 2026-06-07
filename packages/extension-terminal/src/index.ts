@@ -5,10 +5,8 @@ const t = await i18n(import.meta.glob('./i18n*.json'), true);
 
 extensionRegistry.registerExtension({
   id: pkg.name,
-  name: t.EXT_LINUXTERMINAL_NAME,
-  description: t.EXT_LINUXTERMINAL_DESC,
-  loader: () => import("./linuxterminal"),
-  icon: "terminal",
-  experimental: true,
-
+  name: t.EXT_TERMINAL_NAME,
+  description: t.EXT_TERMINAL_DESC,
+  loader: () => import('./terminal-extension'),
+  icon: 'terminal',
 });

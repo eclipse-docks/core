@@ -25,6 +25,7 @@
     "@eclipse-docks/core": "*",
     "@eclipse-docks/extension-monaco-editor": "*",
     "@eclipse-docks/extension-notebook": "*",
+    "@eclipse-docks/extension-terminal": "*",
     "pyodide": "^0.29.3"
   },
   "devDependencies": {

@@ -9,7 +9,8 @@ import { ifDefined } from "lit/directives/if-defined.js";
 import { DocksContextMenu } from "./contextmenu";
 
 export abstract class DocksPart extends DocksContainer {
-    protected scrollMode: 'scroller' | 'native' = 'scroller';
+    /** `scroller`: wrap content in wa-scroller; `native`: overflow on part-content; `none`: no outer scroll (child manages scroll). */
+    protected scrollMode: 'scroller' | 'native' | 'none' = 'scroller';
 
     @property()
     private dirty: boolean = false

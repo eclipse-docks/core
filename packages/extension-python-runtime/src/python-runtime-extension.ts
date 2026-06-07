@@ -8,13 +8,22 @@ import {
     contributionRegistry,
 } from "@eclipse-docks/core";
 import { TARGET_NOTEBOOK_KERNELS } from "@eclipse-docks/extension-notebook";
-import { html } from "lit";
+import { registerTerminalProfile } from "@eclipse-docks/extension-terminal/api";
+import { html } from "@eclipse-docks/core/externals/lit";
 
 type EditorWithLanguage = { isLanguage?(lang: string): boolean };
 import { PyEnv } from "./pyservice";
 import { pythonNotebookKernelContribution } from "./python-notebook-kernel";
+import { PythonReplBackend, PYTHON_REPL_PROFILE_ID } from "./python-terminal-backend";
 
 contributionRegistry.registerContribution(TARGET_NOTEBOOK_KERNELS, pythonNotebookKernelContribution);
+
+registerTerminalProfile({
+  id: PYTHON_REPL_PROFILE_ID,
+  label: "Python REPL",
+  icon: "docks python",
+  create: async () => new PythonReplBackend(),
+});
 
 import { parsePackagesFromContent } from "./editor-python-run";
 import { pythonPackageManagerService } from "./package-manager";

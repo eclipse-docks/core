@@ -13,6 +13,7 @@
     "@eclipse-docks/core": "^0.x",
     "@eclipse-docks/extension-ai-system": "^0.x",
     "@eclipse-docks/extension-command-palette": "^0.x",
+    "@eclipse-docks/extension-terminal": "^0.x",
     "@eclipse-docks/extension-catalog": "^0.x",
     "@eclipse-docks/extension-md-editor": "^0.x",
     "@eclipse-docks/extension-media-viewer": "^0.x",

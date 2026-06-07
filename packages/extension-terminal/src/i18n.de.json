@@ -1,0 +1,16 @@
+{
+  "EXT_TERMINAL_NAME": "Terminal",
+  "EXT_TERMINAL_DESC": "VS Code-ähnliches Terminal-Panel mit erweiterbaren Profilen.",
+  "TERMINAL_TAB_LABEL": "Terminal",
+  "TERMINAL_NEW": "Neues Terminal",
+  "TERMINAL_KILL": "Terminal beenden",
+  "TERMINAL_KILL_CONFIRM": "Terminal \"{name}\" beenden?",
+  "TERMINAL_KILL_ALL": "Alle Terminals beenden",
+  "TERMINAL_CLEAR": "Leeren",
+  "TERMINAL_RENAME": "Umbenennen",
+  "TERMINAL_SPLIT": "Terminal teilen",
+  "TERMINAL_SELECT_PROFILE": "Profil wählen",
+  "TERMINAL_RENAME_PROMPT": "Terminalname",
+  "TERMINAL_PROFILE_UNAVAILABLE": "Profil nicht verfügbar: {profileId}",
+  "TERMINAL_DEFAULT_JS_NAME": "Befehle"
+}

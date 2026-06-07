@@ -12,6 +12,9 @@
   "workspaces": [
     "packages/*"
   ],
+  "engines": {
+    "node": ">=20.12.0"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -23,6 +26,7 @@
     "build:app-e2e": "npm run build -w @eclipse-docks/core && npm run build -w @eclipse-docks/app-e2e",
     "preview": "npm run preview -w @eclipse-docks/app",
     "type-check": "npm run type-check -w @eclipse-docks/core",
+    "pretest": "node scripts/check-node-version.cjs",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e -w @eclipse-docks/app-e2e",
     "test:e2e:stories": "npm run test:e2e:stories -w @eclipse-docks/app-e2e",

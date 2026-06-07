@@ -1,0 +1,16 @@
+{
+  "EXT_TERMINAL_NAME": "Terminal",
+  "EXT_TERMINAL_DESC": "VS Code-style terminal panel with pluggable profiles.",
+  "TERMINAL_TAB_LABEL": "Terminal",
+  "TERMINAL_NEW": "New Terminal",
+  "TERMINAL_KILL": "Kill Terminal",
+  "TERMINAL_KILL_CONFIRM": "Kill terminal \"{name}\"?",
+  "TERMINAL_KILL_ALL": "Kill All Terminals",
+  "TERMINAL_CLEAR": "Clear",
+  "TERMINAL_RENAME": "Rename",
+  "TERMINAL_SPLIT": "Split Terminal",
+  "TERMINAL_SELECT_PROFILE": "Select Profile",
+  "TERMINAL_RENAME_PROMPT": "Terminal name",
+  "TERMINAL_PROFILE_UNAVAILABLE": "Profile unavailable: {profileId}",
+  "TERMINAL_DEFAULT_JS_NAME": "Commands"
+}

@@ -1,4 +1,4 @@
-import type { CommandRegistry, Command } from "@eclipse-docks/core";
+import type { CommandRegistry, Command } from '@eclipse-docks/core';
 
 export interface ParsedCommand {
   commandId: string;
@@ -7,7 +7,7 @@ export interface ParsedCommand {
 
 export interface ParsedSegment {
   command: ParsedCommand;
-  operator: "&&" | "|" | null;
+  operator: '&&' | '|' | null;
 }
 
 const NAMED_PARAM_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*=.*$/;
@@ -24,7 +24,7 @@ function tokenize(segment: string): string[] {
     if (segment[i] === '"') {
       let end = i + 1;
       while (end < len && segment[end] !== '"') {
-        if (segment[end] === "\\") end++;
+        if (segment[end] === '\\') end++;
         end++;
       }
       tokens.push(segment.slice(i + 1, end).replace(/\\"/g, '"'));
@@ -40,8 +40,8 @@ function tokenize(segment: string): string[] {
   return tokens;
 }
 
-function splitChain(line: string): { segment: string; operator: "&&" | "|" | null }[] {
-  const result: { segment: string; operator: "&&" | "|" | null }[] = [];
+function splitChain(line: string): { segment: string; operator: '&&' | '|' | null }[] {
+  const result: { segment: string; operator: '&&' | '|' | null }[] = [];
   const regex = /(\s*&&\s*|\s*\|\s*)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -49,7 +49,7 @@ function splitChain(line: string): { segment: string; operator: "&&" | "|" | nul
   while ((match = regex.exec(line)) !== null) {
     const segment = line.slice(lastIndex, match.index).trim();
     if (segment) {
-      const op = match[0].includes("|") ? "|" as const : "&&" as const;
+      const op = match[0].includes('|') ? ('|' as const) : ('&&' as const);
       result.push({ segment, operator: op });
     }
     lastIndex = regex.lastIndex;
@@ -71,14 +71,10 @@ function resolveParams(
 
   for (const token of tokens) {
     if (NAMED_PARAM_REGEX.test(token)) {
-      const eqIdx = token.indexOf("=");
+      const eqIdx = token.indexOf('=');
       const name = token.slice(0, eqIdx);
       const value = token.slice(eqIdx + 1);
-      if (value === "true" || value === "false") {
-        params[name] = value === "true";
-      } else {
-        params[name] = value;
-      }
+      params[name] = value === 'true' || value === 'false' ? value === 'true' : value;
     } else {
       positionals.push(token);
     }
@@ -93,22 +89,18 @@ function resolveParams(
   return params;
 }
 
-export function parseShellLine(
-  line: string,
-  commandRegistry: CommandRegistry
-): ParsedSegment[] {
+export function parseShellLine(line: string, commandRegistry: CommandRegistry): ParsedSegment[] {
   const segments = splitChain(line);
   return segments.map(({ segment, operator }) => {
     const tokens = tokenize(segment);
     if (tokens.length === 0) {
-      return { command: { commandId: "", params: {} }, operator };
+      return { command: { commandId: '', params: {} }, operator };
     }
     const commandId = tokens[0];
     const command = commandRegistry.hasCommand(commandId)
       ? commandRegistry.getCommand(commandId)
       : undefined;
-    const paramTokens = tokens.slice(1);
-    const params = resolveParams(paramTokens, command);
+    const params = resolveParams(tokens.slice(1), command);
     return { command: { commandId, params }, operator };
   });
 }

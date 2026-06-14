@@ -1,11 +1,13 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { IndexHtmlTransformContext, Plugin, ResolvedConfig } from 'vite';
 import {
+  collectTransitiveExtensionPackages,
   listExtensionSideEffectPackages,
   resolveDepVersionsPlugin,
+  resolveExtensionSideEffectPackages,
   VIRTUAL_EXTENSION_IMPORTS,
 } from '../../src/vite-plugin-resolve-deps';
 
@@ -72,6 +74,107 @@ describe('listExtensionSideEffectPackages', () => {
       'extension-mine',
       'extension-zebra',
     ]);
+  });
+});
+
+describe('collectTransitiveExtensionPackages', () => {
+  it('collects extension dependencies from package.json files', () => {
+    withTempPackageJson(
+      {
+        '@eclipse-docks/extension-utils': '*',
+      },
+      (root) => {
+        const utilsDir = path.join(root, 'node_modules', '@eclipse-docks', 'extension-utils');
+        const runtimeDir = path.join(
+          root,
+          'node_modules',
+          '@eclipse-docks',
+          'extension-python-runtime',
+        );
+        mkdirSync(utilsDir, { recursive: true });
+        mkdirSync(runtimeDir, { recursive: true });
+        writeFileSync(
+          path.join(utilsDir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-utils',
+            dependencies: {
+              '@eclipse-docks/extension-python-runtime': '*',
+            },
+          }),
+        );
+        writeFileSync(
+          path.join(runtimeDir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-python-runtime',
+            dependencies: {
+              '@eclipse-docks/extension-terminal': '*',
+            },
+          }),
+        );
+
+        expect(
+          collectTransitiveExtensionPackages(
+            root,
+            ['@eclipse-docks/extension-utils'],
+            defaultSideEffects,
+          ),
+        ).toEqual([
+          '@eclipse-docks/extension-python-runtime',
+          '@eclipse-docks/extension-terminal',
+        ]);
+      },
+    );
+  });
+});
+
+describe('resolveExtensionSideEffectPackages', () => {
+  it('merges direct and transitive extension packages', () => {
+    withTempPackageJson(
+      {
+        '@eclipse-docks/extension-utils': '*',
+      },
+      (root) => {
+        const utilsDir = path.join(root, 'node_modules', '@eclipse-docks', 'extension-utils');
+        const runtimeDir = path.join(
+          root,
+          'node_modules',
+          '@eclipse-docks',
+          'extension-python-runtime',
+        );
+        mkdirSync(utilsDir, { recursive: true });
+        mkdirSync(runtimeDir, { recursive: true });
+        writeFileSync(
+          path.join(utilsDir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-utils',
+            dependencies: {
+              '@eclipse-docks/extension-python-runtime': '*',
+            },
+          }),
+        );
+        writeFileSync(
+          path.join(runtimeDir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-python-runtime',
+            dependencies: {
+              '@eclipse-docks/extension-terminal': '*',
+            },
+          }),
+        );
+
+        expect(
+          resolveExtensionSideEffectPackages(
+            root,
+            { '@eclipse-docks/extension-utils': '*' },
+            defaultSideEffects,
+          ),
+        ).toEqual([
+          '@eclipse-docks/extension-python-runtime',
+          '@eclipse-docks/extension-terminal',
+          '@eclipse-docks/extension-utils',
+        ]);
+      },
+    );
   });
 });
 

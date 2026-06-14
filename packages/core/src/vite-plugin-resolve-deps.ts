@@ -18,10 +18,10 @@ interface PackageJson {
   devDependencies?: Record<string, string>;
 }
 
-function findPackageVersion(appRoot: string, depName: string): string | null {
-  const segments = depName.startsWith('@')
-    ? depName.split('/')
-    : [depName];
+function packageJsonPath(appRoot: string, packageName: string): string | null {
+  const segments = packageName.startsWith('@')
+    ? packageName.split('/')
+    : [packageName];
   const relativePath = path.join('node_modules', ...segments, 'package.json');
   let dir = path.resolve(appRoot);
   const root = path.parse(dir).root;
@@ -29,17 +29,27 @@ function findPackageVersion(appRoot: string, depName: string): string | null {
   while (true) {
     const pkgPath = path.join(dir, relativePath);
     if (existsSync(pkgPath)) {
-      try {
-        const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
-        if (typeof pkg.version === 'string') return pkg.version;
-      } catch {
-        // ignore parse errors
-      }
-      return null;
+      return pkgPath;
     }
     if (dir === root) break;
     dir = path.dirname(dir);
   }
+  return null;
+}
+
+function readPackageJson(appRoot: string, packageName: string): PackageJson | null {
+  const pkgPath = packageJsonPath(appRoot, packageName);
+  if (!pkgPath) return null;
+  try {
+    return JSON.parse(readFileSync(pkgPath, 'utf8')) as PackageJson;
+  } catch {
+    return null;
+  }
+}
+
+function findPackageVersion(appRoot: string, depName: string): string | null {
+  const pkg = readPackageJson(appRoot, depName);
+  if (typeof pkg?.version === 'string') return pkg.version;
   return null;
 }
 
@@ -176,6 +186,51 @@ export function listExtensionSideEffectPackages(
   return [...first, ...rest];
 }
 
+/**
+ * Walks extension package.json `dependencies` to collect transitive extension-* packages
+ * (e.g. extension-utils → extension-python-runtime → extension-terminal).
+ */
+export function collectTransitiveExtensionPackages(
+  appRoot: string,
+  seeds: string[],
+  sideEffects: ExtensionSideEffectsListOptions,
+): string[] {
+  const found = new Set<string>();
+  const queue = [...seeds];
+  const visited = new Set<string>();
+
+  while (queue.length > 0) {
+    const name = queue.shift()!;
+    if (visited.has(name)) continue;
+    visited.add(name);
+
+    const pkg = readPackageJson(appRoot, name);
+    if (!pkg?.dependencies) continue;
+
+    for (const dep of Object.keys(pkg.dependencies)) {
+      if (!sideEffects.pattern.test(dep) || sideEffects.exclude.has(dep)) continue;
+      found.add(dep);
+      queue.push(dep);
+    }
+  }
+
+  return [...found];
+}
+
+export function resolveExtensionSideEffectPackages(
+  appRoot: string,
+  dependencies: Record<string, string>,
+  sideEffects: ExtensionSideEffectsListOptions,
+): string[] {
+  const direct = listExtensionSideEffectPackages(dependencies, sideEffects);
+  const transitive = collectTransitiveExtensionPackages(appRoot, direct, sideEffects);
+  const allNames = [...new Set([...direct, ...transitive])];
+  return listExtensionSideEffectPackages(
+    Object.fromEntries(allNames.map((name) => [name, '*'])),
+    sideEffects,
+  );
+}
+
 export function resolveDepVersionsPlugin(
   options?: ResolveDepVersionsPluginOptions,
 ): Plugin {
@@ -211,7 +266,8 @@ export function resolveDepVersionsPlugin(
         return;
       }
       const info = resolvePackageInfo(appRoot, options);
-      extensionImportPackages = listExtensionSideEffectPackages(
+      extensionImportPackages = resolveExtensionSideEffectPackages(
+        appRoot,
         info?.dependencies ?? {},
         normalized,
       );

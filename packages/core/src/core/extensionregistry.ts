@@ -301,6 +301,24 @@ class ExtensionRegistry {
      * await extensionRegistry.load('@eclipse-docks/extension-notebook')
      * ```
      */
+    /**
+     * Extension ids match npm package names. When a dependency was not side-effect-imported
+     * (e.g. only a transitive package.json dependency), importing the package registers it.
+     */
+    private async ensureExtensionRegistered(extensionId: string): Promise<void> {
+        if (this.extensions[extensionId]) {
+            return;
+        }
+        try {
+            await import(/* @vite-ignore */ extensionId);
+        } catch (error) {
+            logger.debug(`Could not side-effect import extension package ${extensionId}: ${error}`);
+        }
+        if (!this.extensions[extensionId]) {
+            throw new Error("Extension not found: " + extensionId);
+        }
+    }
+
     public async load(extensionId: string, loadingChain: string[] = []): Promise<void> {
         // Already loaded, return immediately
         if (this.loadedExtensions.has(extensionId)) {
@@ -321,15 +339,20 @@ class ExtensionRegistry {
         
         const extension = this.extensions[extensionId]
         if (!extension) {
+            await this.ensureExtensionRegistered(extensionId);
+        }
+
+        const resolvedExtension = this.extensions[extensionId]
+        if (!resolvedExtension) {
             throw new Error("Extension not found: " + extensionId)
         }
         
         const loadingPromise = (async () => {
             try {
                 logger.debug(`Loading extension: ${extensionId}`);
-                if (extension.dependencies && extension.dependencies.length > 0) {
+                if (resolvedExtension.dependencies && resolvedExtension.dependencies.length > 0) {
                     const newChain = [...loadingChain, extensionId]
-                    for (const depId of extension.dependencies) {
+                    for (const depId of resolvedExtension.dependencies) {
                         await this.load(depId, newChain)
                         // Enable the dependency if it's not already enabled
                         if (!this.isEnabled(depId)) {
@@ -339,14 +362,14 @@ class ExtensionRegistry {
                     }
                 }
                 
-                const module = await taskService.runAsync("Loading extension: " + extension.name, async () => {
-                    if (extension.loader) {
-                        return extension.loader()
-                    } else if (extension.url) {
-                        let finalUrl = extension.url;
-                        if (esmShService.isSourceIdentifier(extension.url)) {
-                            finalUrl = esmShService.normalizeToEsmSh(extension.url);
-                            logger.debug(`Normalized extension URL: ${extension.url} -> ${finalUrl}`);
+                const module = await taskService.runAsync("Loading extension: " + resolvedExtension.name, async () => {
+                    if (resolvedExtension.loader) {
+                        return resolvedExtension.loader()
+                    } else if (resolvedExtension.url) {
+                        let finalUrl = resolvedExtension.url;
+                        if (esmShService.isSourceIdentifier(resolvedExtension.url)) {
+                            finalUrl = esmShService.normalizeToEsmSh(resolvedExtension.url);
+                            logger.debug(`Normalized extension URL: ${resolvedExtension.url} -> ${finalUrl}`);
                         }
                         return import(/* @vite-ignore */ finalUrl)
                     }

@@ -416,14 +416,8 @@ class AppLoaderService {
         this.systemRequiredExtensions.forEach(extId => extensionsSet.add(extId));
         app.extensions = Array.from(extensionsSet);
 
-        // At this point, all core/built-in extension modules and app contributions
-        // have been registered. It is now safe for the extension registry to
-        // load any extensions that are marked as enabled in settings (including
-        // persisted external extensions).
-        this.dispatchLoadProgress('Loading extensions…');
-        await extensionRegistry.loadEnabledExtensions();
-
-        // Enable and load app extensions so commands/contributions are registered before UI is shown
+        // Enable and load app extensions first so declared dependencies 
+        // are loaded before persisted settings extensions run.
         if (app.extensions.length > 0) {
             this.dispatchLoadProgress('Enabling extensions…');
             await Promise.all(
@@ -434,6 +428,11 @@ class AppLoaderService {
                 )
             );
         }
+
+        // Load any additional extensions marked as enabled in settings (including
+        // persisted external extensions).
+        this.dispatchLoadProgress('Loading extensions…');
+        await extensionRegistry.loadEnabledExtensions();
 
         // Initialize new app
         if (app.initialize) {

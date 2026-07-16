@@ -399,27 +399,18 @@ export class DocksCommandPalette extends DocksWidget {
       flex-shrink: 0;
       margin-left: auto;
       padding: 2px 8px;
-      background: var(--wa-color-neutral-15);
-      border: 1px solid var(--wa-color-neutral-25);
+      background: var(--wa-color-neutral-fill-quiet);
+      border: 1px solid var(--wa-color-neutral-border-quiet);
       border-radius: 3px;
       font-size: 11px;
       font-family: monospace;
       opacity: 0.7;
     }
 
-    :host-context(.wa-light) .command-keybinding {
-      background: var(--wa-color-neutral-85);
-      border: 1px solid var(--wa-color-neutral-75);
-    }
-
     .no-results {
       padding: 20px;
       text-align: center;
-      color: var(--wa-color-neutral-60);
-    }
-
-    :host-context(.wa-light) .no-results {
-      color: var(--wa-color-neutral-40);
+      color: var(--wa-color-neutral-text-subtle);
     }
 
     wa-dialog::part(panel) {

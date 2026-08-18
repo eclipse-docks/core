@@ -1,5 +1,5 @@
 import { registerAll } from "../core/commandregistry";
-import { SYSTEM_VIEWS } from "../core/constants";
+import { SYSTEM_VIEWS } from "../core/contribution-targets";
 import type { TabContribution } from "../core/contributionregistry";
 import { contributionRegistry } from "../core/contributionregistry";
 import { editorRegistry } from "../core/editorregistry";

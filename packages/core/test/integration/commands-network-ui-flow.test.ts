@@ -8,6 +8,7 @@ const runAsyncMock = vi.fn(async (_name: string, fn: (p: any) => Promise<unknown
   fn({ message: '', progress: 0 })
 );
 const filebrowserDialogMock = vi.fn();
+const versionInfoDialogMock = vi.fn();
 const activeSelectionSignalMock = { get: vi.fn() };
 const jsRuntimeExecuteMock = vi.fn();
 const jsRuntimeCloseMock = vi.fn();
@@ -26,6 +27,9 @@ vi.mock('../../src/core/taskservice', () => ({
 }));
 vi.mock('../../src/dialogs/filebrowser-dialog', () => ({
   filebrowserDialog: filebrowserDialogMock,
+}));
+vi.mock('../../src/dialogs/version-info-dialog', () => ({
+  versionInfoDialog: versionInfoDialogMock,
 }));
 vi.mock('../../src/core/appstate', () => ({
   activeSelectionSignal: activeSelectionSignalMock,
@@ -110,5 +114,21 @@ describe('commands network/ui flow', () => {
     const result = await cmd.handler?.execute({});
     expect(result).toBeUndefined();
     expect(harness.toastErrorMock).toHaveBeenCalledWith('No app loaded');
+    expect(versionInfoDialogMock).not.toHaveBeenCalled();
+  });
+
+  it('show_version_info opens the version info dialog', async () => {
+    const { appLoaderService } = await import('../../src/core/apploader');
+    (appLoaderService.getCurrentApp as any).mockReturnValue({
+      name: 'Demo',
+      version: '1.0.0',
+    });
+    versionInfoDialogMock.mockResolvedValue(undefined);
+
+    await import('../../src/commands/version-info');
+    const cmd = harness.getRegistered('show_version_info');
+    await cmd.handler?.execute({});
+
+    expect(versionInfoDialogMock).toHaveBeenCalledOnce();
   });
 });

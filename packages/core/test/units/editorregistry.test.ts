@@ -30,7 +30,7 @@ vi.mock('../../src/core/di', () => ({
   rootContext: { put: vi.fn() },
 }));
 
-vi.mock('../../src/core/constants', () => ({
+vi.mock('../../src/core/contribution-targets', () => ({
   EDITOR_AREA_MAIN: 'editor-main',
 }));
 

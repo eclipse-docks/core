@@ -40,7 +40,7 @@ vi.mock('../../src/core/contributionregistry', () => ({
   TOPIC_CONTRIBUTEIONS_CHANGED: 'events/contrib/changed',
 }));
 
-vi.mock('../../src/core/constants', () => ({
+vi.mock('../../src/core/contribution-targets', () => ({
   SYSTEM_LAYOUTS: 'system.layouts',
 }));
 

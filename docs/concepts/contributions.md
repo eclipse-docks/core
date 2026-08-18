@@ -17,18 +17,35 @@ Contribution targets define where UI appears:
 | `TOOLBAR_MAIN_RIGHT`, `TOOLBAR_MAIN_CENTER` | Main toolbar slots. |
 | `TOOLBAR_BOTTOM`, `TOOLBAR_BOTTOM_END`, `TOOLBAR_BOTTOM_CENTER` | Bottom toolbar. |
 | `SYSTEM_LAYOUTS` | Layout contributions (id, name, component, optional onShow). See [Apps](/concepts/apps#layouts). |
+| `SYSTEM_ATTRIBUTIONS` | License and third-party notices. `HTMLContribution`s collected by `docks-attribution`. |
+| `ABOUT_TABS` | About dialog tabs. Same `TabContribution` model as `docks-tabs` (id is the contribution target). |
 
 Import these from `@eclipse-docks/core`.
+
+Contribution **names** (`name` on the contribution) identify which item it is and are used for remapping. Those constants are also exported from `@eclipse-docks/core` (for example `VIEW_FILEBROWSER`, `ABOUT_TAB_ATTRIBUTIONS`).
 
 ## Contribution types
 
 - **CommandContribution** — `command`, `label`, `icon`, optional `params`, `showLabel`, `disabled`. Used for toolbar buttons and menu items.
-- **TabContribution** — `name`, optional `editorId`, optional `coupledEditors` (list of main-area `editorId` values; when the active editor matches, the tab’s `DocksPart` can auto-activate its sidebar/panel tab), `closable`, `noOverflow`, `component` (function returning a Lit template). Used for sidebar and editor area tabs.
-- **HTMLContribution** — `component` (string or function returning a Lit `TemplateResult`). Raw HTML or template in a slot.
+- **TabContribution** — `name`, optional `editorId`, optional `coupledEditors` (list of main-area `editorId` values; when the active editor matches, the tab’s `DocksPart` can auto-activate its sidebar/panel tab), `closable`, `noOverflow`, `component` (function returning a Lit template). Used for sidebar and editor area tabs, and for About dialog tabs on `ABOUT_TABS`. Core registers **Release History** (`docks-release-history`), **NPM Packages** (`docks-npm-packages`), and **Attributions** (`docks-attribution`).
+- **HTMLContribution** — `component` (string or function returning a Lit `TemplateResult`). Raw HTML or template in a slot. Register on `SYSTEM_ATTRIBUTIONS` for notices that downstream apps must show (collected by `docks-attribution`).
 - **LayoutContribution** — For `SYSTEM_LAYOUTS`: `id`, `name`, `component` (Lit template), optional `onShow`. Defines a layout shell; the app root is the chosen layout's component.
 - **IconContribution** — `mappings` (map of icon keys to identifiers), optional `priority`.
 
-All contributions can include `target`, `label`, `icon`, `slot` from the base `Contribution` interface where applicable.
+All contributions can include `target`, `label`, `icon`, `slot`, and `ranking` from the base `Contribution` interface where applicable. Higher `ranking` appears first (default 0); equal ranks keep registration order.
+
+Packages that must be named in the product UI register an `HTMLContribution` on `SYSTEM_ATTRIBUTIONS`. `docks-attribution` (the About **Attributions** tab) renders them:
+
+```ts
+import { contributionRegistry, SYSTEM_ATTRIBUTIONS, type HTMLContribution } from '@eclipse-docks/core';
+import { html } from '@eclipse-docks/core/externals/lit';
+
+contributionRegistry.registerContribution(SYSTEM_ATTRIBUTIONS, {
+  name: 'attribution.example-lib',
+  label: 'Example Lib',
+  component: () => html`<p>Example Lib is used under the MIT License.</p>`,
+} as HTMLContribution);
+```
 
 See [Add a sidebar tab](/guide/add-sidebar-tab) and [Add a command and toolbar button](/guide/add-command-toolbar).
 

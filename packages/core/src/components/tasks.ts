@@ -1,6 +1,6 @@
 import {contributionRegistry} from "../core/contributionregistry";
-import {TOOLBAR_BOTTOM_CENTER} from "../core/constants";
-import {TOOLBAR_TASKS} from "../core/ui-ids";
+import {TOOLBAR_BOTTOM_CENTER} from "../core/contribution-targets";
+import {TOOLBAR_TASKS} from "../core/contribution-names";
 import {customElement} from "lit/decorators.js";
 import { DocksElement } from "../parts/element";
 import {css, html, render} from "lit";

@@ -17,7 +17,7 @@ import { rootContext } from "./di";
 import { createLogger } from "./logger";
 import { extensionRegistry, Extension } from "./extensionregistry";
 import { contributionRegistry, Contribution, LayoutContribution, TOPIC_CONTRIBUTEIONS_CHANGED } from "./contributionregistry";
-import { SYSTEM_LAYOUTS } from "./constants";
+import { SYSTEM_LAYOUTS } from "./contribution-targets";
 import { appSettings } from "./settingsservice";
 import { marketplaceRegistry } from "./marketplaceregistry";
 import { contributionTargetMappingRegistry, type ContributionNameRemap } from "./contribution-mapping";

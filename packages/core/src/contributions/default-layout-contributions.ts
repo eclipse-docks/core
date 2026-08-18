@@ -1,6 +1,6 @@
 import "../layouts/standard-layout";
 import { contributionRegistry } from "../core/contributionregistry";
-import { SYSTEM_LAYOUTS } from "../core/constants";
+import { SYSTEM_LAYOUTS } from "../core/contribution-targets";
 
 const standardLayouts: Array<{
     id: string;

@@ -13,7 +13,7 @@ import {
     TOOLBAR_BOTTOM,
     TOOLBAR_BOTTOM_CENTER,
     TOOLBAR_BOTTOM_END
-} from "../core/constants";
+} from "../core/contribution-targets";
 import {DocksContainer} from "../parts/container";
 
 @customElement('docks-standard-layout')

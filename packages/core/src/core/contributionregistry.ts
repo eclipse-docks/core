@@ -20,6 +20,11 @@ export interface Contribution {
     showLabel?: boolean;
     icon?: string;
     slot?: string;
+    /**
+     * Higher ranking appears first in `getContributions`. Defaults to 0.
+     * Equal ranks keep registration order.
+     */
+    ranking?: number;
     disabled?: (() => boolean) | Signal.Computed<boolean>;
     /** When false, the contribution is not rendered (default: shown). Honored where supported in UI. */
     visible?: (() => boolean) | Signal.Computed<boolean>;
@@ -135,6 +140,7 @@ class ContributionRegistry {
                 }
             }
         }
+        results.sort((a, b) => (b.ranking ?? 0) - (a.ranking ?? 0));
         if (results.length === 0) {
             this.getOrCreateSlot(target);
         }

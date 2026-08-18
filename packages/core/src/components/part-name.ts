@@ -4,8 +4,8 @@ import {html} from "lit";
 import {activePartSignal} from "../core/appstate";
 import {getActivePartDisplayName} from "./document-title";
 import {contributionRegistry} from "../core/contributionregistry";
-import {TOOLBAR_BOTTOM_CENTER} from "../core/constants";
-import {TOOLBAR_ACTIVE_PART_NAME} from "../core/ui-ids";
+import {TOOLBAR_BOTTOM_CENTER} from "../core/contribution-targets";
+import {TOOLBAR_ACTIVE_PART_NAME} from "../core/contribution-names";
 import { icon } from '../core/icon-utils';
 import { i18n } from '../core/i18n';
 

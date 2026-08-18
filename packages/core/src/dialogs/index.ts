@@ -15,3 +15,4 @@ export {
   type FilebrowserDialogMode,
   type FilebrowserDialogState,
 } from './filebrowser-dialog';
+export { versionInfoDialog } from './version-info-dialog';

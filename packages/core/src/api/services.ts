@@ -39,6 +39,7 @@ export {
     formDialogRequired,
     validateFormDialogFields,
     filebrowserDialog,
+    versionInfoDialog,
     type NavigableDialogAction,
     type FormDialogField,
     type FormDialogFieldType,

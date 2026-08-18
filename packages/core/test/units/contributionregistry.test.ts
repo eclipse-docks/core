@@ -38,6 +38,15 @@ describe('ContributionRegistry', () => {
     expect(list[1].label).toBe('Second');
   });
 
+  it('sorts contributions by ranking, higher first', () => {
+    const target = 'test-ranking-' + Math.random();
+    contributionRegistry.registerContribution(target, { label: 'Low', ranking: 0 });
+    contributionRegistry.registerContribution(target, { label: 'High', ranking: 10 });
+    contributionRegistry.registerContribution(target, { label: 'Mid', ranking: 5 });
+    const list = contributionRegistry.getContributions<Contribution>(target);
+    expect(list.map((c) => c.label)).toEqual(['High', 'Mid', 'Low']);
+  });
+
   it('converts disabled function to Signal.Computed', () => {
     const target = 'test-disabled-' + Math.random();
     const contribution: CommandContribution = {

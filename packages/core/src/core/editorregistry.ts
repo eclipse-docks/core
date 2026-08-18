@@ -1,4 +1,4 @@
-import { EDITOR_AREA_MAIN } from "./constants";
+import { EDITOR_AREA_MAIN } from "./contribution-targets";
 import { subscribe } from "./events";
 import { File, TOPIC_WORKSPACE_CONNECTED } from "./filesys";
 import { DocksTabs } from "../parts/tabs";

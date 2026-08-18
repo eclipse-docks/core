@@ -1,7 +1,7 @@
 import { registerAll } from "../core/commandregistry";
 import { CommandContribution } from "../core/contributionregistry";
-import { TOOLBAR_MAIN_RIGHT } from "../core/constants";
-import { TOOLBAR_FULLSCREEN, TOOLBAR_THEME_SWITCHER } from "../core/ui-ids";
+import { TOOLBAR_MAIN_RIGHT } from "../core/contribution-targets";
+import { TOOLBAR_FULLSCREEN, TOOLBAR_THEME_SWITCHER } from "../core/contribution-names";
 import { EditorInput, editorRegistry } from "../core/editorregistry";
 import { html } from "lit";
 import { toastError, toastInfo } from "../core/toast";

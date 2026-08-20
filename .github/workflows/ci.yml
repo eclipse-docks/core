@@ -13,21 +13,35 @@ permissions:
   id-token: write
 
 jobs:
-  test:
-    # Release commits (exact subject vX.Y.Z) are handled by the Release workflow.
-    if: github.event_name != 'push' || !matches(github.event.head_commit.message, '^v[0-9]+\\.[0-9]+\\.[0-9]+(\\r?\\n|$)')
+  context:
     runs-on: ubuntu-latest
-    
+    outputs:
+      run_release: ${{ steps.check.outputs.run_release }}
+    steps:
+      - id: check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_MSG: ${{ github.event.head_commit.message || '' }}
+        run: |
+          subject=$(printf '%s\n' "$HEAD_MSG" | head -n1)
+          run_release=false
+          if [ "$EVENT_NAME" = push ] && printf '%s\n' "$subject" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            run_release=true
+          fi
+          echo "run_release=$run_release" >> "$GITHUB_OUTPUT"
+
+  test:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
 
@@ -54,3 +68,100 @@ jobs:
       - name: Run E2E tests
         run: npm run test:e2e
 
+  release:
+    needs: [context, test]
+    if: needs.context.outputs.run_release == 'true' && needs.test.result == 'success'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/app-release.yml
+    with:
+      publish_dir: packages/app/dist
+      build_command: npm run build:app
+      node_version_file: .nvmrc
+      pages_url: https://docks.eclipse.dev
+      cname: docks.eclipse.dev
+    secrets: inherit
+
+  deploy-docs:
+    needs: release
+    if: needs.release.outputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build docs
+        env:
+          DOCKS_DOCS_VERSION: ${{ needs.release.outputs.version }}
+        run: npm run docs:build
+
+      - name: Deploy docs to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/.vitepress/dist
+          destination_dir: docs
+          publish_branch: gh-pages
+          keep_files: true
+
+  publish-npm:
+    needs: release
+    if: needs.release.outputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update package versions (CI only, not committed)
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+          VERSION="${VERSION#v}"
+          for pkg in packages/core packages/extension-* packages/create-app packages/cli; do
+            [ -d "$pkg" ] && (cd "$pkg" && npm version "$VERSION" --no-git-tag-version) && echo "Updated $pkg to $VERSION"
+          done
+
+      - name: Build core package
+        run: npm run build
+
+      - name: Run type check
+        run: npm run type-check
+        continue-on-error: true
+
+      - name: Publish core, extensions, create-app, and cli to npm
+        run: |
+          for pkg in packages/core packages/extension-* packages/create-app packages/cli; do
+            if [ -d "$pkg" ]; then
+              if grep -q '"private":\s*true' "$pkg/package.json" 2>/dev/null; then
+                echo "Skipping $pkg (private)"
+              else
+                echo "Publishing $pkg..."
+                (cd "$pkg" && npm publish --access public --provenance)
+              fi
+            fi
+          done

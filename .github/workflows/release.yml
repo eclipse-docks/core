@@ -6,6 +6,8 @@ on:
 
 jobs:
   release:
+    permissions:
+      contents: write
     uses: ./.github/workflows/app-release.yml
     with:
       publish_dir: packages/app/dist

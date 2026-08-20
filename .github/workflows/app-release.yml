@@ -7,6 +7,8 @@ name: App Release (reusable)
 #
 #   jobs:
 #     release:
+#       permissions:
+#         contents: write
 #       uses: eclipse-docks/core/.github/workflows/app-release.yml@main
 #       with:
 #         base_path: /my-app/

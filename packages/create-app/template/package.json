@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "npm run dev -w {{APP_NAME}}",
     "build": "npm run build -w {{APP_NAME}}",
-    "preview": "npm run preview -w {{APP_NAME}}"
+    "preview": "npm run preview -w {{APP_NAME}}",
+    "release": "docks release"
+  },
+  "devDependencies": {
+    "@eclipse-docks/cli": "^0.x"
   }
 }

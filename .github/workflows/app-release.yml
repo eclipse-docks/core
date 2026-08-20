@@ -1,0 +1,167 @@
+name: App Release (reusable)
+
+# Generalized release workflow for apps built on Eclipse Docks: tags + publishes a
+# GitHub Release when a commit subject matches vX.Y.Z (see @eclipse-docks/cli's
+# `docks release` command), then optionally builds and deploys the app to GitHub
+# Pages. Call from a per-app workflow, e.g.:
+#
+#   jobs:
+#     release:
+#       uses: eclipse-docks/core/.github/workflows/app-release.yml@main
+#       with:
+#         base_path: /my-app/
+#         publish_dir: ./packages/app/dist
+#       secrets: inherit
+
+on:
+  workflow_call:
+    inputs:
+      base_path:
+        description: "Public base path passed to the build as VITE_BASE_PATH (e.g. /my-app/)"
+        type: string
+        default: /
+      publish_dir:
+        description: "Build output directory to publish to GitHub Pages"
+        type: string
+        default: ./dist
+      build_command:
+        description: "Command used to build the app"
+        type: string
+        default: npm run build
+      node_version:
+        description: "Node.js version to use (ignored if node_version_file is set)"
+        type: string
+        default: "24"
+      node_version_file:
+        description: "Path to a file (e.g. .nvmrc) to read the Node.js version from instead of node_version"
+        type: string
+        default: ""
+      deploy_pages:
+        description: "Whether to deploy the built app to GitHub Pages"
+        type: boolean
+        default: true
+      pages_url:
+        description: "URL to show in the deployment summary (defaults to the standard github.io URL)"
+        type: string
+        default: ""
+      cname:
+        description: "Custom domain to write as a CNAME file into publish_dir (leave empty for the default github.io URL)"
+        type: string
+        default: ""
+    outputs:
+      version:
+        description: "The version tagged/released, with a leading v (e.g. v1.2.3; empty if this push wasn't a release commit)"
+        value: ${{ jobs.auto-tag.outputs.version }}
+
+permissions:
+  contents: write
+
+jobs:
+  auto-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract-version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Extract version and create tag
+        id: extract-version
+        run: |
+          COMMIT_SUBJECT=$(git log -1 --pretty=%s)
+          COMMIT_BODY=$(git log -1 --pretty=%b)
+          echo "Commit subject: $COMMIT_SUBJECT"
+
+          # the whole subject line must be exactly vX.Y.Z, not just contain it
+          VERSION_WITH_V=$(echo "$COMMIT_SUBJECT" | grep -oE '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+
+          if [ -n "$VERSION_WITH_V" ]; then
+            echo "Found version in commit: $VERSION_WITH_V"
+            echo "Creating tag: $VERSION_WITH_V"
+            echo "version=$VERSION_WITH_V" >> $GITHUB_OUTPUT
+
+            {
+              echo "release_body<<EOF"
+              echo "$COMMIT_BODY"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+
+            if git rev-parse "$VERSION_WITH_V" >/dev/null 2>&1; then
+              echo "Error: Tag $VERSION_WITH_V already exists!"
+              exit 1
+            fi
+
+            git tag "$VERSION_WITH_V"
+            git push origin "$VERSION_WITH_V"
+            echo "Created and pushed tag: $VERSION_WITH_V"
+          else
+            echo "No version pattern found in commit message"
+            echo "version=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        if: steps.extract-version.outputs.version != ''
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.extract-version.outputs.version }}
+          name: Release ${{ steps.extract-version.outputs.version }}
+          body: ${{ steps.extract-version.outputs.release_body }}
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: auto-tag
+    if: inputs.deploy_pages && needs.auto-tag.outputs.version != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.auto-tag.outputs.version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version_file == '' && inputs.node_version || '' }}
+          node-version-file: ${{ inputs.node_version_file }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set package.json version from release tag
+        run: |
+          VERSION="${{ needs.auto-tag.outputs.version }}"
+          npm version --no-commit-hooks --no-git-tag-version "${VERSION#v}" --workspaces
+
+      - name: Build app
+        run: ${{ inputs.build_command }}
+        env:
+          VITE_BASE_PATH: ${{ inputs.base_path }}
+
+      - name: Add .nojekyll
+        run: touch "${{ inputs.publish_dir }}/.nojekyll"
+
+      - name: Add CNAME
+        if: inputs.cname != ''
+        run: echo "${{ inputs.cname }}" > "${{ inputs.publish_dir }}/CNAME"
+
+      - name: Deploy to GitHub Pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ inputs.publish_dir }}
+          publish_branch: gh-pages
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: ${{ needs.auto-tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ inputs.pages_url || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

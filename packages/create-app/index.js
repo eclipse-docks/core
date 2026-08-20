@@ -78,6 +78,11 @@ function main() {
   readme = readme.replace(/\{\{APP_NAME\}\}/g, appName);
   writeFileSync(readmePath, readme);
 
+  const releaseWorkflowPath = join(targetDir, '.github', 'workflows', 'release.yml');
+  let releaseWorkflow = readFileSync(releaseWorkflowPath, 'utf8');
+  releaseWorkflow = releaseWorkflow.replace(/\{\{APP_NAME\}\}/g, appName);
+  writeFileSync(releaseWorkflowPath, releaseWorkflow);
+
   const gitignoreSrc = join(targetDir, '_gitignore');
   if (existsSync(gitignoreSrc)) {
     writeFileSync(join(targetDir, '.gitignore'), readFileSync(gitignoreSrc, 'utf8'));

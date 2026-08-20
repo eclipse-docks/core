@@ -25,8 +25,12 @@ function parseVersionSubject(subject) {
   return `v${m[1].slice(1)}`;
 }
 
+function usage() {
+  return 'Usage: docks release [major|minor|patch|vX.Y.Z] [-m "release notes"] [--since vX.Y.Z] [--dry-run] [--no-push]';
+}
+
 function parseArgs(argv) {
-  const opts = { bump: 'patch', version: '', notes: '', dryRun: false, push: true };
+  const opts = { bump: 'patch', version: '', since: '', notes: '', dryRun: false, push: true };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -34,6 +38,12 @@ function parseArgs(argv) {
       opts.bump = arg;
     } else if (VERSION_RE.test(arg)) {
       opts.version = arg;
+    } else if (arg === '--since') {
+      const value = argv[++i] ?? '';
+      if (!VERSION_RE.test(value)) {
+        throw new Error(`--since requires a version like v1.2.3\n${usage()}`);
+      }
+      opts.since = value;
     } else if (arg === '-m' || arg === '--message') {
       opts.notes = argv[++i] ?? '';
     } else if (arg === '-n' || arg === '--dry-run') {
@@ -43,9 +53,7 @@ function parseArgs(argv) {
     } else if (arg === '--no-push') {
       opts.push = false;
     } else {
-      throw new Error(
-        `Unknown argument: ${arg}\nUsage: docks release [major|minor|patch|vX.Y.Z] [-m "release notes"] [--dry-run] [--no-push]`,
-      );
+      throw new Error(`Unknown argument: ${arg}\n${usage()}`);
     }
   }
 
@@ -82,9 +90,12 @@ function bumpVersion(last, bump) {
   }
 }
 
-function generateSummary(cwd, last) {
-  const lastCommit = last ? findVersionCommit(cwd, last) : null;
-  const range = lastCommit ? `${lastCommit}..HEAD` : 'HEAD';
+function generateSummary(cwd, since) {
+  const sinceCommit = since ? findVersionCommit(cwd, since) : null;
+  if (since && !sinceCommit) {
+    throw new Error(`No commit found for --since ${since} (expected subject "${since}" or "Release: ${since}").`);
+  }
+  const range = sinceCommit ? `${sinceCommit}..HEAD` : 'HEAD';
 
   const log = gitOrNull(['log', range, '--no-merges', '--pretty=%s'], cwd) ?? '';
   const buckets = { features: [], fixes: [], docs: [], chores: [] };
@@ -152,7 +163,9 @@ export async function release(argv, cwd = process.cwd()) {
 
   let notes = opts.notes;
   if (!notes) {
-    const summary = generateSummary(cwd, last);
+    const since = opts.since || last;
+    if (opts.since) console.log(`Summarizing commits since ${opts.since}`);
+    const summary = generateSummary(cwd, since);
     notes = await promptNotes(version, summary);
   }
 

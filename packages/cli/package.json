@@ -1,6 +1,6 @@
 {
   "name": "@eclipse-docks/cli",
-  "version": "0.0.0",
+  "version": "0.7.114",
   "description": "Developer CLI for Eclipse Docks apps (release automation and more)",
   "type": "module",
   "bin": {

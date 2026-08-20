@@ -3,7 +3,7 @@
 # Requires: npm@11.10.0+, 2FA enabled on npm account, packages already published at least once.
 # Usage: ./scripts/setup-npm-trusted-publishing.sh [--dry-run] [package]
 #   package: optional — package name (e.g. @eclipse-docks/extension-foo) or path (e.g. packages/extension-foo).
-#   If omitted, configures all publishable packages (core, extensions, create-app).
+#   If omitted, configures all publishable packages (core, extensions, create-app, cli).
 # See: https://docs.npmjs.com/cli/v11/commands/npm-trust
 
 set -e
@@ -42,8 +42,10 @@ fi
 # Check npm >= 11.10.0 (required for npm trust)
 if ! NPM_VER="$NPM_VER" node -e "
 const v = process.env.NPM_VER || '';
-const [a, b] = (v.match(/^(\d+)\.(\d+)/) || []).slice(1, 3).map(Number);
-if (!a || !b) process.exit(1);
+const m = v.match(/^(\d+)\.(\d+)/);
+if (!m) process.exit(1);
+const a = Number(m[1]);
+const b = Number(m[2]);
 if (a > 11 || (a === 11 && b >= 10)) process.exit(0);
 process.exit(1);
 "; then
@@ -53,7 +55,7 @@ process.exit(1);
 fi
 
 ROOT_PKG_NAME=$(node -p "require('$ROOT/package.json').name" 2>/dev/null || true)
-for pkg_dir in packages/core packages/extension-* packages/create-app; do
+for pkg_dir in packages/core packages/extension-* packages/create-app packages/cli; do
   [ -d "$pkg_dir" ] || continue
   [ -f "$pkg_dir/package.json" ] || continue
   if grep -q '"private":\s*true' "$pkg_dir/package.json" 2>/dev/null; then

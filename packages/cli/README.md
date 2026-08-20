@@ -20,7 +20,10 @@ Pair this with a CI workflow that tags/releases on that commit subject (see
 [`.github/workflows/app-release.yml`](../../.github/workflows/app-release.yml) for a
 reusable one) — the commit body becomes the release notes.
 
+The last version is taken from the most recent commit whose subject is exactly `vX.Y.Z`
+or the legacy form `Release: vX.Y.Z`.
+
 If no release notes are given via `-m`, an end-user-facing summary is generated from the
-commits since the last version, grouped under **Features**, **Fixes**, **Docs**, and
+commits since that version, grouped under **Features**, **Fixes**, **Docs**, and
 **Chore/Refactor**, and offered as the default (press Enter on an empty first line to
 accept it).

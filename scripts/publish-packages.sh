@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Publish npm workspace packages.
 #
-# All packages (core, extension-*, create-app) at one version:
+# All packages (core, extension-*, create-app, cli) at one version:
 #   ./scripts/publish-packages.sh [VERSION]
 #   Default VERSION is 0.0.0
 #
@@ -65,10 +65,19 @@ publish_one() {
     echo ""
   fi
 
-  echo "Building $pkg_rel..."
-  (cd "$pkg_dir" && npm run build)
+  if node -e "
+    const fs=require('fs');
+    const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));
+    process.exit(p.scripts && p.scripts.build ? 0 : 1);
+  " "$pkg_dir/package.json"; then
+    echo "Building $pkg_rel..."
+    (cd "$pkg_dir" && npm run build)
+    echo ""
+  else
+    echo "No build script in $pkg_rel; skipping build."
+    echo ""
+  fi
 
-  echo ""
   echo "Publishing to npm..."
   (cd "$pkg_dir" && npm publish --access public)
 
@@ -82,12 +91,13 @@ if [[ -n "$SINGLE_PKG" ]]; then
 fi
 
 VERSION="${ARGS[0]:-0.0.0}"
+PUBLISH_PKGS=(packages/core packages/extension-* packages/create-app packages/cli)
 
-echo "Publishing core and all extensions as version: $VERSION"
+echo "Publishing core, extensions, create-app, and cli as version: $VERSION"
 echo ""
 
 echo "Updating package versions..."
-for pkg in packages/core packages/extension-* packages/create-app; do
+for pkg in "${PUBLISH_PKGS[@]}"; do
   if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then
     (cd "$pkg" && npm version "$VERSION" --no-git-tag-version --allow-same-version) && echo "  $pkg -> $VERSION"
   fi
@@ -99,7 +109,7 @@ npm run build
 
 echo ""
 echo "Publishing to npm..."
-for pkg in packages/core packages/extension-* packages/create-app; do
+for pkg in "${PUBLISH_PKGS[@]}"; do
   if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then
     if grep -q '"private":\s*true' "$pkg/package.json" 2>/dev/null; then
       echo "  Skip $pkg (private)"
@@ -111,4 +121,4 @@ for pkg in packages/core packages/extension-* packages/create-app; do
 done
 
 echo ""
-echo "Done. Published core, extensions, and create-app at $VERSION"
+echo "Done. Published core, extensions, create-app, and cli at $VERSION"

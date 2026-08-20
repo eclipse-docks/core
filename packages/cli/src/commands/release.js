@@ -1,7 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 
+/** CLI arg / new release commit subject: exact `vX.Y.Z`. */
 const VERSION_RE = /^v\d+\.\d+\.\d+$/;
+/** Discover last release from exact `vX.Y.Z` or legacy `Release: vX.Y.Z`. */
+const VERSION_IN_SUBJECT_RE = /^(?:Release:\s*)?(v\d+\.\d+\.\d+)$/i;
 
 function git(args, cwd) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -14,6 +17,12 @@ function git(args, cwd) {
 function gitOrNull(args, cwd) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
   return result.status === 0 ? result.stdout.trim() : null;
+}
+
+function parseVersionSubject(subject) {
+  const m = subject.trim().match(VERSION_IN_SUBJECT_RE);
+  if (!m) return null;
+  return `v${m[1].slice(1)}`;
 }
 
 function parseArgs(argv) {
@@ -47,9 +56,18 @@ function findLastVersion(cwd) {
   const log = gitOrNull(['log', '--pretty=%s'], cwd);
   if (!log) return null;
   for (const subject of log.split('\n')) {
-    if (VERSION_RE.test(subject)) return subject;
+    const version = parseVersionSubject(subject);
+    if (version) return version;
   }
   return null;
+}
+
+function findVersionCommit(cwd, version) {
+  const escaped = version.replace(/\./g, '\\.');
+  return gitOrNull(
+    ['log', '-E', '-i', '--pretty=%H', '-1', `--grep=^(Release:[[:space:]]*)?${escaped}$`],
+    cwd,
+  );
 }
 
 function bumpVersion(last, bump) {
@@ -65,15 +83,14 @@ function bumpVersion(last, bump) {
 }
 
 function generateSummary(cwd, last) {
-  // find the commit whose subject *is* the last version, not a tag (tags may not exist locally)
-  const lastCommit = last ? gitOrNull(['log', '-E', '--pretty=%H', '-1', `--grep=^${last}$`], cwd) : null;
+  const lastCommit = last ? findVersionCommit(cwd, last) : null;
   const range = lastCommit ? `${lastCommit}..HEAD` : 'HEAD';
 
   const log = gitOrNull(['log', range, '--no-merges', '--pretty=%s'], cwd) ?? '';
   const buckets = { features: [], fixes: [], docs: [], chores: [] };
 
   for (const subject of log.split('\n')) {
-    if (!subject || VERSION_RE.test(subject)) continue;
+    if (!subject || parseVersionSubject(subject)) continue;
 
     const stripped = subject.includes(': ') ? subject.slice(subject.indexOf(': ') + 2) : subject;
     const text = stripped.charAt(0).toUpperCase() + stripped.slice(1);

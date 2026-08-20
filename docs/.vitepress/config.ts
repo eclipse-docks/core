@@ -1,4 +1,20 @@
+import { execSync } from 'node:child_process';
 import { defineConfig } from 'vitepress';
+
+function resolveVersion(): string {
+  const fromEnv = process.env.DOCKS_DOCS_VERSION?.trim();
+  if (fromEnv) return fromEnv.startsWith('v') ? fromEnv : `v${fromEnv}`;
+  try {
+    return execSync('git describe --tags --abbrev=0', {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
+const version = resolveVersion();
 
 export default defineConfig({
   title: 'Eclipse Docks',
@@ -11,6 +27,14 @@ export default defineConfig({
       { text: 'Concepts', link: '/concepts/architecture' },
       { text: 'API', link: '/api' },
       { text: 'Repo', link: 'https://github.com/eclipse-docks/core' },
+      ...(version
+        ? [
+            {
+              text: version,
+              link: `https://github.com/eclipse-docks/core/releases/tag/${version}`,
+            },
+          ]
+        : []),
     ],
     sidebar: [
       {

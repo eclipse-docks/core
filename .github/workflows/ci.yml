@@ -14,6 +14,8 @@ permissions:
 
 jobs:
   test:
+    # Release commits (exact subject vX.Y.Z) are handled by the Release workflow.
+    if: github.event_name != 'push' || !matches(github.event.head_commit.message, '^v[0-9]+\\.[0-9]+\\.[0-9]+(\\r?\\n|$)')
     runs-on: ubuntu-latest
     
     steps:

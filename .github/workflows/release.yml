@@ -37,6 +37,8 @@ jobs:
         run: npm ci
 
       - name: Build docs
+        env:
+          DOCKS_DOCS_VERSION: ${{ needs.release.outputs.version }}
         run: npm run docs:build
 
       - name: Deploy docs to GitHub Pages

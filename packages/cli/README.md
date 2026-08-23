@@ -17,7 +17,9 @@ npx @eclipse-docks/cli release --no-push             # create the tag locally wi
 ## `release`
 
 Creates an annotated tag whose name is the version (`vX.Y.Z`) and pushes it.
-Pair this with a CI workflow triggered by `v*` tag pushes (see
+When pushing (the default), any unpushed commits on the current branch are pushed
+to `origin` first so CI builds code that is on the remote branch, not only reachable
+via the tag. Pair this with a CI workflow triggered by `v*` tag pushes (see
 [`.github/workflows/app-release.yml`](../../.github/workflows/app-release.yml) for a
 reusable one) — the tag message body becomes the GitHub Release notes.
 

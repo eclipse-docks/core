@@ -63,6 +63,49 @@ function findVersionCommit(cwd, version) {
   return gitOrNull(['rev-parse', '--verify', `${version}^{commit}`], cwd);
 }
 
+function currentBranch(cwd) {
+  const branch = gitOrNull(['rev-parse', '--abbrev-ref', 'HEAD'], cwd);
+  if (!branch || branch === 'HEAD') return null;
+  return branch;
+}
+
+function upstreamStatus(cwd) {
+  const upstream = gitOrNull(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], cwd);
+  if (!upstream) return null;
+  const counts = git(['rev-list', '--left-right', '--count', `${upstream}...HEAD`], cwd);
+  const [behind, ahead] = counts.split('\t').map(Number);
+  return { upstream, behind, ahead };
+}
+
+function pushBranchIfNeeded(cwd, { dryRun = false } = {}) {
+  const branch = currentBranch(cwd);
+  if (!branch) {
+    throw new Error('Detached HEAD — checkout a branch before releasing.');
+  }
+
+  const status = upstreamStatus(cwd);
+  if (!status) {
+    throw new Error(`Branch ${branch} has no upstream. Push it first:\n  git push -u origin ${branch}`);
+  }
+
+  if (status.behind > 0) {
+    throw new Error(
+      `Branch ${branch} is ${status.behind} commit(s) behind ${status.upstream}. Pull before releasing.`,
+    );
+  }
+
+  if (status.ahead === 0) return branch;
+
+  if (dryRun) {
+    console.log(`[dry run] would push ${status.ahead} commit(s) to origin ${branch}`);
+    return branch;
+  }
+
+  console.log(`Pushing ${status.ahead} commit(s) to origin ${branch}...`);
+  git(['push', 'origin', branch], cwd);
+  return branch;
+}
+
 function bumpVersion(last, bump) {
   const [major, minor, patch] = last.slice(1).split('.').map(Number);
   switch (bump) {
@@ -155,12 +198,17 @@ export async function release(argv, cwd = process.cwd()) {
   }
 
   if (opts.dryRun) {
+    if (opts.push) pushBranchIfNeeded(cwd, { dryRun: true });
     console.log(`\n[dry run] would create annotated tag ${version} at HEAD`);
     console.log(notes.replace(/^/gm, '  '));
     if (opts.push) {
       console.log(`[dry run] would push tag to origin ${version}`);
     }
     return;
+  }
+
+  if (opts.push) {
+    pushBranchIfNeeded(cwd);
   }
 
   const tagArgs = ['tag', '-a', version, '-m', version];
@@ -173,7 +221,9 @@ export async function release(argv, cwd = process.cwd()) {
     git(['push', 'origin', version], cwd);
     console.log(`\nPushed tag ${version}; the release workflow will take over.`);
   } else {
-    console.log(`\nCreated annotated tag ${version}. Push it to trigger the release:`);
+    console.log(`\nCreated annotated tag ${version}. Push your branch and tag to trigger the release:`);
+    const branch = currentBranch(cwd);
+    if (branch) console.log(`  git push origin ${branch}`);
     console.log(`  git push origin ${version}`);
   }
 }

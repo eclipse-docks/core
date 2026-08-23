@@ -21,8 +21,9 @@ Pair this with a CI workflow triggered by `v*` tag pushes (see
 [`.github/workflows/app-release.yml`](../../.github/workflows/app-release.yml) for a
 reusable one) — the tag message body becomes the GitHub Release notes.
 
-The last version is taken from the most recent `vX.Y.Z` git tag. That drives the
-default bump.
+The last version is the most recent `vX.Y.Z` tag reachable from `HEAD` (via
+`git describe`), not the highest semver tag in the repository. That drives the
+default bump and changelog range.
 
 If no release notes are given via `-m`, an end-user-facing summary is generated from the
 commits since that tag (or since `--since vX.Y.Z` when set), grouped under **Features**,

@@ -53,13 +53,10 @@ function parseArgs(argv) {
 }
 
 function findLastVersion(cwd) {
-  const tags = gitOrNull(['tag', '--list', 'v*', '--sort=-v:refname'], cwd);
-  if (!tags) return null;
-  for (const tag of tags.split('\n')) {
-    const trimmed = tag.trim();
-    if (VERSION_RE.test(trimmed)) return trimmed;
-  }
-  return null;
+  const tag = gitOrNull(['describe', '--tags', '--abbrev=0', '--match', 'v*', 'HEAD'], cwd);
+  if (!tag) return null;
+  const trimmed = tag.trim();
+  return VERSION_RE.test(trimmed) ? trimmed : null;
 }
 
 function findVersionCommit(cwd, version) {
@@ -152,7 +149,7 @@ export async function release(argv, cwd = process.cwd()) {
   let notes = opts.notes;
   if (!notes) {
     const since = opts.since || last;
-    if (opts.since) console.log(`Summarizing commits since ${opts.since}`);
+    if (since) console.log(`Summarizing commits since ${since}`);
     const summary = generateSummary(cwd, since);
     notes = await promptNotes(version, summary);
   }

@@ -12,10 +12,6 @@ permissions:
   contents: read
   id-token: write
 
-# Keep in sync with @playwright/test in packages/app-e2e (see package-lock.json).
-env:
-  PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.59.1-noble
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -49,7 +45,8 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     container:
-      image: ${{ env.PLAYWRIGHT_IMAGE }}
+      # Keep tag in sync with @playwright/test in packages/app-e2e (see package-lock.json).
+      image: mcr.microsoft.com/playwright:v1.59.1-noble
     steps:
       - name: Checkout code
         uses: actions/checkout@v7

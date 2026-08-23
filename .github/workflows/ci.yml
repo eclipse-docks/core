@@ -40,10 +40,7 @@ jobs:
           use_oidc: true
           files: packages/core/coverage/lcov.info
           disable_search: true
-          fail_ci_if_error: false
-
-      - name: Build app
-        run: npm run build:app
+          fail_ci_if_error: true
 
       - name: Install Playwright Chromium
         run: npm run playwright:install-chromium-ci

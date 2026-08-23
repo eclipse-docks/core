@@ -22,13 +22,16 @@ for arg in "$@"; do
   esac
 done
 
-WORKFLOW_FILE="${WORKFLOW_FILE:-ci.yml}"
+WORKFLOW_FILE="${WORKFLOW_FILE:-release.yml}"
 REPO="${NPM_TRUST_REPO:-eclipse-docks/core}"
 
 echo "Configuring npm trusted publishing (GitHub OIDC)"
 echo "  Workflow: $WORKFLOW_FILE"
 echo "  Repository: $REPO"
 [ -n "$ONLY_PACKAGE" ] && echo "  Package: $ONLY_PACKAGE (only)"
+echo ""
+echo "Note: trusted publishers must match the workflow that runs npm publish"
+echo "  (currently .github/workflows/release.yml → job publish-npm)."
 echo ""
 
 if [ "$DRY_RUN" = true ]; then

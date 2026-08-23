@@ -88,6 +88,16 @@ jobs:
           publish_branch: gh-pages
           keep_files: true
 
+      - name: Docs deployment summary
+        run: |
+          echo "## Docs Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: ${{ needs.release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: gh-pages" >> $GITHUB_STEP_SUMMARY
+          echo "- **Path**: /docs/" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: https://docks.eclipse.dev/docs/" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+
   publish-npm:
     needs: release
     if: needs.release.outputs.version != ''

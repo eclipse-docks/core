@@ -9,22 +9,22 @@ npx @eclipse-docks/cli release                       # bump patch, prompt for re
 npx @eclipse-docks/cli release minor                 # bump minor
 npx @eclipse-docks/cli release major -m "notes"      # bump major with inline release notes
 npx @eclipse-docks/cli release v1.2.3                # explicit version
-npx @eclipse-docks/cli release --since v1.2.0        # notes from that version (bump still from latest)
-npx @eclipse-docks/cli release --dry-run             # print what would be committed
-npx @eclipse-docks/cli release --no-push             # commit locally without pushing
+npx @eclipse-docks/cli release --since v1.2.0        # notes from commits since that tag
+npx @eclipse-docks/cli release --dry-run             # print what would be tagged
+npx @eclipse-docks/cli release --no-push             # create the tag locally without pushing
 ```
 
 ## `release`
 
-Creates an empty commit whose subject is the next version (`vX.Y.Z`) and pushes it.
-Pair this with a CI workflow that tags/releases on that commit subject (see
+Creates an annotated tag whose name is the version (`vX.Y.Z`) and pushes it.
+Pair this with a CI workflow triggered by `v*` tag pushes (see
 [`.github/workflows/app-release.yml`](../../.github/workflows/app-release.yml) for a
-reusable one) — the commit body becomes the release notes.
+reusable one) — the tag message body becomes the GitHub Release notes.
 
-The last version is taken from the most recent commit whose subject is exactly `vX.Y.Z`
-or the legacy form `Release: vX.Y.Z`. That drives the default bump.
+The last version is taken from the most recent `vX.Y.Z` git tag. That drives the
+default bump.
 
 If no release notes are given via `-m`, an end-user-facing summary is generated from the
-commits since that version (or since `--since vX.Y.Z` when set), grouped under
-**Features**, **Fixes**, **Docs**, and **Chore/Refactor**, and offered as the default
-(press Enter on an empty first line to accept it).
+commits since that tag (or since `--since vX.Y.Z` when set), grouped under **Features**,
+**Fixes**, **Docs**, and **Chore/Refactor**, and offered as the default (press Enter on
+an empty first line to accept it).

@@ -22,7 +22,7 @@
     "publish:packages": "./scripts/publish-packages.sh",
     "dev": "npm run dev -w @eclipse-docks/app",
     "build": "npm run build -w @eclipse-docks/core",
-    "build:app": "npm run build && npm run build -w @eclipse-docks/app",
+    "build:app": "npm run build && npm run build:extensions && npm run build -w @eclipse-docks/app",
     "build:extensions": "node scripts/build-extensions.cjs",
     "build:app-e2e": "npm run build -w @eclipse-docks/core && npm run build -w @eclipse-docks/app-e2e",
     "preview": "npm run preview -w @eclipse-docks/app",

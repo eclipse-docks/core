@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - v*
   pull_request:
     branches:
       - main
@@ -13,23 +15,6 @@ permissions:
   id-token: write
 
 jobs:
-  context:
-    runs-on: ubuntu-latest
-    outputs:
-      run_release: ${{ steps.check.outputs.run_release }}
-    steps:
-      - id: check
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          HEAD_MSG: ${{ github.event.head_commit.message || '' }}
-        run: |
-          subject=$(printf '%s\n' "$HEAD_MSG" | head -n1)
-          run_release=false
-          if [ "$EVENT_NAME" = push ] && printf '%s\n' "$subject" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            run_release=true
-          fi
-          echo "run_release=$run_release" >> "$GITHUB_OUTPUT"
-
   test:
     runs-on: ubuntu-latest
     steps:
@@ -69,8 +54,8 @@ jobs:
         run: npm run test:e2e
 
   release:
-    needs: [context, test]
-    if: needs.context.outputs.run_release == 'true' && needs.test.result == 'success'
+    needs: test
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && needs.test.result == 'success'
     permissions:
       contents: write
     uses: ./.github/workflows/app-release.yml

@@ -1,10 +1,8 @@
 import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 
-/** CLI arg / new release commit subject: exact `vX.Y.Z`. */
+/** CLI arg / release tag name: exact `vX.Y.Z`. */
 const VERSION_RE = /^v\d+\.\d+\.\d+$/;
-/** Discover last release from exact `vX.Y.Z` or legacy `Release: vX.Y.Z`. */
-const VERSION_IN_SUBJECT_RE = /^(?:Release:\s*)?(v\d+\.\d+\.\d+)$/i;
 
 function git(args, cwd) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -17,12 +15,6 @@ function git(args, cwd) {
 function gitOrNull(args, cwd) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
   return result.status === 0 ? result.stdout.trim() : null;
-}
-
-function parseVersionSubject(subject) {
-  const m = subject.trim().match(VERSION_IN_SUBJECT_RE);
-  if (!m) return null;
-  return `v${m[1].slice(1)}`;
 }
 
 function usage() {
@@ -61,21 +53,17 @@ function parseArgs(argv) {
 }
 
 function findLastVersion(cwd) {
-  const log = gitOrNull(['log', '--pretty=%s'], cwd);
-  if (!log) return null;
-  for (const subject of log.split('\n')) {
-    const version = parseVersionSubject(subject);
-    if (version) return version;
+  const tags = gitOrNull(['tag', '--list', 'v*', '--sort=-v:refname'], cwd);
+  if (!tags) return null;
+  for (const tag of tags.split('\n')) {
+    const trimmed = tag.trim();
+    if (VERSION_RE.test(trimmed)) return trimmed;
   }
   return null;
 }
 
 function findVersionCommit(cwd, version) {
-  const escaped = version.replace(/\./g, '\\.');
-  return gitOrNull(
-    ['log', '-E', '-i', '--pretty=%H', '-1', `--grep=^(Release:[[:space:]]*)?${escaped}$`],
-    cwd,
-  );
+  return gitOrNull(['rev-parse', '--verify', `${version}^{commit}`], cwd);
 }
 
 function bumpVersion(last, bump) {
@@ -93,7 +81,7 @@ function bumpVersion(last, bump) {
 function generateSummary(cwd, since) {
   const sinceCommit = since ? findVersionCommit(cwd, since) : null;
   if (since && !sinceCommit) {
-    throw new Error(`No commit found for --since ${since} (expected subject "${since}" or "Release: ${since}").`);
+    throw new Error(`No tag found for --since ${since}.`);
   }
   const range = sinceCommit ? `${sinceCommit}..HEAD` : 'HEAD';
 
@@ -101,7 +89,7 @@ function generateSummary(cwd, since) {
   const buckets = { features: [], fixes: [], docs: [], chores: [] };
 
   for (const subject of log.split('\n')) {
-    if (!subject || parseVersionSubject(subject)) continue;
+    if (!subject || VERSION_RE.test(subject.trim())) continue;
 
     const stripped = subject.includes(': ') ? subject.slice(subject.indexOf(': ') + 2) : subject;
     const text = stripped.charAt(0).toUpperCase() + stripped.slice(1);
@@ -154,7 +142,7 @@ export async function release(argv, cwd = process.cwd()) {
   let version = opts.version;
   if (!version) {
     version = bumpVersion(last ?? 'v0.0.0', opts.bump);
-    console.log(`Last version commit: ${last ?? 'v0.0.0'}`);
+    console.log(`Last release tag: ${last ?? 'v0.0.0'}`);
   }
 
   if (gitOrNull(['rev-parse', version], cwd)) {
@@ -170,23 +158,25 @@ export async function release(argv, cwd = process.cwd()) {
   }
 
   if (opts.dryRun) {
-    console.log(`\n[dry run] would create empty commit:\n  ${version}\n`);
+    console.log(`\n[dry run] would create annotated tag ${version} at HEAD`);
     console.log(notes.replace(/^/gm, '  '));
     if (opts.push) {
-      const branch = git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd);
-      console.log(`[dry run] would push to origin ${branch}`);
+      console.log(`[dry run] would push tag to origin ${version}`);
     }
     return;
   }
 
-  git(['commit', '--allow-empty', '-m', version, '-m', notes], cwd);
+  const tagArgs = ['tag', '-a', version, '-m', version];
+  if (notes.trim()) {
+    tagArgs.push('-m', notes.trimEnd());
+  }
+  git(tagArgs, cwd);
 
-  const branch = git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd);
   if (opts.push) {
-    git(['push', 'origin', branch], cwd);
-    console.log(`\nPushed ${version} to origin/${branch}; the release workflow will take over.`);
+    git(['push', 'origin', version], cwd);
+    console.log(`\nPushed tag ${version}; the release workflow will take over.`);
   } else {
-    console.log(`\nCreated release commit for ${version}. Push it to trigger the release:`);
-    console.log(`  git push origin ${branch}`);
+    console.log(`\nCreated annotated tag ${version}. Push it to trigger the release:`);
+    console.log(`  git push origin ${version}`);
   }
 }

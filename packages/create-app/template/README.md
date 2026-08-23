@@ -15,7 +15,7 @@ Then open the URL shown in the terminal (e.g. https://localhost:5173/).
 - **dev** – Start the development server
 - **build** – Build for production
 - **preview** – Preview the production build locally
-- **release** – Create a version-release commit (`docks release`); pushing it triggers `.github/workflows/release.yml`, which tags, creates a GitHub Release, and deploys to GitHub Pages
+- **release** – Create an annotated release tag (`docks release`); pushing the tag triggers `.github/workflows/release.yml`, which creates a GitHub Release and deploys to GitHub Pages
 
 ## Structure
 

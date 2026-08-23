@@ -12,6 +12,10 @@ permissions:
   contents: read
   id-token: write
 
+# Keep in sync with @playwright/test in packages/app-e2e (see package-lock.json).
+env:
+  PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.59.1-noble
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -42,8 +46,24 @@ jobs:
           disable_search: true
           fail_ci_if_error: true
 
-      - name: Install Playwright Chromium
-        run: npm run playwright:install-chromium-ci
+  e2e:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ env.PLAYWRIGHT_IMAGE }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run E2E tests
         run: npm run test:e2e
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1

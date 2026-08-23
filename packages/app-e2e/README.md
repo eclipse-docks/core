@@ -10,7 +10,7 @@ Minimal Docks shell for Playwright only (not the public demo app in `packages/ap
 
 ## Config
 
-- [playwright.config.ts](./playwright.config.ts) — `webServer` runs **`npm run build -w @eclipse-docks/core && npm run build -w @eclipse-docks/app-e2e`**, then `vite preview` on `127.0.0.1:4173`; `use.baseURL` matches that origin.
+- [playwright.config.ts](./playwright.config.ts) — `webServer` runs **`npm run build:app-e2e`** (core + extensions + harness), then `vite preview` on `127.0.0.1:4173`; `use.baseURL` matches that origin.
 - **When that runs:** Playwright executes `webServer.command` whenever it **starts** the preview server. **Locally**, if something is already responding on `4173`, `reuseExistingServer` skips that command (faster reruns, but **no rebuild** — you may be testing stale assets). Stop the old preview or set **`PW_E2E_REUSE_SERVER=0`** when you change harness or core and need a fresh build. **CI** never reuses a server.
 - **`E2E_STORY`:** `npm run test:e2e` runs with **`E2E_STORY` cleared** so a leftover export in your shell does not turn on story video/pacing. `npm run test:e2e:stories` sets `E2E_STORY=1` and runs only tests whose title matches **`--grep Storyboard`** (use a `test.describe('Storyboard: …')` block in story specs).
 - **Artifacts:** `screenshot: 'on'`, `trace: 'on-first-retry'`; outputs under `test-results/` (gitignored).

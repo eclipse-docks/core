@@ -5,7 +5,7 @@
 #   ./scripts/publish-packages.sh [VERSION]
 #   Default VERSION is 0.0.0
 #
-# Single package only (build + publish that package; optional version bump):
+# Single package only:
 #   ./scripts/publish-packages.sh --package packages/extension-pwa [VERSION]
 #   ./scripts/publish-packages.sh -p extension-pwa [VERSION]
 #
@@ -18,16 +18,16 @@ echo "Log in to npm (required before publish)."
 npm login
 echo ""
 
-SINGLE_PKG=""
-ARGS=()
+PACKAGE=""
+VERSION=""
 while [[ $# -gt 0 ]]; do
   case $1 in
     --package|-p)
-      SINGLE_PKG="${2:?--package requires a path}"
+      PACKAGE="${2:?--package requires a path}"
       shift 2
       ;;
     *)
-      ARGS+=("$1")
+      VERSION="$1"
       shift
       ;;
   esac
@@ -35,90 +35,82 @@ done
 
 normalize_pkg_path() {
   local p="$1"
-  if [[ "$p" != packages/* ]]; then
-    p="packages/$p"
-  fi
+  [[ "$p" == packages/* ]] || p="packages/$p"
   echo "$p"
 }
 
-publish_one() {
-  local pkg_rel
-  pkg_rel="$(normalize_pkg_path "$1")"
-  local pkg_dir="$ROOT/$pkg_rel"
-  local ver="${2:-}"
-
-  if [[ ! -f "$pkg_dir/package.json" ]]; then
-    echo "No package.json at $pkg_dir" >&2
-    exit 1
-  fi
-  if grep -q '"private":\s*true' "$pkg_dir/package.json" 2>/dev/null; then
-    echo "Refusing to publish: $pkg_rel is private" >&2
-    exit 1
-  fi
-
-  echo "Publishing single package: $pkg_rel"
-  echo ""
-
-  if [[ -n "$ver" ]]; then
-    echo "Setting version to $ver in $pkg_rel..."
-    (cd "$pkg_dir" && npm version "$ver" --no-git-tag-version --allow-same-version)
-    echo ""
-  fi
-
-  if node -e "
-    const fs=require('fs');
-    const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));
-    process.exit(p.scripts && p.scripts.build ? 0 : 1);
-  " "$pkg_dir/package.json"; then
-    echo "Building $pkg_rel..."
-    (cd "$pkg_dir" && npm run build)
-    echo ""
-  else
-    echo "No build script in $pkg_rel; skipping build."
-    echo ""
-  fi
-
-  echo "Publishing to npm..."
-  (cd "$pkg_dir" && npm publish --access public)
-
-  echo ""
-  echo "Done. Published $pkg_rel${ver:+ at $ver}"
-}
-
-if [[ -n "$SINGLE_PKG" ]]; then
-  publish_one "$SINGLE_PKG" "${ARGS[0]:-}"
-  exit 0
+if [[ -n "$PACKAGE" ]]; then
+  PUBLISH_PKGS=("$(normalize_pkg_path "$PACKAGE")")
+else
+  PUBLISH_PKGS=(packages/core packages/extension-* packages/create-app packages/cli)
 fi
 
-VERSION="${ARGS[0]:-0.0.0}"
-PUBLISH_PKGS=(packages/core packages/extension-* packages/create-app packages/cli)
+VERSION="${VERSION:-0.0.0}"
 
-echo "Publishing core, extensions, create-app, and cli as version: $VERSION"
+has_build_script() {
+  node -e "
+    const fs = require('fs');
+    const pkg = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+    process.exit(pkg.scripts?.build ? 0 : 1);
+  " "$1/package.json"
+}
+
+is_private() {
+  grep -q '"private":\s*true' "$1/package.json" 2>/dev/null
+}
+
+if [[ ${#PUBLISH_PKGS[@]} -eq 1 ]]; then
+  pkg="${PUBLISH_PKGS[0]}"
+  if [[ ! -f "$pkg/package.json" ]]; then
+    echo "No package.json at $pkg" >&2
+    exit 1
+  fi
+  if is_private "$pkg"; then
+    echo "Refusing to publish: $pkg is private" >&2
+    exit 1
+  fi
+fi
+
+echo "Publishing ${#PUBLISH_PKGS[@]} package(s) as version: $VERSION"
 echo ""
 
 echo "Updating package versions..."
 for pkg in "${PUBLISH_PKGS[@]}"; do
-  if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then
+  if [[ -d "$pkg" && -f "$pkg/package.json" ]]; then
     (cd "$pkg" && npm version "$VERSION" --no-git-tag-version --allow-same-version) && echo "  $pkg -> $VERSION"
   fi
 done
 
 echo ""
-echo "Building core..."
-npm run build
+echo "Building..."
+if [[ ${#PUBLISH_PKGS[@]} -eq 1 ]]; then
+  pkg="${PUBLISH_PKGS[0]}"
+  if has_build_script "$pkg"; then
+    echo "  $pkg"
+    (cd "$pkg" && npm run build)
+  else
+    echo "  (no build script in $pkg)"
+  fi
+else
+  npm run build
+  npm run build:extensions
+fi
 
 echo ""
 echo "Publishing to npm..."
+published=0
 for pkg in "${PUBLISH_PKGS[@]}"; do
-  if [ -d "$pkg" ] && [ -f "$pkg/package.json" ]; then
-    if grep -q '"private":\s*true' "$pkg/package.json" 2>/dev/null; then
-      echo "  Skip $pkg (private)"
-    else
-      echo "  Publishing $pkg..."
-      (cd "$pkg" && npm publish --access public)
-    fi
+  if [[ ! -d "$pkg" || ! -f "$pkg/package.json" ]]; then
+    continue
   fi
+  if is_private "$pkg"; then
+    echo "  Skip $pkg (private)"
+    continue
+  fi
+  echo "  Publishing $pkg..."
+  (cd "$pkg" && npm publish --access public)
+  published=$((published + 1))
 done
 
 echo ""
-echo "Done. Published core, extensions, create-app, and cli at $VERSION"
+echo "Done. Published $published package(s) at $VERSION"

@@ -13,6 +13,7 @@ name: App Release (reusable)
 #       with:
 #         base_path: /my-app/
 #         publish_dir: ./packages/app/dist
+#         # publish_branch: gh-pages  # optional; created as an orphan if missing
 #       secrets: inherit
 
 on:
@@ -43,13 +44,17 @@ on:
         type: boolean
         default: true
       pages_url:
-        description: "URL to show in the deployment summary (defaults to the standard github.io URL)"
+        description: "Optional override for the URL shown in the deployment summary (derived from cname if set, otherwise the standard github.io URL)"
         type: string
         default: ""
       cname:
-        description: "Custom domain to write as a CNAME file into publish_dir (leave empty for the default github.io URL)"
+        description: "Custom domain to write as a CNAME file into publish_dir (also used to derive the summary URL when pages_url is omitted)"
         type: string
         default: ""
+      publish_branch:
+        description: "Git branch to publish the built app to (created as an orphan branch if it does not exist)"
+        type: string
+        default: gh-pages
     outputs:
       version:
         description: "The version tagged/released, with a leading v (e.g. v1.2.3; empty if this push wasn't a release commit)"
@@ -153,17 +158,32 @@ jobs:
         if: inputs.cname != ''
         run: echo "${{ inputs.cname }}" > "${{ inputs.publish_dir }}/CNAME"
 
+      - name: Ensure publish branch exists
+        run: |
+          BRANCH="${{ inputs.publish_branch }}"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "Branch $BRANCH already exists"
+            exit 0
+          fi
+
+          echo "Creating orphan branch $BRANCH"
+          EMPTY_TREE=$(git hash-object -t tree /dev/null)
+          COMMIT=$(git commit-tree "$EMPTY_TREE" -m "Initialize $BRANCH")
+          git push origin "$COMMIT:refs/heads/$BRANCH"
+          echo "Created orphan branch $BRANCH at $COMMIT"
+
       - name: Deploy to GitHub Pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ${{ inputs.publish_dir }}
-          publish_branch: gh-pages
+          publish_branch: ${{ inputs.publish_branch }}
 
       - name: Deployment summary
         run: |
           echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Release**: ${{ needs.auto-tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: ${{ inputs.pages_url || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ inputs.publish_branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ inputs.pages_url || (inputs.cname != '' && format('https://{0}', inputs.cname)) || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

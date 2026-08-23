@@ -43,8 +43,9 @@ npm run dev           # dev server for default app
 npm run test          # Vitest unit tests (@eclipse-docks/core)
 npm run type-check    # TypeScript
 npm run test:e2e      # Playwright (packages/app-e2e); Chromium install: npm run playwright:install-chromium
-npm run build         # core + extensions scripts as defined at root
-npm run build:app     # typical full app build pipeline
+npm run build         # core only
+npm run build:app     # core + app (extensions resolved from source via Vite)
+npm run build:extensions  # extension dist/ — needed before npm publish
 npm run docs:dev      # docs site (nested tooling)
 ```
 

@@ -78,7 +78,6 @@ jobs:
       publish_dir: packages/app/dist
       build_command: npm run build:app
       node_version_file: .nvmrc
-      pages_url: https://docks.eclipse.dev
       cname: docks.eclipse.dev
     secrets: inherit
 
@@ -148,6 +147,9 @@ jobs:
 
       - name: Build core package
         run: npm run build
+
+      - name: Build extension packages
+        run: npm run build:extensions
 
       - name: Run type check
         run: npm run type-check

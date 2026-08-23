@@ -21,12 +21,12 @@
   "scripts": {
     "publish:packages": "./scripts/publish-packages.sh",
     "dev": "npm run dev -w @eclipse-docks/app",
-    "build": "npm run build -w @eclipse-docks/core && npm run build:extensions",
+    "build": "npm run build -w @eclipse-docks/core",
     "build:app": "npm run build && npm run build -w @eclipse-docks/app",
+    "build:extensions": "node scripts/build-extensions.cjs",
     "build:app-e2e": "npm run build -w @eclipse-docks/core && npm run build -w @eclipse-docks/app-e2e",
     "preview": "npm run preview -w @eclipse-docks/app",
     "type-check": "npm run type-check -w @eclipse-docks/core",
-    "pretest": "node scripts/check-node-version.cjs",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e -w @eclipse-docks/app-e2e",
     "test:e2e:stories": "npm run test:e2e:stories -w @eclipse-docks/app-e2e",
@@ -36,7 +36,6 @@
     "docs:api": "typedoc",
     "docs:build": "npm run docs:api && cd docs && npm install && npm run build",
     "docs:dev": "cd docs && npm install && npm run dev",
-    "build:extensions": "node scripts/build-extensions.cjs",
     "release": "docks release"
   },
   "devDependencies": {

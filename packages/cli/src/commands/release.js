@@ -219,7 +219,7 @@ export async function release(argv, cwd = process.cwd()) {
 
   if (opts.push) {
     git(['push', 'origin', version], cwd);
-    console.log(`\nPushed tag ${version}; the release workflow will take over.`);
+    console.log(`\nPushed tag ${version}. Release runs after CI succeeds on main, or immediately if CI already passed on this commit.`);
   } else {
     console.log(`\nCreated annotated tag ${version}. Push your branch and tag to trigger the release:`);
     const branch = currentBranch(cwd);

@@ -1,24 +1,29 @@
 name: App Release (reusable)
 
 # Generalized release workflow for apps built on Eclipse Docks: publishes a GitHub
-# Release when triggered by a vX.Y.Z tag push (see @eclipse-docks/cli's `docks release`
-# command), then optionally builds and deploys the app to GitHub Pages. Call from a
-# per-app workflow, e.g.:
+# Release for a vX.Y.Z tag (see @eclipse-docks/cli's `docks release` command), then
+# optionally builds and deploys the app to GitHub Pages.
+#
+# Prefer triggering from a Release workflow after CI succeeds on main, passing
+# `version`. Tag-push callers may omit `version` and rely on GITHUB_REF instead.
 #
 #   on:
-#     push:
-#       tags:
-#         - v*
+#     workflow_run:
+#       workflows: [CI]
+#       types: [completed]
 #
 #   jobs:
+#     resolve:
+#       if: github.event.workflow_run.conclusion == 'success'
+#       ...
+#
 #     release:
-#       permissions:
-#         contents: write
+#       needs: resolve
 #       uses: eclipse-docks/core/.github/workflows/app-release.yml@main
 #       with:
+#         version: ${{ needs.resolve.outputs.version }}
 #         base_path: /my-app/
 #         publish_dir: ./packages/app/dist
-#         # publish_branch: gh-pages  # optional; created as an orphan if missing
 #       secrets: inherit
 
 on:
@@ -60,6 +65,10 @@ on:
         description: "Git branch to publish the built app to (created as an orphan branch if it does not exist)"
         type: string
         default: gh-pages
+      version:
+        description: "Release tag (e.g. v1.2.3). When empty, derived from a vX.Y.Z tag push ref."
+        type: string
+        default: ""
     outputs:
       version:
         description: "The released version tag (e.g. v1.2.3; empty if this run was not triggered by a release tag)"
@@ -82,8 +91,11 @@ jobs:
       - name: Resolve release tag and notes
         id: version
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          echo "Ref tag: $TAG"
+          TAG="${{ inputs.version }}"
+          if [ -z "$TAG" ]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "Release tag: $TAG"
 
           if ! printf '%s\n' "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "Not a release tag: $TAG"

@@ -18,10 +18,11 @@ npx @eclipse-docks/cli release --no-push             # create the tag locally wi
 
 Creates an annotated tag whose name is the version (`vX.Y.Z`) and pushes it.
 When pushing (the default), any unpushed commits on the current branch are pushed
-to `origin` first so CI builds code that is on the remote branch, not only reachable
-via the tag. Pair this with a CI workflow triggered by `v*` tag pushes (see
-[`.github/workflows/app-release.yml`](../../.github/workflows/app-release.yml) for a
-reusable one) — the tag message body becomes the GitHub Release notes.
+to `origin` first. The tag message body becomes the GitHub Release notes.
+
+Wire release in CI with [`.github/workflows/app-release.yml`](../../.github/workflows/app-release.yml):
+downstream apps usually trigger it on `v*` tag push; this monorepo waits for a green
+**CI** run on `main` first (see [`.github/workflows/release.yml`](../../.github/workflows/release.yml)).
 
 The last version is the most recent `vX.Y.Z` tag reachable from `HEAD` (via
 `git describe`), not the highest semver tag in the repository. That drives the

@@ -1,5 +1,10 @@
 name: Release
 
+# Pushing any vX.Y.Z tag creates a GitHub Release and deploys the production build
+# from packages/app/dist to GitHub Pages (the tag may be created with `docks release`
+# or manually). Adapt inputs below for your setup, or delete this file if you release
+# another way.
+
 on:
   push:
     tags:

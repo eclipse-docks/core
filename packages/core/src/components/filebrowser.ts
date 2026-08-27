@@ -51,6 +51,7 @@ export class DocksFileBrowser extends DocksPart {
     private treeBuildGeneration = 0;
     private workspaceChangedDebounceId: ReturnType<typeof setTimeout> | undefined;
     private pendingWorkspaceDir: Directory | undefined;
+    private treeContextMenuAbort?: AbortController;
 
     protected doBeforeUI() {
         this.initializeWorkspace();
@@ -66,6 +67,8 @@ export class DocksFileBrowser extends DocksPart {
     }
 
     disconnectedCallback() {
+        this.treeContextMenuAbort?.abort();
+        this.treeContextMenuAbort = undefined;
         if (this.workspaceChangedDebounceId !== undefined) {
             clearTimeout(this.workspaceChangedDebounceId);
             this.workspaceChangedDebounceId = undefined;
@@ -102,14 +105,15 @@ export class DocksFileBrowser extends DocksPart {
     protected renderContextMenu() {
         const selection = activeSelectionSignal.get()
         const file = selection instanceof File ? selection : null
-        const hasOpenWith = file && this.fileEditorOptions.length > 0
+        const editorOptions = file ? editorRegistry.getEditorOptionsForInput(file) : []
+        const hasOpenWith = editorOptions.length > 0
         return html`
             <docks-command cmd="open_editor" icon="folder-open">${t.OPEN}</docks-command>
             ${hasOpenWith ? html`
                 <wa-dropdown-item>
                     ${icon('folder-open', { slot: 'icon' })}
                     ${t.OPEN_WITH}
-                    ${this.fileEditorOptions.map(opt => html`
+                    ${editorOptions.map(opt => html`
                         <docks-command
                             slot="submenu"
                             cmd="open_editor"
@@ -543,9 +547,33 @@ export class DocksFileBrowser extends DocksPart {
         return undefined;
     }
 
+    private syncContextMenuTarget = (event: MouseEvent): void => {
+        const treeItem = (event.target as HTMLElement).closest('wa-tree-item') as WaTreeItemElement | null;
+        const resource = treeItem?.model?.data;
+        if (!(resource instanceof Resource)) return;
+        activeSelectionSignal.set(resource);
+        if (resource instanceof File) {
+            this.fileEditorOptions = editorRegistry.getEditorOptionsForInput(resource);
+        } else {
+            this.fileEditorOptions = [];
+        }
+    };
+
+    private attachTreeContextMenuSync() {
+        this.treeContextMenuAbort?.abort();
+        const tree = this.treeRef.value?.querySelector('wa-tree');
+        if (!tree) return;
+        this.treeContextMenuAbort = new AbortController();
+        tree.addEventListener('contextmenu', this.syncContextMenuTarget, {
+            capture: true,
+            signal: this.treeContextMenuAbort.signal,
+        });
+    }
+
     private setupDragAndDrop() {
         const treeElement = this.treeRef.value;
         if (!treeElement) return;
+        this.attachTreeContextMenuSync();
 
         const dragOverHandler = (e: DragEvent) => {
             const types = e.dataTransfer?.types;

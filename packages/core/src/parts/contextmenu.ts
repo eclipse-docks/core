@@ -13,6 +13,7 @@ import {
 } from "../core/contributionregistry";
 import {unsafeHTML} from "lit/directives/unsafe-html.js";
 import {subscribe} from "../core/events";
+import {closeSiblingSubmenus} from "../core/dropdown-menu-utils";
 import {createRef, ref} from "lit/directives/ref.js";
 import '../components/command';
 
@@ -173,6 +174,14 @@ export class DocksContextMenu extends DocksElement {
         return element;
     }
 
+    private getHostPart(): (HTMLElement & { updateComplete: Promise<boolean> }) | null {
+        const root = this.getRootNode();
+        if (root instanceof ShadowRoot && root.host instanceof HTMLElement) {
+            return root.host as HTMLElement & { updateComplete: Promise<boolean> };
+        }
+        return null;
+    }
+
     /**
      * Triggers a click on the element under the cursor to update selection before showing context menu.
      */
@@ -196,21 +205,35 @@ export class DocksContextMenu extends DocksElement {
         }
     }
 
+    private handleSubmenuOpening = (event: Event): void => {
+        const dropdown = this.dropdownRef.value;
+        const activeItem = (event as CustomEvent<{ item?: Element }>).detail?.item;
+        if (!dropdown || !activeItem) return;
+        closeSiblingSubmenus(activeItem, dropdown);
+    };
+
     /** Opens the menu at `position`. Returns false when there is nothing to show (no thin empty panel). */
-    public show(position: { x: number, y: number }, mouseEvent?: MouseEvent): boolean {
+    public async show(position: { x: number, y: number }, mouseEvent?: MouseEvent): Promise<boolean> {
         if (!this.hasMenuBody()) return false;
         if (mouseEvent) {
             this.triggerClickUnderCursor(mouseEvent);
+            await this.getHostPart()?.updateComplete;
         }
+
+        if (this.isOpen) {
+            this.isOpen = false;
+            await this.updateComplete;
+        }
+
         this.position = position;
         this.isOpen = true;
-        this.updateComplete.then(() => {
-            document.addEventListener('pointerdown', this.boundHandleDocumentPointerDown, { capture: true });
-        });
+        await this.updateComplete;
+        document.addEventListener('pointerdown', this.boundHandleDocumentPointerDown, { capture: true });
         return true;
     }
 
     private onClose() {
+        if (!this.isOpen) return;
         this.isOpen = false;
         document.removeEventListener('pointerdown', this.boundHandleDocumentPointerDown, { capture: true });
     }
@@ -242,14 +265,13 @@ export class DocksContextMenu extends DocksElement {
     }
 
     render() {
-        if (!this.isOpen) return nothing;
-
         const partContent = this.partContextMenuRenderer ? this.partContextMenuRenderer() : nothing;
 
         return html`
             <wa-dropdown
                 ${ref(this.dropdownRef)}
                 ?open=${this.isOpen}
+                @submenu-opening=${this.handleSubmenuOpening}
                 @wa-after-hide=${this.onClose}>
                 
                 <div 
@@ -281,8 +303,12 @@ export class DocksContextMenu extends DocksElement {
         }
 
         wa-dropdown {
-            pointer-events: auto;
+            pointer-events: none;
             min-width: 200px;
+        }
+
+        wa-dropdown:state(open) {
+            pointer-events: auto;
         }
         
         wa-dropdown::part(menu) {

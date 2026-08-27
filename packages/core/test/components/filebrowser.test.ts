@@ -420,6 +420,45 @@ describe('docks-filebrowser', () => {
     fb.remove();
   });
 
+  it('renderContextMenu shows Open with from current file even when fileEditorOptions is stale', async () => {
+    const fb = await mountFileBrowser();
+    getEditorOptionsMock.mockReturnValue([{ editorId: 'e1', title: 'Editor 1', icon: 'file' }]);
+    const file = new TestFile('hello.ipynb', undefined, 'root/hello.ipynb');
+    activeSelectionSignal.set(file);
+
+    const menu = (fb as unknown as { renderContextMenu: () => import('lit').TemplateResult }).renderContextMenu();
+    const container = document.createElement('div');
+    render(menu, container);
+
+    expect(container.textContent).toContain('Open with');
+    expect(container.textContent).toContain('Editor 1');
+    fb.remove();
+  });
+
+  it('syncContextMenuTarget sets selection from tree item under cursor', async () => {
+    const fb = await mountFileBrowser();
+    const file = new TestFile('a.ipynb', undefined, 'a.ipynb');
+    const treeItem = document.createElement('wa-tree-item');
+    (treeItem as unknown as { model: TreeNode }).model = {
+      data: file,
+      label: 'a.ipynb',
+      leaf: true,
+      children: [],
+    };
+    const inner = document.createElement('span');
+    treeItem.appendChild(inner);
+
+    getEditorOptionsMock.mockReturnValue([{ editorId: 'e1', title: 'E1' }]);
+    activeSetSpy.mockClear();
+
+    const event = new MouseEvent('contextmenu', { bubbles: true });
+    Object.defineProperty(event, 'target', { value: inner, configurable: true });
+    (fb as unknown as { syncContextMenuTarget: (e: MouseEvent) => void }).syncContextMenuTarget(event);
+
+    expect(activeSetSpy).toHaveBeenCalledWith(file);
+    fb.remove();
+  });
+
   it('onDragStart writes workspace payload to dataTransfer', async () => {
     const fb = await mountFileBrowser();
     const parent = new TestDir('p', undefined, []);

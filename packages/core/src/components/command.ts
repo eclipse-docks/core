@@ -156,9 +156,9 @@ export class DocksCommand extends DocksWidget {
     render() {
         const keybinding = this.getKeybinding()
 
-        // Nested menu: when this command has a dropdown and is already inside a
-        // wa-dropdown (e.g. context menu), expose contributions as a submenu.
-        // Without this branch, dropdown is ignored and a cmd-less click does nothing.
+        // Nested dropdown menu item (e.g. context menu "Create new…").
+        // docks-command renders the submenu; docks-contextmenu closes sibling
+        // submenus across shadow boundaries when one opens.
         if (this.isInDropdown() && this.dropdown) {
             return html`
                 <wa-dropdown-item ?disabled=${this.disabled}>

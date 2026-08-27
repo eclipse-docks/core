@@ -145,10 +145,10 @@ export abstract class DocksPart extends DocksContainer {
         return contributionKey ? `contextmenu:${contributionKey}` : undefined;
     }
 
-    private onContentContextMenu = (event: MouseEvent): void => {
+    private onContentContextMenu = async (event: MouseEvent): Promise<void> => {
         const contextMenu = this.renderRoot.querySelector('docks-contextmenu') as DocksContextMenu | null;
         if (!contextMenu) return;
-        if (contextMenu.show({ x: event.clientX, y: event.clientY }, event)) {
+        if (await contextMenu.show({ x: event.clientX, y: event.clientY }, event)) {
             event.preventDefault();
         }
     };

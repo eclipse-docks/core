@@ -1,27 +1,50 @@
-import Toastify from 'toastify-js';
-import 'toastify-js/src/toastify.css';
+import '@awesome.me/webawesome/dist/components/toast/toast.js';
 import { createLogger } from './logger';
 
 const logger = createLogger('Toast');
 
 const DURATION = 4000;
-const BASE = { duration: DURATION, gravity: 'bottom' as const, position: 'right' as const, close: true };
 
-const show = (msg: string, style: { background: string; color: string }) => {
-  Toastify({ ...BASE, text: msg, style }).showToast();
+type ToastVariant = 'brand' | 'danger' | 'warning';
+
+type WaToastElement = HTMLElement & {
+  placement: string;
+  create(
+    message: string,
+    options?: {
+      variant?: ToastVariant | 'neutral' | 'success';
+      duration?: number;
+    },
+  ): Promise<HTMLElement>;
+};
+
+let toastStack: WaToastElement | null = null;
+
+function getToastStack(): WaToastElement {
+  if (!toastStack) {
+    toastStack = document.createElement('wa-toast') as WaToastElement;
+    toastStack.placement = 'bottom-end';
+    document.body.append(toastStack);
+  }
+  return toastStack;
+}
+
+const show = (msg: string, variant: ToastVariant) => {
+  if (typeof document === 'undefined' || !document.body) return;
+  void getToastStack().create(msg, { variant, duration: DURATION });
 };
 
 export const toastInfo = (msg: string) => {
   logger.info(msg);
-  show(msg, { background: 'var(--wa-color-brand-50)', color: 'var(--wa-color-brand-on)' });
+  show(msg, 'brand');
 };
 
 export const toastError = (msg: string) => {
   logger.error(msg);
-  show(msg, { background: 'var(--wa-color-danger-50)', color: 'var(--wa-color-danger-on)' });
+  show(msg, 'danger');
 };
 
 export const toastWarning = (msg: string) => {
   logger.warn(msg);
-  show(msg, { background: 'var(--wa-color-warning-50)', color: 'var(--wa-color-warning-on)' });
+  show(msg, 'warning');
 };

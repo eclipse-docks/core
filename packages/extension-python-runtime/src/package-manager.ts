@@ -152,7 +152,7 @@ export class DocksPythonPackageManager extends LitElement {
                                     <wa-icon name="box" style="opacity: 0.5;"></wa-icon>
                                     <span class="package-name">${pkg}</span>
                                     <wa-button 
-                                        size="small" 
+                                        size="s" 
                                         variant="text"
                                         @click=${() => this.removePackage(pkg)}
                                         title="Remove package">

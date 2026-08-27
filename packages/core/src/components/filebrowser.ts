@@ -42,8 +42,6 @@ export class DocksFileBrowser extends DocksPart {
 
     @state()
     private root?: TreeNode;
-    @state()
-    private fileEditorOptions: Array<{ editorId: string; title: string; icon?: string }> = [];
     private workspaceDir?: Directory
     private treeRef = createRef<HTMLElement>();
     private loadingNodes = new Set<TreeNode>();
@@ -511,15 +509,9 @@ export class DocksFileBrowser extends DocksPart {
             } else {
                 this.persistSelectedPath(null);
             }
-            if (data instanceof File) {
-                this.fileEditorOptions = editorRegistry.getEditorOptionsForInput(data)
-            } else {
-                this.fileEditorOptions = []
-            }
         } else {
             activeSelectionSignal.set(undefined)
             this.persistSelectedPath(null);
-            this.fileEditorOptions = []
         }
     }
 
@@ -552,11 +544,6 @@ export class DocksFileBrowser extends DocksPart {
         const resource = treeItem?.model?.data;
         if (!(resource instanceof Resource)) return;
         activeSelectionSignal.set(resource);
-        if (resource instanceof File) {
-            this.fileEditorOptions = editorRegistry.getEditorOptionsForInput(resource);
-        } else {
-            this.fileEditorOptions = [];
-        }
     };
 
     private attachTreeContextMenuSync() {

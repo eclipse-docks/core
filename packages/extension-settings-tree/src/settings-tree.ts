@@ -376,7 +376,7 @@ export class DocksSettingsTree extends DocksPart {
                 <wa-select
                     value=${value}
                     @change=${(e: Event) => this.setRowValue(row, (e.target as HTMLSelectElement).value)}
-                    size="small">
+                    size="s">
                     ${options.map(opt => html`<wa-option value=${opt}>${opt}</wa-option>`)}
                 </wa-select>
             `;
@@ -388,7 +388,7 @@ export class DocksSettingsTree extends DocksPart {
                 <wa-switch
                     ?checked=${checked}
                     @change=${(e: Event) => this.setRowValue(row, (e.target as HTMLInputElement).checked)}
-                    size="small">
+                    size="s">
                 </wa-switch>
             `;
         }
@@ -399,7 +399,7 @@ export class DocksSettingsTree extends DocksPart {
                 <wa-number-input
                     .value=${String(num)}
                     @change=${(e: Event) => this.setRowValue(row, Number((e.target as HTMLInputElement).value))}
-                    size="small">
+                    size="s">
                 </wa-number-input>
             `;
         }
@@ -428,7 +428,7 @@ export class DocksSettingsTree extends DocksPart {
                 <wa-switch
                     ?checked=${current}
                     @change=${(e: Event) => this.setRowValue(row, (e.target as HTMLInputElement).checked)}
-                    size="small">
+                    size="s">
                 </wa-switch>
             `;
         }
@@ -437,7 +437,7 @@ export class DocksSettingsTree extends DocksPart {
                 <wa-number-input
                     .value=${String(current)}
                     @change=${(e: Event) => this.setRowValue(row, Number((e.target as HTMLInputElement).value))}
-                    size="small">
+                    size="s">
                 </wa-number-input>
             `;
         }
@@ -445,7 +445,7 @@ export class DocksSettingsTree extends DocksPart {
                 <wa-input
                 .value=${str}
                 @input=${(e: Event) => this.setRowValue(row, (e.target as HTMLInputElement).value)}
-                size="small">
+                size="s">
             </wa-input>
         `;
     }
@@ -475,7 +475,7 @@ export class DocksSettingsTree extends DocksPart {
                         <div class="nested-row">
                             <wa-input
                                 .value=${k}
-                                size="small"
+                                size="s"
                                 style="width: 140px;"
                                 @blur=${(e: Event) => {
                                     const newKey = (e.target as HTMLInputElement).value.trim();
@@ -540,10 +540,10 @@ export class DocksSettingsTree extends DocksPart {
                 <div class="detail-heading-row">
                     <h2 class="detail-heading">${this.detailTitle}</h2>
                     ${canAddToSelection ? html`
-                        <docks-command size="small" icon="plus" title="Add setting" .action=${() => this.addKeyToGroup(this.selectedPath!)}>Add</docks-command>
+                        <docks-command size="s" icon="plus" title="Add setting" .action=${() => this.addKeyToGroup(this.selectedPath!)}>Add</docks-command>
                     ` : ''}
                     ${isTopLevel ? html`
-                        <docks-command size="small" icon="trash" title="Delete category" .action=${() => this.deleteTopLevelKey(this.selectedPath!)}></docks-command>
+                        <docks-command size="s" icon="trash" title="Delete category" .action=${() => this.deleteTopLevelKey(this.selectedPath!)}></docks-command>
                     ` : ''}
                 </div>
                 <wa-scroller class="detail-scroller" orientation="vertical">
@@ -564,7 +564,7 @@ export class DocksSettingsTree extends DocksPart {
                                     ${showGroup ? html`
                                         <div class="detail-group-header">
                                             <span>${row.groupLabel}</span>
-                                            <docks-command size="small" icon="plus" title="Add setting" .action=${() => this.addKeyToGroup(row.parentPath!)}>Add</docks-command>
+                                            <docks-command size="s" icon="plus" title="Add setting" .action=${() => this.addKeyToGroup(row.parentPath!)}>Add</docks-command>
                                         </div>
                                     ` : ''}
                                     <div class="setting-row ${inGroup ? 'setting-row-in-group' : ''}">
@@ -572,7 +572,7 @@ export class DocksSettingsTree extends DocksPart {
                                             ${row.parentPath != null ? html`
                                                 <wa-input
                                                     .value=${row.key}
-                                                    size="small"
+                                                    size="s"
                                                     class="editable-key setting-control-key"
                                                     @blur=${(e: Event) => {
                                                         const newKey = (e.target as HTMLInputElement).value.trim();
@@ -584,7 +584,7 @@ export class DocksSettingsTree extends DocksPart {
                                         </div>
                                         <div class="setting-control">${this.renderDetailControl(row)}</div>
                                         ${row.parentPath != null ? html`
-                                            <docks-command size="small" icon="trash" title="Delete setting" .action=${() => this.deleteKey(row.parentPath!, row.key)}></docks-command>
+                                            <docks-command size="s" icon="trash" title="Delete setting" .action=${() => this.deleteKey(row.parentPath!, row.key)}></docks-command>
                                         ` : ''}
                                     </div>
                                 `;
@@ -658,12 +658,12 @@ export class DocksSettingsTree extends DocksPart {
                     this.searchQuery = (e.target as HTMLInputElement).value;
                     this.buildCategoryTree();
                 }}
-                size="small"
+                size="s"
                 class="toolbar-search">
             </wa-input>
-            <docks-command size="small" icon="plus" title="Add Key" .action=${() => this.addKey()}>Add Key</docks-command>
-            <docks-command size="small" icon="chevron-down" title="Expand All" .action=${() => this.setAllExpanded(true)}>Expand All</docks-command>
-            <docks-command size="small" icon="chevron-right" title="Collapse All" .action=${() => this.setAllExpanded(false)}>Collapse All</docks-command>
+            <docks-command size="s" icon="plus" title="Add Key" .action=${() => this.addKey()}>Add Key</docks-command>
+            <docks-command size="s" icon="chevron-down" title="Expand All" .action=${() => this.setAllExpanded(true)}>Expand All</docks-command>
+            <docks-command size="s" icon="chevron-right" title="Collapse All" .action=${() => this.setAllExpanded(false)}>Collapse All</docks-command>
         `;
     }
 

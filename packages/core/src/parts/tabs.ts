@@ -45,9 +45,9 @@ export class DocksTabs extends DocksContainer {
     @property({ type: Boolean, reflect: true, attribute: 'hide-tabs' })
     hideTabs: boolean = false;
 
-    /** Tab and nav-toolbar control sizing (`small` | `medium` | `large`). */
+    /** Tab and nav-toolbar control sizing (`s` | `m` | `l`). */
     @property({ reflect: true, attribute: 'item-size' })
-    itemSize: 'small' | 'medium' | 'large' = 'medium';
+    itemSize: 's' | 'm' | 'l' = 'm';
 
     /** Tab contributions for this container */
     @state()
@@ -549,12 +549,12 @@ export class DocksTabs extends DocksContainer {
             font-size: var(--wa-font-size-s);
         }
 
-        :host([item-size="small"]) wa-tab::part(base) {
+        :host([item-size="s"]) wa-tab::part(base) {
             padding: 2px 0.375rem;
             font-size: var(--wa-font-size-xs);
         }
 
-        :host([item-size="large"]) wa-tab::part(base) {
+        :host([item-size="l"]) wa-tab::part(base) {
             padding: var(--wa-space-s) 0.75rem;
             font-size: var(--wa-font-size-m);
         }
@@ -567,11 +567,11 @@ export class DocksTabs extends DocksContainer {
             padding: var(--wa-space-s);
         }
 
-        :host([icon-only][item-size="small"]:is([placement="top"], [placement="bottom"])) wa-tab::part(base) {
+        :host([icon-only][item-size="s"]:is([placement="top"], [placement="bottom"])) wa-tab::part(base) {
             padding: var(--wa-space-xs);
         }
 
-        :host([icon-only][item-size="large"]:is([placement="top"], [placement="bottom"])) wa-tab::part(base) {
+        :host([icon-only][item-size="l"]:is([placement="top"], [placement="bottom"])) wa-tab::part(base) {
             padding: var(--wa-space-m);
         }
 
@@ -580,11 +580,11 @@ export class DocksTabs extends DocksContainer {
             padding-block: var(--wa-space-s);
         }
 
-        :host([icon-only][item-size="small"]:is([placement="start"], [placement="end"])) wa-tab::part(base) {
+        :host([icon-only][item-size="s"]:is([placement="start"], [placement="end"])) wa-tab::part(base) {
             padding-block: var(--wa-space-xs);
         }
 
-        :host([icon-only][item-size="large"]:is([placement="start"], [placement="end"])) wa-tab::part(base) {
+        :host([icon-only][item-size="l"]:is([placement="start"], [placement="end"])) wa-tab::part(base) {
             padding-block: var(--wa-space-m);
         }
 
@@ -592,11 +592,11 @@ export class DocksTabs extends DocksContainer {
             font-size: var(--wa-font-size-l);
         }
 
-        :host([icon-only][item-size="small"]) wa-tab wa-icon {
+        :host([icon-only][item-size="s"]) wa-tab wa-icon {
             font-size: var(--wa-font-size-m);
         }
 
-        :host([icon-only][item-size="large"]) wa-tab wa-icon {
+        :host([icon-only][item-size="l"]) wa-tab wa-icon {
             font-size: var(--wa-font-size-xl);
         }
 

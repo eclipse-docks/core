@@ -320,7 +320,7 @@ export class DocksAIView extends DocksPart {
 
         return html`
             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.875rem;font-weight:500;padding:0 0.25rem;">${session?.title || 'New Chat'}</span>
-            <wa-button appearance="plain" size="small" title="New chat"
+            <wa-button appearance="plain" size="s" title="New chat"
                 @click="${() => this.createNewSession()}">
                 <wa-icon name="plus" label="New chat"></wa-icon>
             </wa-button>
@@ -329,7 +329,7 @@ export class DocksAIView extends DocksPart {
                     ?open="${this.showHistory}"
                     @wa-after-hide="${() => { this.showHistory = false; }}"
                     placement="bottom-start">
-                    <wa-button slot="trigger" appearance="plain" size="small" with-caret
+                    <wa-button slot="trigger" appearance="plain" size="s" with-caret
                         title="Chat history"
                         @click="${() => { this.showHistory = !this.showHistory; }}">
                         <wa-icon name="clock-rotate-left" label="History"></wa-icon>
@@ -338,7 +338,7 @@ export class DocksAIView extends DocksPart {
                         <wa-dropdown-item @click="${() => this.switchToSession(s.id)}">
                             <wa-icon name="message" label="Session" slot="icon"></wa-icon>
                             <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.title || 'Unnamed Chat'}</span>
-                            <wa-button slot="details" appearance="plain" size="small" title="Delete"
+                            <wa-button slot="details" appearance="plain" size="s" title="Delete"
                                 @click="${(e: Event) => { e.stopPropagation(); this.deletePastSession(s.id); }}">
                                 <wa-icon name="trash" label="Delete"></wa-icon>
                             </wa-button>
@@ -398,7 +398,7 @@ export class DocksAIView extends DocksPart {
 
                             ${when(this.busy && this.streamManager.getAllStreamingMessages().length === 0, () => html`
                                 <div class="thinking-indicator">
-                                    <wa-progress-ring indeterminate size="small"></wa-progress-ring>
+                                    <wa-progress-ring indeterminate size="s"></wa-progress-ring>
                                     <span>Thinking…</span>
                                 </div>
                             `)}

@@ -24,7 +24,7 @@ export class ToolRegistry {
             type: "function",
             function: {
                 name: sanitizeFunctionName(command.id),
-                description: command.description || command.name,
+                description: String(command.description || command.name),
                 parameters: { type: "object", properties, required }
             }
         };

@@ -389,10 +389,9 @@ describe('docks-filebrowser', () => {
     fb.remove();
   });
 
-  it('onSelectionChanged updates selection, editors, and persisted path', async () => {
+  it('onSelectionChanged updates selection and persisted path', async () => {
     const fb = await mountFileBrowser();
     const setDialogSpy = vi.spyOn(fb as unknown as { setDialogSetting: (v: unknown) => Promise<void> }, 'setDialogSetting').mockResolvedValue(undefined);
-    getEditorOptionsMock.mockReturnValue([{ editorId: 'e1', title: 'Editor 1' }]);
     const parent = new TestDir('p', undefined, []);
     const file = new TestFile('f.ts', parent, 'root/f.ts');
     await fb.onSelectionChanged({
@@ -401,7 +400,6 @@ describe('docks-filebrowser', () => {
       },
     } as unknown as Event);
     expect(activeSetSpy).toHaveBeenCalledWith(file);
-    expect(getEditorOptionsMock).toHaveBeenCalled();
     expect(setDialogSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         v: 1,
@@ -420,7 +418,7 @@ describe('docks-filebrowser', () => {
     fb.remove();
   });
 
-  it('renderContextMenu shows Open with from current file even when fileEditorOptions is stale', async () => {
+  it('renderContextMenu shows Open with from current file selection', async () => {
     const fb = await mountFileBrowser();
     getEditorOptionsMock.mockReturnValue([{ editorId: 'e1', title: 'Editor 1', icon: 'file' }]);
     const file = new TestFile('hello.ipynb', undefined, 'root/hello.ipynb');

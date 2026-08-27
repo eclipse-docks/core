@@ -29,9 +29,11 @@ export function collectDropdownItems(root: Element): DropdownItemElement[] {
 
 /** Close every open submenu except the one being activated. */
 export function closeSiblingSubmenus(activeItem: Element, menuRoot: Element): void {
-  for (const item of collectDropdownItems(menuRoot)) {
-    if (item !== activeItem && item.submenuOpen) {
-      item.submenuOpen = false;
+  queueMicrotask(() => {
+    for (const item of collectDropdownItems(menuRoot)) {
+      if (item !== activeItem && item.submenuOpen) {
+        item.submenuOpen = false;
+      }
     }
-  }
+  });
 }

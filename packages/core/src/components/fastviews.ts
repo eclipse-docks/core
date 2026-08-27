@@ -29,7 +29,7 @@ export class DocksFastViews extends DocksWidget {
     appearance: 'default' | 'plain' | 'outline' = 'plain'
 
     @property()
-    size: 'small' | 'medium' | 'large' = 'small'
+    size: 's' | 'm' | 'l' = 's'
 
     @property()
     placement: 'top' | 'top-start' | 'top-end' | 'bottom' | 'bottom-start' | 'bottom-end' | 'left' | 'left-start' | 'left-end' | 'right' | 'right-start' | 'right-end' = 'bottom-start'

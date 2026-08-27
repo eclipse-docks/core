@@ -134,7 +134,7 @@ export class DocksLanguageSelector extends DocksElement {
         return html`
             <wa-button 
                 appearance="plain" 
-                size="small"
+                size="s"
                 title="Current language: ${languageName}"
                 @click=${() => showLanguageSelectorDialog()}>
                 ${icon('language')}

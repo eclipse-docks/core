@@ -141,7 +141,7 @@ export class DocksSqlExtensionManager extends LitElement {
             ${installed
               ? html`
                   <wa-button
-                    size="small"
+                    size="s"
                     appearance="plain"
                     ?disabled=${!canDisable || isUpdating}
                     @click=${() => void this.disableExtension(ext)}
@@ -154,7 +154,7 @@ export class DocksSqlExtensionManager extends LitElement {
                 `
               : html`
                   <wa-button
-                    size="small"
+                    size="s"
                     appearance="plain"
                     ?disabled=${isUpdating}
                     @click=${() => void this.enableExtension(ext)}
@@ -227,7 +227,7 @@ export class DocksSqlExtensionManager extends LitElement {
             : null}
 
           <wa-input
-              size="small"
+              size="s"
               placeholder="Filter extensions…"
               .value=${this.filterText}
               @input=${(event: Event) => {

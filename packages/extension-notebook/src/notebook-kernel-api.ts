@@ -27,10 +27,13 @@ export interface NotebookKernel {
   close?(): void | Promise<void>;
 }
 
-export interface NotebookKernelContribution {
+export interface NotebookKernelDescriptor {
   id: string;
   label: string;
-  icon?: string;
   language: string;
+}
+
+export interface NotebookKernelContribution extends NotebookKernelDescriptor {
+  icon?: string;
   loadKernel(): Promise<NotebookKernel>;
 }

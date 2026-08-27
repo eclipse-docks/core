@@ -43,7 +43,7 @@ export class DocksCommand extends DocksWidget {
     variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'
 
     @property()
-    size: 'small' | 'medium' | 'large' = 'small'
+    size: 's' | 'm' | 'l' = 's'
 
     @property({ type: Object, attribute: false })
     params: Record<string, any> = {}
@@ -105,21 +105,21 @@ export class DocksCommand extends DocksWidget {
 
     protected doBeforeUI() {
         if (this.dropdown) {
-            this.loadDropdownContributions()
-            
+            this.dropdownContributions = contributionRegistry.getContributions(this.dropdown);
+
             subscribe(TOPIC_CONTRIBUTEIONS_CHANGED, (event: ContributionChangeEvent) => {
                 if (this.dropdown && event.target === this.dropdown) {
                     this.dropdownContributions = event.contributions;
-                    this.requestUpdate();
                 }
             })
         }
     }
 
-    private loadDropdownContributions() {
-        if (!this.dropdown) return
-        this.dropdownContributions = contributionRegistry.getContributions(this.dropdown)
-        this.requestUpdate()
+    protected willUpdate(changedProperties: Map<PropertyKey, unknown>) {
+        super.willUpdate?.(changedProperties);
+        if (this.dropdown && changedProperties.has('dropdown')) {
+            this.dropdownContributions = contributionRegistry.getContributions(this.dropdown);
+        }
     }
 
     private renderContribution(contribution: Contribution, slot?: string) {

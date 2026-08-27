@@ -41,7 +41,7 @@ export class AIChatMessage extends LitElement {
         return markdownHtml.replace(/<pre><code([^>]*)>([\s\S]*?)<\/code><\/pre>/gi, (_, attrs, codeText) => `
             <div class="code-blocwrapper">
                 <div class="code-blocheader">
-                    <wa-copy-button value="${this.escapeHtmlAttribute(codeText.trim())}" size="small" label="Copy code"></wa-copy-button>
+                    <wa-copy-button value="${this.escapeHtmlAttribute(codeText.trim())}" size="s" label="Copy code"></wa-copy-button>
                 </div>
                 <div class="code-bloccontent">
                     <pre><code${attrs}>${codeText}</code></pre>
@@ -78,7 +78,7 @@ export class AIChatMessage extends LitElement {
                             <span class="role-name">${message.role}</span>
                         </div>
                     <div class="message-actions">
-                        <wa-button variant="neutral" appearance="plain" size="small" title="Copy"
+                        <wa-button variant="neutral" appearance="plain" size="s" title="Copy"
                             @click="${() => this.copyToClipboard(message.content)}">
                             <wa-icon slot="label" name="copy" label="Copy"></wa-icon>
                         </wa-button>
@@ -91,11 +91,11 @@ export class AIChatMessage extends LitElement {
                         ${when(this.isStreaming, () => html`<span class="streaming-cursor">▋</span>`)}
                     </div>
                     ${when(isUser, () => html`
-                        <wa-button variant="neutral" appearance="plain" size="small" title="Copy"
+                        <wa-button variant="neutral" appearance="plain" size="s" title="Copy"
                             @click="${() => this.copyToClipboard(message.content)}">
                             <wa-icon name="copy" label="Copy"></wa-icon>
                         </wa-button>
-                        <wa-button variant="neutral" appearance="plain" size="small" title="Resend"
+                        <wa-button variant="neutral" appearance="plain" size="s" title="Resend"
                             @click="${(e: Event) => this.handleResend(e)}">
                             <wa-icon name="rotate-right" label="Resend"></wa-icon>
                         </wa-button>

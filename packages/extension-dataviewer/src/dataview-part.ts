@@ -177,14 +177,14 @@ export class DataViewPart extends DocksPart {
         <wa-dropdown
           placement="bottom-start"
           distance="4"
-          size="small"
+          size="s"
           hoist
           @wa-select=${(e: CustomEvent) => this.onHistorySelect(e as any)}
         >
           <wa-button
             slot="trigger"
             appearance="plain"
-            size="small"
+            size="s"
             with-caret
             title="Data view history"
           >
@@ -198,7 +198,7 @@ export class DataViewPart extends DocksPart {
                   <wa-button
                     slot="details"
                     appearance="plain"
-                    size="small"
+                    size="s"
                     title="Clear history"
                     @click=${() => this.onClearHistory()}
                   >
@@ -220,7 +220,7 @@ export class DataViewPart extends DocksPart {
                 <wa-button
                   slot="details"
                   appearance="plain"
-                  size="small"
+                  size="s"
                   title="Delete data view"
                   @click=${(e: Event) => this.onDeleteView(e, entry.storageKey)}
                 >
@@ -235,7 +235,7 @@ export class DataViewPart extends DocksPart {
         <wa-divider orientation="vertical"></wa-divider>
 
         <wa-button
-          size="small"
+          size="s"
           appearance="plain"
           title="Export current data view to CSV"
           ?disabled=${!this.hasData}
@@ -246,7 +246,7 @@ export class DataViewPart extends DocksPart {
 
         <wa-switch
           ?checked=${this.autoActivateTab}
-          size="small"
+          size="s"
           title="Switch to this tab when new results arrive"
           @change=${(e: Event) => this.onAutoActivateChange(e)}
           style="margin-top: 0.5rem;"

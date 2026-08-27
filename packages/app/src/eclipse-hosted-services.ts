@@ -43,7 +43,7 @@ contributionRegistry.registerContribution(
       <wa-button
         appearance="plain"
         variant="brand"
-        size="small"
+        size="s"
         title="Eclipse Foundation legal information"
         @click=${openEclipseLegalDialog}
       >

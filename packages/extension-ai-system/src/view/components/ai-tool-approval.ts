@@ -59,11 +59,11 @@ export class AIToolApproval extends LitElement {
                             <span slot="summary" class="approval-summary">
                                 <span>${summaryText}</span>
                                 <div class="approval-inline-actions">
-                                    <wa-button appearance="plain" size="small" variant="neutral"
+                                    <wa-button appearance="plain" size="s" variant="neutral"
                                         @click="${(e: Event) => { e.stopPropagation(); this.deny(id, approval); }}">
                                         <wa-icon name="xmark" label="Deny"></wa-icon>
                                     </wa-button>
-                                    <wa-button appearance="plain" size="small" variant="success"
+                                    <wa-button appearance="plain" size="s" variant="success"
                                         @click="${async (e: Event) => { e.stopPropagation(); this.approve(id, approval); }}">
                                         <wa-icon name="check" label="Approve"></wa-icon>
                                     </wa-button>

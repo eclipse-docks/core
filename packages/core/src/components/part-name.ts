@@ -32,7 +32,7 @@ export class DocksPartName extends DocksElement {
         return html`
             <wa-button 
                 appearance="plain"
-                size="small"
+                size="s"
                 title="${t.ACTIVE_PART}">
                 ${icon(partIcon, { label: 'Part', slot: 'start' })}
                 ${getActivePartDisplayName()}

@@ -76,8 +76,8 @@ export class DocksContextMenu extends DocksElement {
         });
     }
 
-    protected updated(changedProperties: Map<string, unknown>) {
-        super.updated?.(changedProperties);
+    protected willUpdate(changedProperties: Map<string, unknown>) {
+        super.willUpdate?.(changedProperties);
         if (changedProperties.has('scopeTokens')) {
             this.refreshContributions();
         }

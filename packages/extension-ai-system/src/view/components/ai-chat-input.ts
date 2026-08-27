@@ -46,7 +46,7 @@ export class AIChatInput extends LitElement {
                 <div class="input-row">
                     <wa-textarea
                         placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
-                        size="small"
+                        size="s"
                         resize="auto"
                         rows="1"
                         .value="${this.value}"
@@ -55,7 +55,7 @@ export class AIChatInput extends LitElement {
                         @keydown="${this.onKeyDown}">
                     </wa-textarea>
                     ${when(this.busy, () => html`
-                        <wa-button appearance="plain" size="small" @click="${this.cancel}">
+                        <wa-button appearance="plain" size="s" @click="${this.cancel}">
                             <wa-icon name="stop" label="Stop"></wa-icon>
                         </wa-button>
                     `)}

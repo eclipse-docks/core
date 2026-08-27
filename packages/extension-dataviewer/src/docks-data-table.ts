@@ -169,7 +169,7 @@ export class DocksDataTable extends LitElement {
           @input=${this.onFilterInput}
           @wa-clear=${this.clearFilter}
           with-clear
-          size="small"
+          size="s"
           aria-label="Filter rows"
         >
           <wa-icon slot="start" name="magnifying-glass" label="Filter"></wa-icon>
@@ -177,7 +177,7 @@ export class DocksDataTable extends LitElement {
         <div class="paging-controls">
           <wa-select
             class="page-size-select"
-            size="small"
+            size="s"
             .value=${String(this.pageSize)}
             title="Rows per page"
             @change=${this.onPageSizeChange}
@@ -190,7 +190,7 @@ export class DocksDataTable extends LitElement {
             ${total === 0 ? '0 rows' : `${start}–${end} of ${total}`}
           </span>
           <wa-button
-            size="small"
+            size="s"
             appearance="plain"
             title="Previous page"
             ?disabled=${count <= 1 || page <= 0}
@@ -199,7 +199,7 @@ export class DocksDataTable extends LitElement {
             <wa-icon name="chevron-left" label="Previous"></wa-icon>
           </wa-button>
           <wa-button
-            size="small"
+            size="s"
             appearance="plain"
             title="Next page"
             ?disabled=${count <= 1 || page >= count - 1}

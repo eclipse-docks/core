@@ -1,6 +1,6 @@
 import logger from "./logger";
 import { publish } from "./events";
-import { CommandContribution, Contribution, contributionRegistry } from "./contributionregistry";
+import { CommandContribution, contributionRegistry } from "./contributionregistry";
 import { rootContext } from "./di";
 import { activePartSignal, activeEditorSignal } from "./appstate";
 
@@ -225,7 +225,7 @@ rootContext.put("commandRegistry", commandRegistry);
 export interface RegisterOptions {
     command: Command,
     handler?: Handler,
-    contribution?: Contribution
+    contribution?: Omit<CommandContribution, 'command'>,
 }
 
 export const registerAll = (options: RegisterOptions) => {

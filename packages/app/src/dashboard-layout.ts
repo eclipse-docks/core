@@ -116,7 +116,7 @@ const dashboardShellTemplate = () =>
         <docks-toolbar id=${TOOLBAR_MAIN_RIGHT}></docks-toolbar>
       </div>
       <docks-resizable-grid class="dashboard-main" orientation="horizontal" sizes="15%, 85%">
-        <docks-toolbar id="dashboard-views" size="large" orientation="vertical"></docks-toolbar>
+        <docks-toolbar id="dashboard-views" size="l" orientation="vertical"></docks-toolbar>
         <docks-tabs style="padding: 10px;" id=${EDITOR_AREA_MAIN}></docks-tabs>
       </docks-resizable-grid>
     </div>`;

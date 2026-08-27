@@ -50,7 +50,7 @@ export class DocksTokenUsage extends DocksElement {
 
         return html`
             <wa-dropdown placement="top-end" distance="8">
-                <wa-button slot="trigger" appearance="plain" size="small" title="Token usage">
+                <wa-button slot="trigger" appearance="plain" size="s" title="Token usage">
                     <wa-icon name="database" label="Tokens" slot="start"></wa-icon>
                     ${this.formatNumber(this.totalUsage.totalTokens)} tokens
                 </wa-button>

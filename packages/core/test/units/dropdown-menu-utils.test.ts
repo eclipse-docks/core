@@ -18,7 +18,7 @@ describe('dropdown-menu-utils', () => {
     expect(collectDropdownItems(host)).toEqual([nestedItem, topLevelItem]);
   });
 
-  it('closes open sibling submenus except the active item', () => {
+  it('closes open sibling submenus except the active item', async () => {
     const menu = document.createElement('wa-dropdown');
     const first = document.createElement('wa-dropdown-item') as HTMLElement & { submenuOpen?: boolean };
     const second = document.createElement('wa-dropdown-item') as HTMLElement & { submenuOpen?: boolean };
@@ -27,6 +27,7 @@ describe('dropdown-menu-utils', () => {
     menu.append(first, second);
 
     closeSiblingSubmenus(second, menu);
+    await Promise.resolve();
 
     expect(first.submenuOpen).toBe(false);
     expect(second.submenuOpen).toBe(true);

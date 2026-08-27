@@ -178,7 +178,7 @@ export class DocksPythonEditor extends DocksPart implements EditorContentProvide
         return html`
             <wa-button
                 appearance="plain"
-                size="small"
+                size="s"
                 style=${styleMap({ display: "flex", alignItems: "center", gap: "0.5rem" })}
                 ?disabled=${this.pyConnecting}
                 @click=${() => this.connectPython()}
@@ -188,7 +188,7 @@ export class DocksPythonEditor extends DocksPart implements EditorContentProvide
                 ${connectionText}
             </wa-button>
             <wa-button
-                size="small"
+                size="s"
                 appearance="plain"
                 ?disabled=${!this.pyConnected}
                 @click=${() => this.runScript()}
@@ -198,7 +198,7 @@ export class DocksPythonEditor extends DocksPart implements EditorContentProvide
                 Run
             </wa-button>
             <wa-button
-                size="small"
+                size="s"
                 appearance="plain"
                 ?disabled=${!this.pyConnected}
                 @click=${() => this.openPackageManager()}

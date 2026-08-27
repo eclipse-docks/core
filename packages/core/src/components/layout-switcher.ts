@@ -46,12 +46,12 @@ export class DocksLayoutSwitcher extends DocksElement {
             <wa-dropdown
                 placement="bottom-end"
                 distance="4"
-                size="small"
+                size="s"
                 @wa-select=${this.handleSelect}>
                 <wa-button
                     slot="trigger"
                     appearance="plain"
-                    size="small"
+                    size="s"
                     with-caret
                     title="Switch layout (current: ${layoutName})">
                     <wa-icon name="table-cells" label="Layout"></wa-icon>

@@ -5,8 +5,8 @@ import { html } from "@eclipse-docks/core/externals/lit";
 registerAll({
   command: {
     id: "commandpalette.open",
-    name: t.OPEN_COMMAND_PALETTE,
-    description: t.OPEN_COMMAND_PALETTE_DESC,
+    name: String(t.OPEN_COMMAND_PALETTE),
+    description: String(t.OPEN_COMMAND_PALETTE_DESC),
     icon: "terminal",
     keyBinding: "CTRL+SHIFT+P",
   },

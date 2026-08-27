@@ -157,12 +157,12 @@ export class DocksAIConfigEditor extends DocksPart {
                                     <span class="provider-name">${provider.name}</span>
                                     ${this.defaultProvider === provider.name
                                         ? html`<span class="default-badge">Default</span>`
-                                        : html`<wa-button appearance="plain" size="small" title="Set as default"
+                                        : html`<wa-button appearance="plain" size="s" title="Set as default"
                                                 @click="${() => { this.defaultProvider = provider.name; this.markDirtyAndUpdate(); }}">
                                                 Set default
                                             </wa-button>`
                                     }
-                                    <wa-button variant="danger" appearance="plain" size="small"
+                                    <wa-button variant="danger" appearance="plain" size="s"
                                         @click="${() => this.deleteProvider(index)}">
                                         Delete
                                     </wa-button>
@@ -176,21 +176,21 @@ export class DocksAIConfigEditor extends DocksPart {
                                         <label>Model</label>
                                         <div class="model-row">
                                             ${this.renderProviderField(index, 'model')}
-                                            <wa-button appearance="plain" size="small"
+                                            <wa-button appearance="plain" size="s"
                                                 @click="${async () => { await this.fetchModels(index); }}"
                                                 title="Fetch available models">
                                                 <wa-icon name="refresh" label="Refresh"></wa-icon>
                                             </wa-button>
                                         </div>
                                         ${when(this.loadingModels, () => html`
-                                            <wa-progress-ring indeterminate size="small"></wa-progress-ring>
+                                            <wa-progress-ring indeterminate size="s"></wa-progress-ring>
                                         `)}
                                         ${when(this.availableModels.length > 0, () => html`
                                             <wa-dropdown
                                                 @wa-select="${(e: CustomEvent) => {
                                                     if (e.detail.item?.value) this.setEditValue(index, 'model', e.detail.item.value);
                                                 }}">
-                                                <wa-button slot="trigger" size="small" appearance="plain" with-caret>
+                                                <wa-button slot="trigger" size="s" appearance="plain" with-caret>
                                                     Select model
                                                 </wa-button>
                                                 ${this.availableModels.map(m => html`

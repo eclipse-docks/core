@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures.js';
+import { createFileMenuItem } from './story-utils.js';
 
 const UI_MS = 3000;
 
@@ -29,7 +30,7 @@ test.describe('Workspace (IndexedDB) persistence', () => {
         // touch with ask: Create → Create File… → prompt path (relative to selected folder).
         const createMenu = fileBrowser.locator('docks-command[dropdown="filebrowser.create"]');
         await createMenu.locator('wa-button[slot="trigger"]').click();
-        await page.getByText('Create File...', { exact: true }).click();
+        await createFileMenuItem(fileBrowser).click();
 
         const dialog = page.locator('wa-dialog[open][label="Input"]');
         await expect(dialog).toBeAttached({ timeout: UI_MS });

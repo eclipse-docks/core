@@ -418,7 +418,7 @@ export class DocksRAGSystemManager extends DocksPart {
                     this.searchQuery = '';
                     await this.updateFilteredDocuments();
                 }}
-                size="small"
+                size="s"
                 with-clear
                 autocomplete="off"
                 style="flex: 1; max-width: 400px;">
@@ -431,7 +431,7 @@ export class DocksRAGSystemManager extends DocksPart {
                     this.filterByActiveWorkspace = e.target.checked;
                     await this.loadDocuments();
                 }}
-                size="small">
+                size="s">
                 Active workspace only
             </wa-switch>
             
@@ -442,7 +442,7 @@ export class DocksRAGSystemManager extends DocksPart {
                     this.filterWorkspace = e.target.value || null;
                     await this.updateFilteredDocuments();
                 }}
-                    size="small"
+                    size="s"
                     style="width: 200px;">
                     <wa-option value="">All Workspaces</wa-option>
                     ${workspaces.map(ws => html`
@@ -452,7 +452,7 @@ export class DocksRAGSystemManager extends DocksPart {
             ` : nothing}
             
             <docks-command 
-                size="small" 
+                size="s" 
                 icon="arrow-rotate-right"
                 title="Refresh document list"
                 .action=${() => this.loadDocuments()}
@@ -461,7 +461,7 @@ export class DocksRAGSystemManager extends DocksPart {
             </docks-command>
             
             <docks-command 
-                size="small" 
+                size="s" 
                 icon="database"
                 title="Re-index all documents"
                 .action=${() => this.reindexAllDocuments()}
@@ -528,7 +528,7 @@ export class DocksRAGSystemManager extends DocksPart {
                                                 <wa-button
                                                     variant="neutral"
                                                     appearance="plain"
-                                                    size="small"
+                                                    size="s"
                                                     title="Reindex"
                                                     @click=${() => this.reindexDocument(doc)}>
                                                     <wa-icon name="arrow-rotate-right"></wa-icon>
@@ -536,7 +536,7 @@ export class DocksRAGSystemManager extends DocksPart {
                                                 <wa-button
                                                     variant="danger"
                                                     appearance="plain"
-                                                    size="small"
+                                                    size="s"
                                                     title="Delete"
                                                     @click=${() => this.deleteDocument(doc)}>
                                                     <wa-icon name="trash"></wa-icon>
@@ -557,11 +557,11 @@ export class DocksRAGSystemManager extends DocksPart {
                                             label="File Path"
                                             .value=${this.selectedDocument.filePath}
                                             readonly
-                                            size="small">
+                                            size="s">
                                             <wa-copy-button
                                                 slot="end"
                                                 .value=${this.selectedDocument.filePath}
-                                                size="small"
+                                                size="s"
                                                 label="Copy file path">
                                             </wa-copy-button>
                                         </wa-input>
@@ -570,11 +570,11 @@ export class DocksRAGSystemManager extends DocksPart {
                                             label="Workspace"
                                             .value=${this.selectedDocument.workspacePath}
                                             readonly
-                                            size="small">
+                                            size="s">
                                             <wa-copy-button
                                                 slot="end"
                                                 .value=${this.selectedDocument.workspacePath}
-                                                size="small"
+                                                size="s"
                                                 label="Copy workspace">
                                             </wa-copy-button>
                                         </wa-input>
@@ -583,11 +583,11 @@ export class DocksRAGSystemManager extends DocksPart {
                                             label="File Type"
                                             .value=${this.selectedDocument.fileType}
                                             readonly
-                                            size="small">
+                                            size="s">
                                             <wa-copy-button
                                                 slot="end"
                                                 .value=${this.selectedDocument.fileType}
-                                                size="small"
+                                                size="s"
                                                 label="Copy file type">
                                             </wa-copy-button>
                                         </wa-input>
@@ -596,11 +596,11 @@ export class DocksRAGSystemManager extends DocksPart {
                                             label="Size"
                                             .value=${this.formatFileSize(this.selectedDocument.metadata.size)}
                                             readonly
-                                            size="small">
+                                            size="s">
                                             <wa-copy-button
                                                 slot="end"
                                                 .value=${this.formatFileSize(this.selectedDocument.metadata.size)}
-                                                size="small"
+                                                size="s"
                                                 label="Copy size">
                                             </wa-copy-button>
                                         </wa-input>
@@ -609,11 +609,11 @@ export class DocksRAGSystemManager extends DocksPart {
                                             label="Indexed At"
                                             .value=${this.formatDate(this.selectedDocument.indexedAt)}
                                             readonly
-                                            size="small">
+                                            size="s">
                                             <wa-copy-button
                                                 slot="end"
                                                 .value=${this.formatDate(this.selectedDocument.indexedAt)}
-                                                size="small"
+                                                size="s"
                                                 label="Copy indexed date">
                                             </wa-copy-button>
                                         </wa-input>
@@ -622,11 +622,11 @@ export class DocksRAGSystemManager extends DocksPart {
                                             label="Last Updated"
                                             .value=${this.formatDate(this.selectedDocument.updatedAt)}
                                             readonly
-                                            size="small">
+                                            size="s">
                                             <wa-copy-button
                                                 slot="end"
                                                 .value=${this.formatDate(this.selectedDocument.updatedAt)}
-                                                size="small"
+                                                size="s"
                                                 label="Copy updated date">
                                             </wa-copy-button>
                                         </wa-input>
@@ -638,11 +638,11 @@ export class DocksRAGSystemManager extends DocksPart {
                                                 label="Tags"
                                                 .value=${this.selectedDocument.metadata.tags.join(', ')}
                                                 readonly
-                                                size="small">
+                                                size="s">
                                                 <wa-copy-button
                                                     slot="end"
                                                     .value=${this.selectedDocument.metadata.tags.join(', ')}
-                                                    size="small"
+                                                    size="s"
                                                     label="Copy tags">
                                                 </wa-copy-button>
                                             </wa-input>

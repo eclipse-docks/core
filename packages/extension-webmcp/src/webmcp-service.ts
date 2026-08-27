@@ -26,9 +26,17 @@ const READ_ONLY_COMMAND_IDS = new Set([
 
 const APP_LOADED_EVENT = "app-loaded";
 
+function resolveCommandText(value: unknown, fallback: string): string {
+  if (value == null) return fallback;
+  const text = typeof value === 'function' ? String(value()) : String(value);
+  return text.trim() || fallback;
+}
+
 function toolDescription(command: Command, toolDef: ToolDefinition): string {
-  const description = (toolDef.function.description || command.description || command.name || command.id).trim();
-  return description || command.id;
+  return resolveCommandText(
+    toolDef.function.description ?? command.description ?? command.name ?? command.id,
+    command.id,
+  );
 }
 
 export class WebMCPService {
@@ -36,6 +44,7 @@ export class WebMCPService {
   private readonly registrationControllers = new Map<string, AbortController>();
   private readonly registeredIds = new Set<string>();
   private readonly registeredToolNames = new Set<string>();
+  private readonly pendingRegistrations = new Set<string>();
   private commandSubscriptionToken: ReturnType<typeof subscribe> | null = null;
   private appLoadedListener: (() => void) | null = null;
 
@@ -74,6 +83,7 @@ export class WebMCPService {
     this.registrationControllers.clear();
     this.registeredIds.clear();
     this.registeredToolNames.clear();
+    this.pendingRegistrations.clear();
   }
 
   private toolDefToInputSchema(
@@ -108,20 +118,24 @@ export class WebMCPService {
   }
 
   private async registerCommand(command: Command): Promise<boolean> {
-    if (this.registeredIds.has(command.id)) return false;
+    if (this.registeredIds.has(command.id) || this.pendingRegistrations.has(command.id)) {
+      return false;
+    }
 
     const modelContext = getModelContext();
     if (!modelContext) return false;
 
+    const toolName = sanitizeWebMcpToolName(command.id);
+    if (this.registeredToolNames.has(toolName)) {
+      logger.warn(`Skipping command "${command.id}": WebMCP tool name "${toolName}" is already registered.`);
+      return false;
+    }
+
+    this.pendingRegistrations.add(command.id);
+
     const schemaContext = commandRegistry.createExecutionContext?.() ?? {};
     const toolDef = this.toolRegistry.commandToTool(command, schemaContext) as ToolDefinition;
     const commandId = command.id;
-    const toolName = sanitizeWebMcpToolName(command.id);
-
-    if (this.registeredToolNames.has(toolName)) {
-      logger.warn(`Skipping command "${commandId}": WebMCP tool name "${toolName}" is already registered.`);
-      return false;
-    }
 
     const registrationController = new AbortController();
 
@@ -129,7 +143,7 @@ export class WebMCPService {
       await modelContext.registerTool(
         {
           name: toolName,
-          title: command.name || command.id,
+          title: resolveCommandText(command.name, command.id),
           description: toolDescription(command, toolDef),
           inputSchema: this.toolDefToInputSchema(toolDef.function.parameters),
           annotations: {
@@ -148,8 +162,15 @@ export class WebMCPService {
       return true;
     } catch (error) {
       registrationController.abort();
+      if (error instanceof DOMException && error.name === 'InvalidStateError') {
+        this.registeredIds.add(command.id);
+        this.registeredToolNames.add(toolName);
+        return true;
+      }
       logger.warn(`Failed to register WebMCP tool "${toolName}" for command "${commandId}":`, error);
       return false;
+    } finally {
+      this.pendingRegistrations.delete(command.id);
     }
   }
 }

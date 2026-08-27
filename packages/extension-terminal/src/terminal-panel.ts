@@ -119,7 +119,7 @@ export class DocksTerminalPanel extends DocksPart {
       <docks-tabs
         id="${TERMINAL_INSTANCES_TABS_ID}"
         placement="start"
-        item-size="small"
+        item-size="s"
       ></docks-tabs>
     `;
   }

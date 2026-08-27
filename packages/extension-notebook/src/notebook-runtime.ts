@@ -11,6 +11,10 @@ import { createLogger, File, DocksPart, contributionRegistry, subscribe, unsubsc
 import type { NotebookCell, NotebookData, NotebookEditorLike } from "./notebook-types";
 import type { NotebookKernel, NotebookKernelContribution } from "./notebook-kernel-api";
 import { TARGET_NOTEBOOK_KERNELS } from "./notebook-kernel-api";
+import {
+    applyKernelToNotebookMetadata,
+    resolveKernelIdFromNotebookMetadata,
+} from "./notebook-metadata";
 
 const logger = createLogger('NotebookRuntime');
 
@@ -132,8 +136,8 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
         this.kernelVersion = undefined;
         this.selectedKernelId = nextId;
         if (this.notebook) {
-            if (!this.notebook.metadata) this.notebook.metadata = {};
-            this.notebook.metadata.kernel = nextId ?? undefined;
+            const contribution = this.availableKernels.find((c) => c.id === nextId);
+            this.notebook.metadata = applyKernelToNotebookMetadata(this.notebook.metadata, contribution);
         }
         this.cellOutputs.clear();
         this.executionCounter = 0;
@@ -172,12 +176,12 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
                 : 'var(--wa-color-red-40)';
 
         const runAllButton = this.isRunningAll ? html`
-            <wa-button size="small" appearance="plain" @click=${() => this.cancelAllCells()} title="Cancel running all cells">
+            <wa-button size="s" appearance="plain" @click=${() => this.cancelAllCells()} title="Cancel running all cells">
                 <wa-icon name="stop" label="Stop"></wa-icon>
                 Cancel All
             </wa-button>
         ` : html`
-            <wa-button size="small" appearance="plain" @click=${() => this.runAllCells()} title="Run all code cells sequentially">
+            <wa-button size="s" appearance="plain" @click=${() => this.runAllCells()} title="Run all code cells sequentially">
                 <wa-icon name="play" label="Run"></wa-icon>
                 Run All
             </wa-button>
@@ -188,13 +192,13 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
                 class="kernel-select"
                 placement="bottom-start"
                 distance="4"
-                size="small"
+                size="s"
                 @wa-select=${(e: CustomEvent<{ item?: { value?: string } }>) => void this.onKernelDropdownSelect(e)}
             >
                 <wa-button
                     slot="trigger"
                     appearance="plain"
-                    size="small"
+                    size="s"
                     with-caret
                     title="Notebook kernel"
                 >
@@ -214,7 +218,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             </wa-dropdown>
             ${runAllButton}
             <wa-button
-                size="small"
+                size="s"
                 appearance="plain"
                 @click=${() => this.clearAllOutputs()}
                 title="Clear all outputs and reset execution counter"
@@ -224,7 +228,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             </wa-button>
             ${this.kernel?.restart ? html`
                 <wa-button
-                    size="small"
+                    size="s"
                     appearance="plain"
                     @click=${() => void this.restartKernel()}
                     title="Restart kernel"
@@ -236,7 +240,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             ` : ''}
             ${this.kernel?.openPackageManager ? html`
                 <wa-button
-                    size="small"
+                    size="s"
                     appearance="plain"
                     @click=${() => this.openPackageManager()}
                     title="Manage packages"
@@ -248,7 +252,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             ${this.kernel ? (this.kernel.connect ? html`
                 <wa-button
                     appearance="plain"
-                    size="small"
+                    size="s"
                     style="display: flex; align-items: center; gap: 0.5rem;"
                     ?disabled=${this.kernelConnecting}
                     @click=${() => void this.connectKernel()}
@@ -293,8 +297,8 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
 
     private resolveDefaultKernelId(contributions: NotebookKernelContribution[]): string | null {
         if (!contributions.length) return null;
-        const fromMeta = this.notebook?.metadata?.kernel;
-        if (fromMeta && contributions.some((c) => c.id === fromMeta)) return fromMeta;
+        const fromMeta = resolveKernelIdFromNotebookMetadata(this.notebook?.metadata, contributions);
+        if (fromMeta) return fromMeta;
         const python = contributions.find((c) => c.id === 'python');
         if (python) return python.id;
         const js = contributions.find((c) => c.id === 'javascript');
@@ -308,8 +312,8 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
         if (!this.selectedKernelId && contributions.length) {
             this.selectedKernelId = this.resolveDefaultKernelId(contributions);
             if (this.notebook && this.selectedKernelId) {
-                if (!this.notebook.metadata) this.notebook.metadata = {};
-                this.notebook.metadata.kernel = this.selectedKernelId;
+                const contribution = contributions.find((c) => c.id === this.selectedKernelId);
+                this.notebook.metadata = applyKernelToNotebookMetadata(this.notebook.metadata, contribution);
             }
         }
         if (this.selectedKernelId && !contributions.some((c) => c.id === this.selectedKernelId)) {
@@ -383,9 +387,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             };
         }
 
-        if (this.notebook?.metadata?.kernel) {
-            this.selectedKernelId = this.notebook.metadata.kernel;
-        }
+        this.selectedKernelId = null;
 
         if (this.notebook?.cells) {
             const maxCount = this.notebook.cells
@@ -454,16 +456,16 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             <div class="cell-header-actions">
                 ${additionalButton || ''}
                 ${additionalButton ? html`<span class="divider"></span>` : ''}
-                <wa-button size="small" appearance="plain" @click=${() => this.addCell(index, 'code')} title="Add code cell before">
+                <wa-button size="s" appearance="plain" @click=${() => this.addCell(index, 'code')} title="Add code cell before">
                     <wa-icon name="plus"></wa-icon>
                     <wa-icon name="code" label="Code"></wa-icon>
                 </wa-button>
-                <wa-button size="small" appearance="plain" @click=${() => this.addCell(index, 'markdown')} title="Add markdown cell before">
+                <wa-button size="s" appearance="plain" @click=${() => this.addCell(index, 'markdown')} title="Add markdown cell before">
                     <wa-icon name="plus"></wa-icon>
                     <wa-icon name="font" label="Markdown"></wa-icon>
                 </wa-button>
                 <span class="divider"></span>
-                <wa-button size="small" appearance="plain" @click=${() => this.deleteCell(index)} title="Delete cell" ?disabled=${this.notebook!.cells.length <= 1}>
+                <wa-button size="s" appearance="plain" @click=${() => this.deleteCell(index)} title="Delete cell" ?disabled=${this.notebook!.cells.length <= 1}>
                     <wa-icon name="trash" label="Delete cell"></wa-icon>
                 </wa-button>
             </div>
@@ -473,11 +475,11 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
     private renderFooterActions(index: number) {
         return html`
             <div class="cell-footer">
-                <wa-button size="small" appearance="plain" @click=${() => this.addCell(index + 1, 'code')} title="Add code cell after">
+                <wa-button size="s" appearance="plain" @click=${() => this.addCell(index + 1, 'code')} title="Add code cell after">
                     <wa-icon name="code" label="Code"></wa-icon>
                     <wa-icon name="plus"></wa-icon>
                 </wa-button>
-                <wa-button size="small" appearance="plain" @click=${() => this.addCell(index + 1, 'markdown')} title="Add markdown cell after">
+                <wa-button size="s" appearance="plain" @click=${() => this.addCell(index + 1, 'markdown')} title="Add markdown cell after">
                     <wa-icon name="font" label="Markdown"></wa-icon>
                     <wa-icon name="plus"></wa-icon>
                 </wa-button>
@@ -687,7 +689,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
         if (isEditing) {
             const editButtons = html`
                 <wa-button 
-                    size="small" 
+                    size="s" 
                     appearance="plain"
                     @click=${(e: Event) => {
                         const textarea = (e.target as HTMLElement).closest('.markdown-cell')?.querySelector('textarea');
@@ -699,7 +701,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
                     <wa-icon name="check" label="Save"></wa-icon>
                 </wa-button>
                 <wa-button 
-                    size="small" 
+                    size="s" 
                     appearance="plain"
                     @click=${() => this.toggleMarkdownEdit(index)}
                     title="Cancel editing">
@@ -736,7 +738,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
 
         const editButton = html`
             <wa-button 
-                size="small" 
+                size="s" 
                 appearance="plain"
                 @click=${() => this.toggleMarkdownEdit(index)}
                 title="Edit markdown">
@@ -783,7 +785,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
 
         const runButton = isExecuting ? html`
             <wa-button 
-                size="small" 
+                size="s" 
                 appearance="plain"
                 @click=${() => this.cancelExecution(index)}
                 title="Stop execution">
@@ -794,7 +796,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
                 cmd="notebook.runCell"
                 icon="play"
                 title="Run cell"
-                size="small"
+                size="s"
                 appearance="plain"
                 .params=${{ cellIndex: index }}>
             </docks-command>

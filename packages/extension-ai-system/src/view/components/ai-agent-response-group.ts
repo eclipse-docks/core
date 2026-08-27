@@ -47,7 +47,7 @@ export class AIAgentResponseGroup extends LitElement {
                     <span>${agentInfo.label}</span>
                     ${this.renderStatusIcon(agentInfo.status)}
                     <div class="agent-card-actions">
-                        <wa-button variant="neutral" appearance="plain" size="small" title="Copy"
+                        <wa-button variant="neutral" appearance="plain" size="s" title="Copy"
                             @click="${() => this.copyToClipboard(message.content || '')}">
                             <wa-icon name="copy" label="Copy"></wa-icon>
                         </wa-button>

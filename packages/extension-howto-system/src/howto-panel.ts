@@ -498,7 +498,7 @@ export class DocksHowToPanel extends DocksWidget {
                     <div class="step-status">
                         ${step.command ? html`
                             <wa-button 
-                                size="small" 
+                                size="s" 
                                 appearance="plain" 
                                 @click=${(e: Event) => {
                                     e.stopPropagation();
@@ -531,7 +531,7 @@ export class DocksHowToPanel extends DocksWidget {
                 ` : nothing}
                 ${isActive && step.optional ? html`
                     <div class="step-actions">
-                        <wa-button size="small" appearance="outline" @click=${() => this.skipStep(contributionId, index)}>
+                        <wa-button size="s" appearance="outline" @click=${() => this.skipStep(contributionId, index)}>
                             <wa-icon name="forward"></wa-icon>
                             Skip
                         </wa-button>
@@ -584,7 +584,7 @@ export class DocksHowToPanel extends DocksWidget {
                     </div>
                     <div class="header-actions" @mousedown=${(e: MouseEvent) => e.stopPropagation()}>
                         <wa-button 
-                            size="small" 
+                            size="s" 
                             appearance="plain" 
                             @click=${this.toggleMinimize}
                             title="${this.isMinimized ? 'Expand' : 'Minimize'}"
@@ -592,7 +592,7 @@ export class DocksHowToPanel extends DocksWidget {
                             <wa-icon name="${this.isMinimized ? 'chevron-up' : 'chevron-down'}"></wa-icon>
                         </wa-button>
                         <wa-button 
-                            size="small" 
+                            size="s" 
                             appearance="plain" 
                             @click=${this.hidePanel}
                             title="Hide Panel"
@@ -618,7 +618,7 @@ export class DocksHowToPanel extends DocksWidget {
                                         ` : nothing}
                                     </div>
                                     <wa-button 
-                                        size="small" 
+                                        size="s" 
                                         appearance="plain" 
                                         @click=${this.closeHowTo}
                                         title="Close HowTo"

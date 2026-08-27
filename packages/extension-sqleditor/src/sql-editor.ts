@@ -524,13 +524,13 @@ export class DocksSqlEditor extends DocksPart implements EditorContentProvider {
         class="engine-select"
         placement="bottom-start"
         distance="4"
-        size="small"
+        size="s"
         @wa-select=${(e: CustomEvent) => void this.onEngineDropdownSelect(e)}
       >
         <wa-button
           slot="trigger"
           appearance="plain"
-          size="small"
+          size="s"
           with-caret
           title="SQL engine"
         >
@@ -555,14 +555,14 @@ export class DocksSqlEditor extends DocksPart implements EditorContentProvider {
         class="connection-select"
         placement="bottom-start"
         distance="4"
-        size="small"
+        size="s"
         @wa-select=${(e: CustomEvent) =>
           void this.onConnectionDropdownSelect(e)}
       >
         <wa-button
           slot="trigger"
           appearance="plain"
-          size="small"
+          size="s"
           with-caret
           title="Connection"
           ?disabled=${!hasEngines || !hasConnections || this.sqlEngineLoading}
@@ -580,7 +580,7 @@ export class DocksSqlEditor extends DocksPart implements EditorContentProvider {
               <wa-button
                 slot="details"
                 appearance="plain"
-                size="small"
+                size="s"
                 title=${info.id === null
                   ? 'Reset in-memory connection'
                   : 'Delete connection'}
@@ -596,7 +596,7 @@ export class DocksSqlEditor extends DocksPart implements EditorContentProvider {
         )}
       </wa-dropdown>
       <wa-button
-        size="small"
+        size="s"
         appearance="plain"
         title="New connection"
         ?disabled=${this.sqlEngineLoading}
@@ -607,7 +607,7 @@ export class DocksSqlEditor extends DocksPart implements EditorContentProvider {
       ${supportsExtensions
         ? html`
             <wa-button
-              size="small"
+              size="s"
               appearance="plain"
               title="Manage extensions"
               ?disabled=${!hasEngines ||
@@ -622,7 +622,7 @@ export class DocksSqlEditor extends DocksPart implements EditorContentProvider {
           `
         : null}
       <wa-button
-        size="small"
+        size="s"
         appearance="plain"
         ?disabled=${runDisabled}
         @click=${() => void this.runQuery(true)}
@@ -632,7 +632,7 @@ export class DocksSqlEditor extends DocksPart implements EditorContentProvider {
         ${this.running ? 'Running…' : 'Run selection'}
       </wa-button>
       <wa-button
-        size="small"
+        size="s"
         appearance="plain"
         ?disabled=${runDisabled}
         @click=${() => void this.runQuery(false)}

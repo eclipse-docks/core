@@ -8,6 +8,7 @@ import {
 import {
     beat,
     dwell,
+    createFileMenuItem,
     dismissOpenPromptDialogs,
     jupyterNotebookCreateMenuItem,
     storyPaceExtraMs,
@@ -87,7 +88,7 @@ test.describe('Storyboard: Docks walkthrough', () => {
             await dwell(page, undefined, 'Create a new text file in this folder.');
 
             await fileBrowser.locator('docks-command[dropdown="filebrowser.create"]').locator('wa-button[slot="trigger"]').click();
-            await page.getByText('Create File...', { exact: true }).click();
+            await createFileMenuItem(fileBrowser).click();
 
             const dialog = page.locator('wa-dialog[open][label="Input"]');
             await expect(dialog).toBeAttached({ timeout: UI_MS });

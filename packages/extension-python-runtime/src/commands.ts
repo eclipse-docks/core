@@ -3,8 +3,8 @@ import { PyEnv } from "./pyservice";
 
 registerAll({
   command: {
-    id: "python",
-    name: "Run Python Cell",
+    id: "python.runCode",
+    name: "Run Python Code",
     description: "Runs Python code.",
     keyBinding: "CTRL+R",
     parameters: [

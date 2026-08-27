@@ -9,9 +9,20 @@ export interface NotebookCell {
 export interface NotebookData {
     cells: NotebookCell[];
     metadata?: {
+        language_info?: {
+            name?: string;
+            [key: string]: unknown;
+        };
+        kernelspec?: {
+            name?: string;
+            language?: string;
+            display_name?: string;
+            [key: string]: unknown;
+        };
+        /** @deprecated Legacy field; use language_info.name instead */
         kernel?: string;
         required_packages?: string[];
-        [key: string]: any;
+        [key: string]: unknown;
     };
     nbformat?: number;
     nbformat_minor?: number;

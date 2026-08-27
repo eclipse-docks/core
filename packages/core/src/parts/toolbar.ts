@@ -56,7 +56,7 @@ export class DocksToolbar extends DocksElement {
     align: "start" | "center" | "end" = "start";
 
     @property({reflect: true})
-    size: "small" | "medium" | "large" = "small";
+    size: "s" | "m" | "l" = "s";
 
     @property({attribute: false})
     scopeTokens: string[] = [];
@@ -83,7 +83,6 @@ export class DocksToolbar extends DocksElement {
         const trimmed = toolbarItems.scrollWidth > toolbarItems.clientWidth;
         if (this.compact !== trimmed) {
             this.compact = trimmed;
-            this.requestUpdate();
         }
     }
 
@@ -123,6 +122,10 @@ export class DocksToolbar extends DocksElement {
     updated(changedProperties: Map<string, unknown>) {
         super.updated?.(changedProperties);
         if (!this.compact) this.scheduleOverflowCheck();
+    }
+
+    protected willUpdate(changedProperties: Map<string, unknown>) {
+        super.willUpdate?.(changedProperties);
         if (changedProperties.has('scopeTokens')) {
             this.refreshContributions();
         }
@@ -145,7 +148,6 @@ export class DocksToolbar extends DocksElement {
             const shouldReload = this.matchesTarget(id, event.target);
             if (shouldReload) {
                 this.refreshContributions();
-                this.requestUpdate()
             }
         })
     }

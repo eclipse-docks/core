@@ -42,6 +42,7 @@ appLoaderService.registerApp(
     extensions: [
       '@eclipse-docks/extension-command-palette',
       '@eclipse-docks/extension-terminal',
+      '@eclipse-docks/extension-notebook',
       '@eclipse-docks/extension-python-runtime',
       '@eclipse-docks/extension-catalog',
       '@eclipse-docks/extension-md-editor',

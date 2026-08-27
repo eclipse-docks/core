@@ -312,6 +312,13 @@ export async function dismissOpenPromptDialogs(page: Page): Promise<void> {
     }
 }
 
+/** Create-menu entry once the filebrowser Create dropdown is open. */
+export function createFileMenuItem(fileBrowser: Locator): Locator {
+    return fileBrowser
+        .locator('docks-command[dropdown="filebrowser.create"]')
+        .getByRole('menuitem', { name: 'Create File...' });
+}
+
 /** Create-menu entry once the dropdown is open (role matches Web Awesome wa-dropdown-item). */
 export function jupyterNotebookCreateMenuItem(fileBrowser: Locator): Locator {
     return fileBrowser.getByRole('menuitem', { name: 'Jupyter Notebook' });

@@ -229,7 +229,7 @@ export class DocksCommandPalette extends DocksWidget {
         @click=${this.handleInputClick}
         @mousedown=${this.handleInputMouseDown}
         autocomplete="off"
-        size="small"
+        size="s"
       >
         <wa-icon slot="start" name="terminal" label="Terminal"></wa-icon>
       </wa-input>

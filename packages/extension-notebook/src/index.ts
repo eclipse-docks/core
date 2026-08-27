@@ -1,5 +1,10 @@
 export * from './notebook-types';
 export * from './notebook-kernel-api';
+export { buildDefaultNotebook } from './notebook-default-content';
+export {
+    applyKernelToNotebookMetadata,
+    resolveKernelIdFromNotebookMetadata,
+} from './notebook-metadata';
 import { extensionRegistry, i18n } from '@eclipse-docks/core';
 import pkg from '../package.json';
 

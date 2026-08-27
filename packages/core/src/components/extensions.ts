@@ -248,7 +248,7 @@ export class DocksExtensions extends DocksPart {
                 @input=${(e: Event) => this.handleFilterInput(e)}
                 @wa-clear=${() => this.clearFilter()}
                 with-clear
-                size="small"
+                size="s"
                 style="width: 300px;">
                 <wa-icon slot="start" name="magnifying-glass" label="Filter"></wa-icon>
             </wa-input>
@@ -462,7 +462,7 @@ export class DocksExtensions extends DocksPart {
 
                                 ${when(e.experimental, () => html`
                                     <div style="margin-top: 1em;">
-                                        <wa-button size="small" variant="warning" appearance="plain">
+                                        <wa-button size="s" variant="warning" appearance="plain">
                                             <wa-icon name="triangle-exclamation" label="Warning"></wa-icon>
                                         </wa-button>
                                         <small><i>${t.EXPERIMENTAL}</i></small>

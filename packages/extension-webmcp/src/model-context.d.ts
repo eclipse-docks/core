@@ -1,27 +1,77 @@
 /**
- * Minimal type augmentation for the emerging W3C Web Model Context API (navigator.modelContext).
+ * Type augmentation for the Web Model Context API (WebMCP).
  * @see https://webmachinelearning.github.io/webmcp/
  */
-interface ModelContextToolInputSchema {
-  type: "object";
-  properties?: Record<string, unknown>;
-  required?: string[];
+
+export interface ToolAnnotations {
+  readOnlyHint?: boolean;
+  untrustedContentHint?: boolean;
 }
 
-interface ModelContextToolResult {
-  content: Array<{ type: "text"; text: string }>;
+export interface ToolExecuteCallbackOptions {
+  signal: AbortSignal;
 }
 
-interface ModelContext {
-  registerTool(tool: {
-    name: string;
-    description: string;
-    inputSchema: ModelContextToolInputSchema;
-    execute(args: Record<string, unknown>): Promise<ModelContextToolResult>;
-  }): void;
-  unregisterTool(name: string): void;
+export type ToolExecuteCallback = (
+  inputObject: Record<string, unknown>,
+  options: ToolExecuteCallbackOptions
+) => Promise<unknown>;
+
+export interface ModelContextTool {
+  name: string;
+  title?: string;
+  description: string;
+  inputSchema?: Record<string, unknown>;
+  execute: ToolExecuteCallback;
+  annotations?: ToolAnnotations;
 }
 
-interface Navigator {
-  modelContext?: ModelContext;
+export interface ModelContextRegisterToolOptions {
+  exposedTo?: string[];
+  signal?: AbortSignal;
 }
+
+export interface ModelContextGetToolOptions {
+  fromOrigins?: string[];
+}
+
+export interface RegisteredTool {
+  name: string;
+  title?: string;
+  description: string;
+  inputSchema?: Record<string, unknown>;
+  window: Window;
+  origin: string;
+  annotations?: ToolAnnotations;
+}
+
+export interface ModelContextExecuteToolOptions {
+  signal?: AbortSignal;
+}
+
+export interface ModelContext extends EventTarget {
+  registerTool(
+    tool: ModelContextTool,
+    options?: ModelContextRegisterToolOptions
+  ): Promise<void>;
+  getTools(options?: ModelContextGetToolOptions): Promise<RegisteredTool[]>;
+  executeTool(
+    tool: RegisteredTool,
+    inputObject?: Record<string, unknown>,
+    options?: ModelContextExecuteToolOptions
+  ): Promise<string>;
+  ontoolchange: ((this: ModelContext, ev: Event) => unknown) | null;
+}
+
+declare global {
+  interface Document {
+    readonly modelContext: ModelContext;
+  }
+
+  interface Navigator {
+    /** @deprecated Prefer document.modelContext; retained for transitional user agents. */
+    modelContext?: ModelContext;
+  }
+}
+
+export {};

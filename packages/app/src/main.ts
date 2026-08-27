@@ -52,6 +52,7 @@ appLoaderService.registerApp(
       '@eclipse-docks/extension-pwa',
       '@eclipse-docks/extension-ai-system',
       '@eclipse-docks/extension-dataviewer',
+      '@eclipse-docks/extension-webmcp',
     ],
   },
   { autoStart: true, hostConfig: true, container: appRoot },

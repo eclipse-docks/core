@@ -1,6 +1,12 @@
 import { WebMCPService } from "./webmcp-service";
 
+let activeService: WebMCPService | null = null;
+
 export default async (_uiContext: unknown): Promise<void> => {
-  const service = new WebMCPService();
-  await service.start();
+  if (activeService) {
+    activeService.stop();
+  }
+
+  activeService = new WebMCPService();
+  await activeService.start();
 };

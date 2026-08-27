@@ -12,5 +12,5 @@ extensionRegistry.registerExtension({
     import("./commands"),
   ]),
   icon: "docks python",
-  dependencies: ["@eclipse-docks/extension-terminal"],
+  dependencies: ["@eclipse-docks/extension-terminal","@eclipse-docks/extension-monaco-editor"],
 });

@@ -122,7 +122,7 @@ export class DocksCommand extends DocksWidget {
         this.requestUpdate()
     }
 
-    private renderContribution(contribution: Contribution) {
+    private renderContribution(contribution: Contribution, slot?: string) {
         if ('command' in contribution) {
             const commandContribution = contribution as CommandContribution
             if (!getContributionVisible(commandContribution)) {
@@ -131,6 +131,7 @@ export class DocksCommand extends DocksWidget {
             const disabled = getContributionDisabled(commandContribution)
             return html`
                 <docks-command 
+                    slot=${slot ?? nothing}
                     cmd="${commandContribution.command}"
                     icon="${commandContribution.icon || ''}"
                     .params=${commandContribution.params || {}}
@@ -154,6 +155,19 @@ export class DocksCommand extends DocksWidget {
 
     render() {
         const keybinding = this.getKeybinding()
+
+        // Nested menu: when this command has a dropdown and is already inside a
+        // wa-dropdown (e.g. context menu), expose contributions as a submenu.
+        // Without this branch, dropdown is ignored and a cmd-less click does nothing.
+        if (this.isInDropdown() && this.dropdown) {
+            return html`
+                <wa-dropdown-item ?disabled=${this.disabled}>
+                    ${icon(this.icon, { label: this.title, slot: 'icon' })}
+                    <slot></slot>
+                    ${this.dropdownContributions.map(c => this.renderContribution(c, 'submenu'))}
+                </wa-dropdown-item>
+            `
+        }
 
         if (this.isInDropdown()) {
             return html`

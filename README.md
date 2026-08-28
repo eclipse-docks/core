@@ -19,6 +19,34 @@ Eclipse Docks is a runtime web platform for building modular, extensible desktop
 
 **Docs:** [https://docks.eclipse.dev/docs/](https://docks.eclipse.dev/docs/)
 
+## Downstream apps
+
+Applications built on Eclipse Docks (not part of the platform itself):
+
+### Default demo app ([`packages/app`](packages/app))
+
+![Default demo app](docs/images/demo-app.png)
+
+The hosted demo at [docks.eclipse.dev](https://docks.eclipse.dev): standard IDE layout with file browser, editors, notebook, command palette, and AI Assistant.
+
+### geo!space (WebGIS) ([geo.kispace.de](https://geo.kispace.de))
+
+![geo!space](docs/images/geospace.png)
+
+A WebGIS built on Eclipse Docks: 3D map viewer, layer and style management, geospatial file browser, Python terminal, and AI Assistant.
+
+### Neuromorphic platform ([neuro.kispace.de](https://neuro.kispace.de))
+
+![Neuromorphic platform](docs/images/neuromorphic-platform.png)
+
+Scientific platform for neuromorphic hybrid cognitive architectures: neuroimaging viewer with multi-planar brain volumes and project file browser.
+
+### Wattmonitor Map ([erdalkaraca.github.io/wattmonitormap](https://erdalkaraca.github.io/wattmonitormap/))
+
+![Wattmonitor Map](docs/images/wattmonitormap.png)
+
+Map of municipalities in northwest Germany showing renewable energy production and self-sufficiency by district.
+
 **DeepWiki (interactive docs):** [talk to the code and architecture](https://deepwiki.com/eclipse-docks/core) — the recommended way to explore internals and ask questions about the codebase.
 
 **AI coding assistants ([Library Skills](https://library-skills.io)):** `@eclipse-docks/core` ships **two** [`.agents/skills/`](https://library-skills.io/create/) bundles in the npm package: **`eclipse-docks-core`** (downstream **app/extension authors**) and **`eclipse-docks-contributing`** (maintainers hacking **this** monorepo). Depend on **`@eclipse-docks/core`**, then **`npx library-skills`** ([Using Library Skills](https://library-skills.io/use/)). Sources live under **`packages/core/.agents/skills/`** in git.

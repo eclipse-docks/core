@@ -4,10 +4,9 @@ import { Ref, createRef, ref } from "lit/directives/ref.js";
 import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { marked } from "marked";
 import type { EditorInput } from "@eclipse-docks/core";
 import { DocksMonacoWidget } from "@eclipse-docks/extension-monaco-editor/widget";
-import { createLogger, File, DocksPart, contributionRegistry, subscribe, unsubscribe, TOPIC_CONTRIBUTEIONS_CHANGED } from "@eclipse-docks/core";
+import { createLogger, File, DocksPart, contributionRegistry, subscribe, unsubscribe, TOPIC_CONTRIBUTEIONS_CHANGED, parseMarkdownHtml } from "@eclipse-docks/core";
 import type { NotebookCell, NotebookData, NotebookEditorLike } from "./notebook-types";
 import type { NotebookKernel, NotebookKernelContribution } from "./notebook-kernel-api";
 import { TARGET_NOTEBOOK_KERNELS } from "./notebook-kernel-api";
@@ -734,7 +733,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             `;
         }
 
-        const rendered = marked.parse(source) as string;
+        const rendered = parseMarkdownHtml(source);
 
         const editButton = html`
             <wa-button 

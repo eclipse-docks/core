@@ -1,7 +1,6 @@
 import {customElement, property, state} from "lit/decorators.js";
-import {DocksPart} from "@eclipse-docks/core";
+import {DocksPart, parseMarkdownHtml} from "@eclipse-docks/core";
 import {html} from "lit";
-import {marked} from "marked";
 import {EditorInput, editorRegistry} from "@eclipse-docks/core";
 import {unsafeHTML} from "lit/directives/unsafe-html.js";
 import {File} from "@eclipse-docks/core";
@@ -64,6 +63,6 @@ export class DocksMDEditor extends DocksPart {
     }
 
     private updateContents(text: string) {
-        this.mdContents = marked.parse(text) as string
+        this.mdContents = parseMarkdownHtml(text)
     }
 }

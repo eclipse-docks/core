@@ -1,6 +1,6 @@
 import { html, TemplateResult, css } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { marked } from "marked";
+import { parseMarkdownHtml } from "../core/markdown-html";
 import { DocksElement } from "./element";
 
 export abstract class DocksDialogContent extends DocksElement {
@@ -22,7 +22,7 @@ export abstract class DocksDialogContent extends DocksElement {
 
     protected renderMessage(message: string, markdown: boolean = false): TemplateResult {
         if (markdown) {
-            const htmlContent = marked.parse(message, { async: false }) as string;
+            const htmlContent = parseMarkdownHtml(message);
             return html`<div class="dialog-message" style="white-space: normal;">${unsafeHTML(htmlContent)}</div>`;
         }
         return html`<div class="dialog-message" style="white-space: pre-line;">${message}</div>`;

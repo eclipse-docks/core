@@ -1,9 +1,9 @@
 import { html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { marked } from "marked";
 import { DocksPart } from "../parts/part";
 import { appLoaderService, type ReleaseEntry } from "../core/apploader";
+import { parseMarkdownHtml } from "../core/markdown-html";
 import { createLogger } from "../core/logger";
 
 const logger = createLogger("ReleaseHistory");
@@ -112,9 +112,7 @@ export class DocksReleaseHistory extends DocksPart {
         const showUpdateHint = !isCurrent && isNewerThan(release.tag_name, this.appVersion);
         const atOldest = this.currentReleaseIndex === this.releases.length - 1;
         const atNewest = this.currentReleaseIndex === 0;
-        const bodyHtml = release.body
-            ? (marked.parse(release.body, { async: false }) as string)
-            : "";
+        const bodyHtml = release.body ? parseMarkdownHtml(release.body) : "";
 
         return html`
             <div class="release-panel">

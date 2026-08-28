@@ -70,4 +70,5 @@ export {
 } from '../core/contribution-mapping';
 export { parseIconSpec, icon } from '../core/icon-utils';
 export type { ParsedIconSpec, IconOptions } from '../core/icon-utils';
+export { sanitizeHtml, parseMarkdownHtml } from '../core/markdown-html';
 

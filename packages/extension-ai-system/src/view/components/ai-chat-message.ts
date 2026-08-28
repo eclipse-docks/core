@@ -2,7 +2,7 @@ import { css, html, LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { when } from 'lit/directives/when.js';
-import { marked } from 'marked';
+import { parseMarkdownHtml } from '@eclipse-docks/core';
 import type { ChatMessage } from '../../core/types';
 
 @customElement('docks-ai-chat-message')
@@ -87,7 +87,7 @@ export class AIChatMessage extends LitElement {
                 `)}
                 <div class="message-content-wrapper ${isUser ? 'user' : ''}">
                     <div class="message-content">
-                        ${unsafeHTML(this.processMarkdownContent(marked.parse(message.content || '') as string))}
+                        ${unsafeHTML(this.processMarkdownContent(parseMarkdownHtml(message.content || '')))}
                         ${when(this.isStreaming, () => html`<span class="streaming-cursor">▋</span>`)}
                     </div>
                     ${when(isUser, () => html`

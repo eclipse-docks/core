@@ -55,7 +55,7 @@ describe('layout-switcher', () => {
   });
 
   it('renders nothing when the standard layout is not active', async () => {
-    findStandardLayout.mockReturnValue(null);
+    findStandardLayout.mockReturnValue(null as never);
 
     await import('../../src/components/layout-switcher');
     const el = document.createElement('docks-layout-switcher');

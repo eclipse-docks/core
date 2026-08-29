@@ -22,7 +22,7 @@ describe('docks-resizable-grid', () => {
 
   async function settleGrid(grid: HTMLElement & { updateComplete: Promise<unknown> }) {
     await grid.updateComplete;
-    await new Promise((resolve) => queueMicrotask(resolve));
+    await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
     await grid.updateComplete;
   }
 
@@ -77,7 +77,6 @@ describe('docks-resizable-grid', () => {
 
     const grid = document.createElement('docks-resizable-grid') as HTMLElement & {
       updateComplete: Promise<unknown>;
-      gridSizes?: string[];
     };
     grid.setAttribute('id', 'toggle-grid');
     grid.setAttribute('orientation', 'horizontal');

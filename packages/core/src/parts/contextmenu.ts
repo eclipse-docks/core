@@ -12,6 +12,15 @@ import {closeSiblingSubmenus} from "../core/dropdown-menu-utils";
 import {createRef, ref} from "lit/directives/ref.js";
 import {renderDropdownContribution} from "../core/dropdown-item";
 
+interface VirtualPopupAnchor {
+    getBoundingClientRect(): DOMRect;
+}
+
+interface WaPopupElement extends HTMLElement {
+    anchor?: Element | string | VirtualPopupAnchor;
+    reposition(): void;
+}
+
 @customElement('docks-contextmenu')
 export class DocksContextMenu extends DocksElement {
     @property({attribute: false})
@@ -26,10 +35,15 @@ export class DocksContextMenu extends DocksElement {
     @state()
     private isOpen: boolean = false;
 
-    @state()
-    private position: { x: number, y: number } = { x: 0, y: 0 };
+    private menuPosition: { x: number; y: number } = { x: 0, y: 0 };
 
-    private anchorRef = createRef<HTMLElement>();
+    private readonly virtualAnchor: VirtualPopupAnchor = {
+        getBoundingClientRect: () => {
+            const { x, y } = this.menuPosition;
+            return new DOMRect(x, y, 0, 0);
+        },
+    };
+
     private dropdownRef = createRef<HTMLElement>();
 
     private boundHandleDocumentPointerDown = this.handleDocumentPointerDown.bind(this);
@@ -220,17 +234,34 @@ export class DocksContextMenu extends DocksElement {
             await this.updateComplete;
         }
 
-        this.position = position;
+        this.menuPosition = position;
         this.isOpen = true;
         await this.updateComplete;
+        this.syncVirtualPopupAnchor();
         document.addEventListener('pointerdown', this.boundHandleDocumentPointerDown, { capture: true });
         return true;
+    }
+
+    /** Points wa-dropdown's internal wa-popup at the pointer via a VirtualElement anchor. */
+    private syncVirtualPopupAnchor(): void {
+        const dropdown = this.dropdownRef.value;
+        const popup = dropdown?.shadowRoot?.querySelector('wa-popup') as WaPopupElement | null;
+        if (!popup) return;
+        popup.anchor = this.virtualAnchor;
+        popup.reposition();
     }
 
     private onClose() {
         if (!this.isOpen) return;
         this.isOpen = false;
         document.removeEventListener('pointerdown', this.boundHandleDocumentPointerDown, { capture: true });
+    }
+
+    protected updated(changedProperties: Map<string, unknown>): void {
+        super.updated(changedProperties);
+        if (changedProperties.has('isOpen') && this.isOpen) {
+            this.syncVirtualPopupAnchor();
+        }
     }
 
     private renderContribution(contribution: Contribution) {
@@ -246,17 +277,7 @@ export class DocksContextMenu extends DocksElement {
                 ?open=${this.isOpen}
                 @submenu-opening=${this.handleSubmenuOpening}
                 @wa-after-hide=${this.onClose}>
-                
-                <div 
-                    slot="trigger"
-                    ${ref(this.anchorRef)}
-                    style="position: fixed; 
-                           left: ${this.position.x}px; 
-                           top: ${this.position.y}px; 
-                           width: 1px; 
-                           height: 1px; 
-                           pointer-events: none;">
-                </div>
+                <span slot="trigger" hidden aria-hidden="true"></span>
                 
                 ${partContent}
                 ${this.contributions.map(c => this.renderContribution(c))}

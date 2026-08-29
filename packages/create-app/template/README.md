@@ -19,7 +19,7 @@ Then open the URL shown in the terminal (e.g. https://localhost:5173/).
 
 ## Structure
 
-- **packages/app** – The Docks app (entry point, UI)
+- **packages/app** – The Docks app (entry point, UI). Edit `src/main.ts` to change extensions and `layout.props` for default panel visibility.
 - **packages/extension-example** – Example extension package (`extension-example`); use it as a reference to add your own
 
 ## Extensions

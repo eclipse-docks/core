@@ -31,7 +31,6 @@ appLoaderService.registerApp(
   {
     name: 'Eclipse Docks',
     description: 'Eclipse Docks demo app with default extensions.',
-    layoutId: 'standard-full',
     metadata: {
       github: {
         owner: 'eclipse-docks',

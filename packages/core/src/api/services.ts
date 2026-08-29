@@ -79,5 +79,16 @@ export {
     handleDropdownWaSelect,
 } from '../core/dropdown-item';
 export type { DropdownItemOptions, ReactiveBoolean } from '../core/dropdown-item';
+export type { LayoutPanelVisibility } from '../core/layout-panels';
+export {
+    DEFAULT_LAYOUT_PANEL_VISIBILITY,
+    LAYOUT_PANEL_OPTIONS,
+    LAYOUT_PANEL_SETTINGS_KEY,
+    LEGACY_PREFERRED_LAYOUT_KEY,
+    findStandardLayout,
+    layoutIdToPanelVisibility,
+    resolveInitialPanelVisibilityFromApp,
+    resolveStoredPanelVisibility,
+} from '../core/layout-panels';
 export { sanitizeHtml, parseMarkdownHtml } from '../core/markdown-html';
 

@@ -10,6 +10,16 @@ contributionRegistry.registerContribution(TOOLBAR_MAIN, {
 const appRoot = document.getElementById('app-root') ?? document.body;
 appLoaderService.registerApp(
   {
+    layout: {
+      id: 'standard',
+      props: {
+        showLeftSidebar: true,
+        showAuxSidebar: true,
+        showBottomPanel: true,
+        showLeftAux: false,
+        showRightAux: false,
+      },
+    },
     extensions: [
       '@eclipse-docks/extension-utils',
       '@eclipse-docks/extension-pwa',

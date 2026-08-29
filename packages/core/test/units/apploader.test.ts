@@ -103,6 +103,25 @@ describe('apploader', () => {
     expect(app.name).toBe('resolved-app');
     expect(app.version).toBe('1.2.3');
     expect(addCatalogUrlsMock).toHaveBeenCalledWith(['https://example.com/catalog.json']);
+    expect(app.layout).toBe('standard');
+  });
+
+  it('defaults layout to standard when omitted', async () => {
+    const { appLoaderService } = await import('../../src/core/apploader');
+    appLoaderService.registerApp({ name: 'minimal-app' });
+
+    expect(appLoaderService.getRegisteredApps()[0].layout).toBe('standard');
+  });
+
+  it('preserves an explicit layout descriptor', async () => {
+    const { appLoaderService } = await import('../../src/core/apploader');
+    appLoaderService.registerApp({
+      name: 'custom-layout-app',
+      layout: { id: 'standard', props: { showBottomPanel: true } },
+    });
+
+    const app = appLoaderService.getRegisteredApps().find((entry) => entry.name === 'custom-layout-app');
+    expect(app?.layout).toEqual({ id: 'standard', props: { showBottomPanel: true } });
   });
 
   it('disables previous app extensions and enables next app extensions', async () => {
@@ -138,27 +157,5 @@ describe('apploader', () => {
 
     await appLoaderService.start();
     expect(appLoaderService.getCurrentApp()?.name).toBe('my/path-app');
-  });
-
-  it('setPreferredLayoutId validates unknown id and rerenders current app', async () => {
-    (contributionRegistryMock.getContributions as any).mockImplementation((target: string) =>
-      target === 'system.layouts'
-        ? [
-            { id: 'standard', component: { tag: 'x-standard' } },
-            { id: 'compact', component: { tag: 'x-compact' } },
-          ]
-        : []
-    );
-    const { appLoaderService } = await import('../../src/core/apploader');
-    appLoaderService.registerApp({ name: 'layout-app' });
-    await appLoaderService.loadApp('layout-app', (globalThis as any).document.body);
-
-    await expect(appLoaderService.setPreferredLayoutId('missing')).rejects.toThrow(
-      "Layout 'missing' not found."
-    );
-
-    await appLoaderService.setPreferredLayoutId('compact');
-    expect(appSettingsSetMock).toHaveBeenCalledWith('preferredLayoutId', 'compact');
-    expect((globalThis as any).window.dispatchEvent).toHaveBeenCalled();
   });
 });

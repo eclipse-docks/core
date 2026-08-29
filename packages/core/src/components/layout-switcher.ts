@@ -1,46 +1,59 @@
 import { html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { DocksElement } from "../parts/element";
-import { appLoaderService } from "../core/apploader";
 import { icon } from '../core/icon-utils';
+import {
+    DEFAULT_LAYOUT_PANEL_VISIBILITY,
+    findStandardLayout,
+    LAYOUT_PANEL_OPTIONS,
+    type LayoutPanelVisibility,
+} from "../core/layout-panels";
 
 @customElement('docks-layout-switcher')
 export class DocksLayoutSwitcher extends DocksElement {
     @state()
-    private currentLayoutId = 'standard';
+    private panels: LayoutPanelVisibility = { ...DEFAULT_LAYOUT_PANEL_VISIBILITY };
 
     protected doBeforeUI() {
-        this.currentLayoutId = appLoaderService.getCurrentLayoutId();
-        const updateLayout = () => {
-            this.currentLayoutId = appLoaderService.getCurrentLayoutId();
+        const syncPanels = () => {
+            const layout = findStandardLayout();
+            this.panels = layout?.getPanelVisibility() ?? { ...DEFAULT_LAYOUT_PANEL_VISIBILITY };
             this.requestUpdate();
         };
-        window.addEventListener('app-loaded', updateLayout);
-        window.addEventListener('layout-changed', updateLayout);
+        syncPanels();
+        window.addEventListener('app-loaded', syncPanels);
+        window.addEventListener('layout-panels-changed', syncPanels);
         return () => {
-            window.removeEventListener('app-loaded', updateLayout);
-            window.removeEventListener('layout-changed', updateLayout);
+            window.removeEventListener('app-loaded', syncPanels);
+            window.removeEventListener('layout-panels-changed', syncPanels);
         };
     }
 
     private async handleSelect(e: CustomEvent) {
-        const layoutId = e.detail?.item?.value;
-        if (!layoutId || layoutId === this.currentLayoutId) return;
+        const layout = findStandardLayout();
+        if (!layout) {
+            return;
+        }
+
+        const item = e.detail?.item as (HTMLElement & { value?: string; checked?: boolean }) | undefined;
+        const key = item?.value as keyof LayoutPanelVisibility | undefined;
+        if (!item || !key) {
+            return;
+        }
         try {
-            await appLoaderService.setPreferredLayoutId(layoutId);
+            await layout.setPanelVisibility({
+                [key]: item.checked ?? false,
+            });
+            this.panels = layout.getPanelVisibility();
         } catch (err) {
-            console.error('Failed to switch layout:', err);
+            console.error('Failed to update layout panels:', err);
         }
     }
 
     protected render() {
-        const layouts = appLoaderService.getRegisteredLayouts();
-        if (layouts.length <= 1) {
+        if (!findStandardLayout()) {
             return html``;
         }
-
-        const currentLayout = layouts.find((l) => l.id === this.currentLayoutId);
-        const layoutName = currentLayout?.name ?? this.currentLayoutId;
 
         return html`
             <wa-dropdown
@@ -53,17 +66,17 @@ export class DocksLayoutSwitcher extends DocksElement {
                     appearance="plain"
                     size="s"
                     with-caret
-                    title="Switch layout (current: ${layoutName})">
-                    <wa-icon name="table-cells" label="Layout"></wa-icon>
+                    title="Show or hide layout panels">
+                    <wa-icon name="table-cells" label="Layout panels"></wa-icon>
                 </wa-button>
-                ${layouts.map(
-                    (layout) => html`
+                ${LAYOUT_PANEL_OPTIONS.map(
+                    (panel) => html`
                         <wa-dropdown-item
-                            value="${layout.id}"
+                            value="${panel.key}"
                             type="checkbox"
-                            ?checked=${layout.id === this.currentLayoutId}>
-                            ${icon(layout.icon, { label: layout.name, slot: 'icon' })}
-                            ${layout.name}
+                            ?checked=${this.panels[panel.key]}>
+                            ${icon(panel.icon, { label: panel.label, slot: 'icon' })}
+                            ${panel.label}
                         </wa-dropdown-item>
                     `
                 )}

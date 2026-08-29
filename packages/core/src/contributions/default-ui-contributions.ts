@@ -100,7 +100,7 @@ contributionRegistry.registerContribution(TOOLBAR_BOTTOM_END, {
 
 contributionRegistry.registerContribution(TOOLBAR_MAIN_RIGHT, {
     name: TOOLBAR_LAYOUT_SWITCHER,
-    label: "Layout Switcher",
+    label: "Layout panels",
     component: () => html`<docks-layout-switcher></docks-layout-switcher>`
 } as HTMLContribution);
 

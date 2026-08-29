@@ -41,7 +41,7 @@ If you prefer to work inside the Eclipse Docks repo or copy the default app by h
    - Call `appLoaderService.registerApp(appDefinition, { autoStart: true, hostConfig: true })`. Add `marketplaceCatalogUrls` and optionally `dependencies` to the app definition if you use the marketplace or want to show dependency versions in About.
 
 4. **App definition**  
-   Minimal example (default layout is `standard`, i.e. IDE):
+   Minimal example with the standard IDE layout and default panel visibility:
 
 ```ts
 import { appLoaderService } from '@eclipse-docks/core';
@@ -53,13 +53,22 @@ appLoaderService.registerApp(
       '@eclipse-docks/extension-settings-tree',
       '@eclipse-docks/extension-ai-system',
     ],
-    layout: 'standard',
+    layout: {
+      id: 'standard',
+      props: {
+        showLeftSidebar: true,
+        showAuxSidebar: true,
+        showBottomPanel: false,
+        showLeftAux: false,
+        showRightAux: false,
+      },
+    },
   },
   { autoStart: true, hostConfig: true }
 );
 ```
 
-Use `layout: { id: 'standard', props: { 'show-bottom-panel': true } }` to parameterize the layout (props are applied as attributes when rendering).
+Adjust `layout.props` to control which regions are visible on first load (users can still toggle them from the layout menu). Omit `layout` entirely to use the same defaults via the framework default (`standard`).
 
 To add another layout (e.g. dashboard), register a **LayoutContribution** to the `SYSTEM_LAYOUTS` slot (`id`, `name`, `component`, optional `onShow`). Users switch between layouts via the toolbar layout switcher.
 

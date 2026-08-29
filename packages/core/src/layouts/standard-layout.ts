@@ -6,6 +6,7 @@ import {
     SIDEBAR_MAIN,
     SIDEBAR_MAIN_BOTTOM,
     SIDEBAR_AUXILIARY,
+    SIDEBAR_AUXILIARY_BOTTOM,
     PANEL_BOTTOM,
     TOOLBAR_MAIN,
     TOOLBAR_MAIN_CENTER,
@@ -14,15 +15,22 @@ import {
     TOOLBAR_BOTTOM_CENTER,
     TOOLBAR_BOTTOM_END
 } from "../core/contribution-targets";
+import { appLoaderService } from "../core/apploader";
+import { appSettings } from "../core/settingsservice";
+import {
+    LAYOUT_PANEL_SETTINGS_KEY,
+    resolveStoredPanelVisibility,
+    type LayoutPanelVisibility,
+} from "../core/layout-panels";
 import {DocksContainer} from "../parts/container";
 
 @customElement('docks-standard-layout')
 export class DocksStandardLayout extends DocksContainer {
-    @property({type: Boolean, attribute: 'show-bottom-sidebar'})
-    showBottomSidebar: boolean = false;
+    @property({type: Boolean, attribute: 'show-left-aux'})
+    showLeftAux: boolean = false;
 
     @property({type: Boolean, attribute: 'show-bottom-panel'})
-    showBottomPanel: boolean = false;
+    showBottomPanel: boolean = true;
 
     @property({type: Boolean, attribute: 'show-left-sidebar'})
     showLeftSidebar: boolean = true;
@@ -30,8 +38,63 @@ export class DocksStandardLayout extends DocksContainer {
     @property({type: Boolean, attribute: 'show-aux-sidebar'})
     showAuxSidebar: boolean = true;
 
+    @property({type: Boolean, attribute: 'show-right-aux'})
+    showRightAux: boolean = false;
+
+    private panelsInitialized = false;
+
     createRenderRoot() {
         return this;
+    }
+
+    getPanelVisibility(): LayoutPanelVisibility {
+        return {
+            showLeftSidebar: this.showLeftSidebar,
+            showAuxSidebar: this.showAuxSidebar,
+            showBottomPanel: this.showBottomPanel,
+            showLeftAux: this.showLeftAux,
+            showRightAux: this.showRightAux,
+        };
+    }
+
+    private applyPanelVisibility(panels: LayoutPanelVisibility): void {
+        this.showLeftSidebar = panels.showLeftSidebar;
+        this.showAuxSidebar = panels.showAuxSidebar;
+        this.showBottomPanel = panels.showBottomPanel;
+        this.showLeftAux = panels.showLeftAux;
+        this.showRightAux = panels.showRightAux;
+    }
+
+    async setPanelVisibility(panels: Partial<LayoutPanelVisibility>): Promise<void> {
+        const next = { ...this.getPanelVisibility(), ...panels };
+        this.applyPanelVisibility(next);
+        try {
+            await appSettings.set(LAYOUT_PANEL_SETTINGS_KEY, next);
+        } catch (error) {
+            console.error('Failed to persist layout panel visibility:', error);
+            throw error;
+        }
+        window.dispatchEvent(new CustomEvent('layout-panels-changed', {
+            detail: { panels: this.getPanelVisibility() },
+        }));
+    }
+
+    protected doInitUI() {
+        void this.initializePanelVisibility();
+    }
+
+    private async initializePanelVisibility(): Promise<void> {
+        if (this.panelsInitialized) {
+            return;
+        }
+        this.panelsInitialized = true;
+
+        const appLayout = appLoaderService.getCurrentApp()?.layout;
+        const panels = await resolveStoredPanelVisibility(appLayout);
+        this.applyPanelVisibility(panels);
+        window.dispatchEvent(new CustomEvent('layout-panels-changed', {
+            detail: { panels: this.getPanelVisibility() },
+        }));
     }
 
     private getGridSizes(): string {
@@ -133,7 +196,7 @@ export class DocksStandardLayout extends DocksContainer {
                 
                 ${this.showLeftSidebar
                     ? html`
-                        ${this.showBottomSidebar
+                        ${this.showLeftAux
                             ? html`
                                 <docks-resizable-grid 
                                     id="left-sidebar-split" 
@@ -163,7 +226,20 @@ export class DocksStandardLayout extends DocksContainer {
                 }
                 
                 ${this.showAuxSidebar
-                    ? html`<docks-tabs id="${SIDEBAR_AUXILIARY}"></docks-tabs>`
+                    ? html`
+                        ${this.showRightAux
+                            ? html`
+                                <docks-resizable-grid
+                                    id="right-sidebar-split"
+                                    orientation="vertical"
+                                    sizes="50%, 50%">
+                                    <docks-tabs id="${SIDEBAR_AUXILIARY}"></docks-tabs>
+                                    <docks-tabs id="${SIDEBAR_AUXILIARY_BOTTOM}" placement="start" icon-only></docks-tabs>
+                                </docks-resizable-grid>
+                            `
+                            : html`<docks-tabs id="${SIDEBAR_AUXILIARY}"></docks-tabs>`
+                        }
+                    `
                     : nothing
                 }
             </docks-resizable-grid>

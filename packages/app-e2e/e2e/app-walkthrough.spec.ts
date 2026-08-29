@@ -131,7 +131,7 @@ test.describe('Storyboard: Docks walkthrough', () => {
         await test.step('Switch layout to Standard (bottom panel)', async () => {
             await layoutSwitcher.locator('wa-button[slot="trigger"]').click();
             await dwell(page, undefined, 'Switch the workbench layout.');
-            await layoutSwitcher.locator('wa-dropdown-item[value="standard-bottom-panel"]').click();
+            await layoutSwitcher.locator('wa-dropdown-item[value="showBottomPanel"]').click();
             await expect(page.locator('docks-tabs#panel-bottom')).toBeVisible({ timeout: UI_MS });
             await beat(page);
         });

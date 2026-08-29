@@ -1,23 +1,28 @@
 // @vitest-environment jsdom
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { html } from 'lit';
+import { DEFAULT_LAYOUT_PANEL_VISIBILITY } from '../../src/core/layout-panels';
 
-const { getCurrentLayoutId, getRegisteredLayouts, setPreferredLayoutId } = vi.hoisted(() => ({
-  getCurrentLayoutId: vi.fn(() => 'a'),
-  getRegisteredLayouts: vi.fn(() => [
-    { id: 'a', name: 'Layout A', icon: 'table-cells' },
-    { id: 'b', name: 'Layout B', icon: 'table-cells' },
-  ]),
-  setPreferredLayoutId: vi.fn(async () => undefined),
+const panels = { ...DEFAULT_LAYOUT_PANEL_VISIBILITY };
+
+const mockLayout = {
+  getPanelVisibility: vi.fn(() => ({ ...panels })),
+  setPanelVisibility: vi.fn(async (next: Partial<typeof panels>) => {
+    Object.assign(panels, next);
+  }),
+};
+
+const { findStandardLayout } = vi.hoisted(() => ({
+  findStandardLayout: vi.fn(() => mockLayout),
 }));
 
-vi.mock('../../src/core/apploader', () => ({
-  appLoaderService: {
-    getCurrentLayoutId,
-    getRegisteredLayouts,
-    setPreferredLayoutId,
-  },
-}));
+vi.mock('../../src/core/layout-panels', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../src/core/layout-panels')>();
+  return {
+    ...original,
+    findStandardLayout,
+  };
+});
 
 vi.mock('../../src/core/icon-utils', () => ({
   icon: () => html`<span data-testid="mock-icon"></span>`,
@@ -33,12 +38,8 @@ describe('layout-switcher', () => {
     }
   });
 
-  it('renders a dropdown when more than one layout is registered', async () => {
-    getCurrentLayoutId.mockReturnValue('a');
-    getRegisteredLayouts.mockReturnValue([
-      { id: 'a', name: 'Layout A', icon: 'table-cells' },
-      { id: 'b', name: 'Layout B', icon: 'table-cells' },
-    ]);
+  it('renders panel visibility toggles for the standard layout', async () => {
+    findStandardLayout.mockReturnValue(mockLayout as never);
 
     await import('../../src/components/layout-switcher');
     const el = document.createElement('docks-layout-switcher');
@@ -48,13 +49,13 @@ describe('layout-switcher', () => {
 
     const root = el.shadowRoot;
     expect(root?.querySelector('wa-dropdown')).toBeTruthy();
-    expect(root?.querySelectorAll('wa-dropdown-item').length).toBe(2);
+    expect(root?.querySelectorAll('wa-dropdown-item').length).toBe(5);
 
     el.remove();
   });
 
-  it('renders nothing when only one layout exists', async () => {
-    getRegisteredLayouts.mockReturnValue([{ id: 'single', name: 'Only', icon: 'table-cells' }]);
+  it('renders nothing when the standard layout is not active', async () => {
+    findStandardLayout.mockReturnValue(null);
 
     await import('../../src/components/layout-switcher');
     const el = document.createElement('docks-layout-switcher');

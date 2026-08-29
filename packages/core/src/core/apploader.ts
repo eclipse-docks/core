@@ -26,21 +26,12 @@ import { publish } from "./events";
 
 const logger = createLogger('AppLoader');
 
-/** Layout reference: layout id string, or id + props to parameterize the layout (e.g. show-bottom-panel). */
+/** Layout reference: layout id string, or id + optional props read by the layout on init. */
 export type LayoutDescriptor = string | { id: string; props?: Record<string, string | boolean> };
 
 function getLayoutIdFromApp(app: AppDefinition | undefined): string {
-    if (!app) return 'standard';
-    const l = app.layout ?? app.layoutId;
-    return typeof l === 'object' ? l.id : (l ?? 'standard');
-}
-
-function propsToAttributes(props: Record<string, string | boolean>): Record<string, string> {
-    const out: Record<string, string> = {};
-    for (const [k, v] of Object.entries(props)) {
-        out[k] = typeof v === 'boolean' ? (v ? 'true' : 'false') : v;
-    }
-    return out;
+    const layout = app?.layout ?? 'standard';
+    return typeof layout === 'object' ? layout.id : layout;
 }
 
 /**
@@ -177,14 +168,10 @@ export interface AppDefinition {
     releaseHistory?: ReleaseHistory | (() => ReleaseHistory | Promise<ReleaseHistory>);
 
     /**
-     * Layout: id (string) or { id, props } to parameterize the layout.
-     * App root is the chosen layout's component. Props are merged as attributes when rendering (e.g. show-bottom-panel).
+     * Layout: id (string) or { id, props }. The layout component reads props on init (e.g. panel visibility).
      * Defaults to 'standard' when omitted.
      */
     layout?: LayoutDescriptor;
-
-    /** @deprecated Use layout (string or { id, props }) instead. */
-    layoutId?: string;
 
     /**
      * Optional cleanup function.
@@ -248,8 +235,6 @@ class AppLoaderService {
     private container: HTMLElement = document.body;
     private systemRequiredExtensions: Set<string> = new Set();
     private static readonly PREFERRED_APP_KEY = 'preferredAppName';
-    private static readonly PREFERRED_LAYOUT_KEY = 'preferredLayoutId';
-    private preferredLayoutId?: string;
     
     /**
      * Register an application with the framework.
@@ -269,6 +254,7 @@ class AppLoaderService {
         }
         app.name = app.name ?? 'app';
         app.version = app.version ?? '0.0.0';
+        app.layout = app.layout ?? 'standard';
 
         if (this.apps.has(app.name)) {
             logger.warn(`App '${app.name}' is already registered. Overwriting.`);
@@ -443,7 +429,6 @@ class AppLoaderService {
 
         this.currentApp = app;
         logger.info(`App ${app.name} loaded successfully`);
-        this.preferredLayoutId = await this.getPreferredLayoutId();
         this.updateDocumentMetadata(app);
         if (container) {
             this.dispatchLoadProgress('Rendering layout…');
@@ -485,7 +470,7 @@ class AppLoaderService {
             throw new Error('No app loaded. Call loadApp() first.');
         }
 
-        const layoutId = this.preferredLayoutId ?? getLayoutIdFromApp(this.currentApp);
+        const layoutId = getLayoutIdFromApp(this.currentApp);
         const layouts = contributionRegistry.getContributions<LayoutContribution>(SYSTEM_LAYOUTS);
         let layout = layouts.find((c) => c.id === layoutId);
         if (!layout) {
@@ -500,10 +485,6 @@ class AppLoaderService {
         let effectiveAttributes: Record<string, string> = {};
         if (r && typeof r === 'object' && 'tag' in r && r.attributes) {
             effectiveAttributes = { ...r.attributes };
-        }
-        const appLayout = this.currentApp?.layout;
-        if (typeof appLayout === 'object' && appLayout.id === layoutId && appLayout.props) {
-            Object.assign(effectiveAttributes, propsToAttributes(appLayout.props));
         }
 
         container.innerHTML = '';
@@ -582,35 +563,7 @@ class AppLoaderService {
     }
 
     getCurrentLayoutId(): string {
-        return this.preferredLayoutId ?? getLayoutIdFromApp(this.currentApp);
-    }
-
-    async getPreferredLayoutId(): Promise<string | undefined> {
-        try {
-            return await appSettings.get(AppLoaderService.PREFERRED_LAYOUT_KEY);
-        } catch (error) {
-            logger.debug(`Failed to get preferred layout ID: ${getErrorMessage(error)}`);
-            return undefined;
-        }
-    }
-
-    async setPreferredLayoutId(layoutId: string): Promise<void> {
-        const layouts = this.getRegisteredLayouts();
-        if (!layouts.some((l) => l.id === layoutId)) {
-            throw new Error(`Layout '${layoutId}' not found.`);
-        }
-        try {
-            await appSettings.set(AppLoaderService.PREFERRED_LAYOUT_KEY, layoutId);
-            this.preferredLayoutId = layoutId;
-            logger.info(`Set preferred layout to: ${layoutId}`);
-            if (this.currentApp && this.container) {
-                this.renderApp(this.container);
-            }
-            window.dispatchEvent(new CustomEvent('layout-changed', { detail: { layoutId } }));
-        } catch (error) {
-            logger.error(`Failed to persist preferred layout: ${getErrorMessage(error)}`);
-            throw error;
-        }
+        return getLayoutIdFromApp(this.currentApp);
     }
     
     /**

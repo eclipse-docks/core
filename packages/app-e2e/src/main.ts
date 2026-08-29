@@ -60,7 +60,6 @@ appLoaderService.registerApp(
     {
         name: 'Docks Preview',
         description: 'A slim Docks shell for browser tests and story clips — not the full demo app.',
-        layoutId: 'standard-full',
         extensions: [
             '@eclipse-docks/extension-ai-system',
             '@eclipse-docks/extension-monaco-editor',

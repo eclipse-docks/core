@@ -46,10 +46,10 @@ export class DocksResizableGrid extends DocksElement {
     } | null = null;
     
     private resizeOverlay: HTMLDivElement | null = null;
-    private childrenLoaded = false;
     private childStylesApplied = false;
     private mutationObserver?: MutationObserver;
-    private settingsLoaded = false;
+    private refreshScheduled = false;
+    private layoutGeneration = 0;
 
     createRenderRoot() {
         // intentionally disabling shadow DOM for the resizable grid
@@ -59,63 +59,125 @@ export class DocksResizableGrid extends DocksElement {
     // ============= Lifecycle Methods =============
 
     protected doBeforeUI() {
-        // Only set up observer if children not yet loaded
-        if (!this.childrenLoaded) {
-            // Use MutationObserver to detect when children are added
-            this.mutationObserver = new MutationObserver(() => {
-                if (!this.childrenLoaded) {
-                    this.loadChildren();
-                }
-            });
-            
-            this.mutationObserver.observe(this, { childList: true, subtree: false });
-            
-            // Also try to load immediately
-            this.loadChildren();
-        }
+        this.mutationObserver = new MutationObserver(() => {
+            this.scheduleRefreshGridLayout();
+        });
+        this.mutationObserver.observe(this, { childList: true, subtree: false });
+        this.scheduleRefreshGridLayout();
     }
 
-    private async loadChildren() {
-        const potentialChildren = Array.from(this.children).filter(
-            child => child.tagName !== 'STYLE' && 
-                     child.tagName !== 'SCRIPT' && 
-                     !child.classList.contains('resize-handle')
-        ) as HTMLElement[];
+    private scheduleRefreshGridLayout() {
+        if (this.refreshScheduled) {
+            return;
+        }
+        this.refreshScheduled = true;
+        queueMicrotask(() => {
+            this.refreshScheduled = false;
+            void this.refreshGridLayout();
+        });
+    }
 
+    private getGridChildrenFromDom(): HTMLElement[] {
+        return Array.from(this.children).filter(
+            (child) =>
+                child.tagName !== 'STYLE' &&
+                child.tagName !== 'SCRIPT' &&
+                !child.classList.contains('resize-handle'),
+        ) as HTMLElement[];
+    }
+
+    private static isNestedResizableGrid(child: HTMLElement): boolean {
+        return child.tagName.toLowerCase() === 'docks-resizable-grid';
+    }
+
+    private applyChildLayoutStyles(): void {
+        this.gridChildren.forEach((child, index) => {
+            child.style.overflow = 'hidden';
+            child.style.height = '100%';
+            child.style.width = '100%';
+            child.style.gridColumn = this.orientation === 'horizontal' ? `${index * 2 + 1}` : '1';
+            child.style.gridRow = this.orientation === 'vertical' ? `${index * 2 + 1}` : '1';
+            if (!DocksResizableGrid.isNestedResizableGrid(child)) {
+                child.style.display = 'flex';
+                child.style.flexDirection = 'column';
+            }
+        });
+    }
+
+    private resolveGridSizes(childCount: number): string[] {
+        const parsedSizes = this.sizes?.split(',').map((s) => s.trim()).filter(Boolean) ?? [];
+        if (parsedSizes.length === childCount) {
+            return parsedSizes;
+        }
+        const equalSize = `${100 / childCount}%`;
+        return Array.from({ length: childCount }, () => equalSize);
+    }
+
+    private resolvePersistedSizes(persisted: unknown, childCount: number): string[] | null {
+        if (!persisted || typeof persisted !== 'object') {
+            return null;
+        }
+
+        const record = persisted as {
+            sizes?: unknown;
+            sizesByCount?: Record<string, unknown>;
+        };
+        const byCount = record.sizesByCount?.[String(childCount)];
+        if (Array.isArray(byCount) && byCount.length === childCount && byCount.every((size) => typeof size === 'string')) {
+            return byCount;
+        }
+
+        if (Array.isArray(record.sizes) && record.sizes.length === childCount && record.sizes.every((size) => typeof size === 'string')) {
+            return record.sizes;
+        }
+
+        return null;
+    }
+
+    private async refreshGridLayout() {
+        const generation = ++this.layoutGeneration;
+        const potentialChildren = this.getGridChildrenFromDom();
         if (potentialChildren.length === 0) {
+            this.gridChildren = [];
+            this.gridSizes = [];
+            this.childStylesApplied = false;
+            this.requestUpdate();
             return;
         }
 
-        // Mark as loaded and disconnect observer
-        this.childrenLoaded = true;
-        if (this.mutationObserver) {
-            this.mutationObserver.disconnect();
-            this.mutationObserver = undefined;
-        }
-
-        // Store children references
+        const countChanged = potentialChildren.length !== this.gridChildren.length;
+        const identityChanged = countChanged
+            || potentialChildren.some((child, index) => child !== this.gridChildren[index]);
         this.gridChildren = potentialChildren;
 
-        // Load persisted sizes once if available
-        if (!this.settingsLoaded) {
-            this.settingsLoaded = true;
-            const persisted = await this.getDialogSetting();
-            if (persisted && Array.isArray(persisted.sizes) && persisted.sizes.length === this.gridChildren.length) {
-                this.gridSizes = persisted.sizes;
-                this.requestUpdate();
-                return;
+        const persisted = await this.getDialogSetting();
+        if (generation !== this.layoutGeneration) {
+            return;
+        }
+
+        const restoredSizes = this.resolvePersistedSizes(persisted, this.gridChildren.length);
+        if (restoredSizes) {
+            const sizesChanged = restoredSizes.join('|') !== this.gridSizes.join('|');
+            this.gridSizes = restoredSizes;
+            if (identityChanged || sizesChanged) {
+                this.childStylesApplied = false;
             }
+            this.requestUpdate();
+            return;
         }
 
-        // Use sizes attribute or equal distribution (only if not restored from settings)
-        if (this.sizes) {
-            this.gridSizes = this.sizes.split(',').map(s => s.trim());
-        } else {
-            const equalSize = `${100 / this.gridChildren.length}%`;
-            this.gridSizes = this.gridChildren.map(() => equalSize);
-        }
+        const nextSizes = this.resolveGridSizes(this.gridChildren.length);
+        const sizesChanged = nextSizes.join('|') !== this.gridSizes.join('|');
+        this.gridSizes = nextSizes;
 
+        if (identityChanged || sizesChanged) {
+            this.childStylesApplied = false;
+        }
         this.requestUpdate();
+    }
+
+    protected doInitUI() {
+        this.scheduleRefreshGridLayout();
     }
 
     private async saveSizes() {
@@ -123,23 +185,36 @@ export class DocksResizableGrid extends DocksElement {
             return;
         }
 
+        const persisted = await this.getDialogSetting();
+        const existingByCount = persisted && typeof persisted === 'object'
+            ? (persisted as { sizesByCount?: Record<string, string[]> }).sizesByCount ?? {}
+            : {};
+
         await this.setDialogSetting({
             sizes: this.gridSizes,
-            orientation: this.orientation
+            sizesByCount: {
+                ...existingByCount,
+                [String(this.gridSizes.length)]: this.gridSizes,
+            },
+            orientation: this.orientation,
         });
     }
 
     updated(changedProperties: Map<string, any>) {
         super.updated(changedProperties);
-        
+
+        if (changedProperties.has('sizes')) {
+            this.scheduleRefreshGridLayout();
+        }
+
         // Only apply child styles once when children are first loaded
         // This prevents interfering with nested resizable grids during resize operations
-        if (changedProperties.has('gridChildren') && !this.childStylesApplied && this.gridChildren.length > 0) {
+        if (!this.childStylesApplied && this.gridChildren.length > 0) {
             this.childStylesApplied = true;
-            
+
             /**
              * Direct style manipulation is intentionally used here.
-             * 
+             *
              * Reasoning:
              * - Grid positioning (gridColumn/gridRow) must be computed dynamically based on
              *   the number of children and orientation at runtime
@@ -149,16 +224,9 @@ export class DocksResizableGrid extends DocksElement {
              *   (e.g., child at index 0 → column 1, index 1 → column 3, etc.)
              * - This is a layout container whose primary job is to programmatically position
              *   its children within a CSS grid system
+             * - Nested resizable grids manage their own display mode and must not receive flex
              */
-            this.gridChildren.forEach((child, index) => {
-                child.style.overflow = 'hidden';
-                child.style.height = '100%';
-                child.style.width = '100%';
-                child.style.gridColumn = this.orientation === 'horizontal' ? `${index * 2 + 1}` : '1';
-                child.style.gridRow = this.orientation === 'vertical' ? `${index * 2 + 1}` : '1';
-                child.style.display = 'flex';
-                child.style.flexDirection = 'column';
-            });
+            this.applyChildLayoutStyles();
         }
     }
 

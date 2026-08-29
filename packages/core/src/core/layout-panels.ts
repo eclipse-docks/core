@@ -119,9 +119,9 @@ export type LayoutPanelOption = {
 };
 
 export const LAYOUT_PANEL_OPTIONS: LayoutPanelOption[] = [
-    { key: 'showLeftSidebar', label: 'Left sidebar', icon: 'docks layout-standard' },
-    { key: 'showAuxSidebar', label: 'Right sidebar', icon: 'docks layout-standard' },
+    { key: 'showLeftSidebar', label: 'Left sidebar', icon: 'docks layout-standard-left-sidebar' },
+    { key: 'showAuxSidebar', label: 'Right sidebar', icon: 'docks layout-standard-right-sidebar' },
     { key: 'showBottomPanel', label: 'Bottom panel', icon: 'docks layout-standard-bottom-panel' },
-    { key: 'showLeftAux', label: 'Left Aux', icon: 'docks layout-standard-bottom-sidebar' },
-    { key: 'showRightAux', label: 'Right Aux', icon: 'docks layout-standard-bottom-sidebar' },
+    { key: 'showLeftAux', label: 'Left Aux', icon: 'docks layout-standard-left-aux' },
+    { key: 'showRightAux', label: 'Right Aux', icon: 'docks layout-standard-right-aux' },
 ];

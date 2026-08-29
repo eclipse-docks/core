@@ -5,8 +5,12 @@
 - js.svg: Licence=MIT, Author=Garuda Technology, Source=https://www.svgrepo.com/svg/452045/js
 - jupyter.svg: Licence=Logo License, Author=gilbarbara, Source=https://www.svgrepo.com/svg/353949/jupyter
 - layout-standard.svg: Licence=Project-internal, Author=Eclipse Docks Team
+- layout-standard-left-sidebar.svg: Licence=Project-internal, Author=Eclipse Docks Team
+- layout-standard-right-sidebar.svg: Licence=Project-internal, Author=Eclipse Docks Team
 - layout-standard-bottom-panel.svg: Licence=Project-internal, Author=Eclipse Docks Team
-- layout-standard-bottom-sidebar.svg: Licence=Project-internal, Author=Eclipse Docks Team
+- layout-standard-left-aux.svg: Licence=Project-internal, Author=Eclipse Docks Team
+- layout-standard-right-aux.svg: Licence=Project-internal, Author=Eclipse Docks Team
+- layout-standard-bottom-sidebar.svg: Licence=Project-internal, Author=Eclipse Docks Team, Note=Legacy; superseded by layout-standard-left-aux.svg
 - layout-standard-full.svg: Licence=Project-internal, Author=Eclipse Docks Team
 - mark-github.svg: Licence=MIT, Author=GitHub, Source=https://github.com/primer/octicons (icons/mark-github-16.svg)
 - file-plus.svg: Licence=Project-internal, Author=Eclipse Docks Team

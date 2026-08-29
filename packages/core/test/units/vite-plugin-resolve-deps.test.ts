@@ -219,7 +219,8 @@ function runMainTsTransform(
     return result;
   }
   if (result && typeof result === 'object' && 'code' in result) {
-    return result.code;
+    const { code } = result;
+    return typeof code === 'string' ? code : null;
   }
   return null;
 }

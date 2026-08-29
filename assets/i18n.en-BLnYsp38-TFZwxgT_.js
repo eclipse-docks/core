@@ -1,0 +1,1 @@
+var e=`WebDAV Workspace`,t=`Connect to WebDAV servers (Nextcloud, ownCloud) as workspace folders for cloud storage integration`,n={EXT_WEBDAV_NAME:e,EXT_WEBDAV_DESC:t};export{t as EXT_WEBDAV_DESC,e as EXT_WEBDAV_NAME,n as default};

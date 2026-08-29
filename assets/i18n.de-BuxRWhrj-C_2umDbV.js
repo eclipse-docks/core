@@ -1,0 +1,1 @@
+var e=`WebDAV-Arbeitsbereich`,t=`Verbinden Sie sich mit WebDAV-Servern (Nextcloud, ownCloud) als Arbeitsbereichsordner für Cloud-Speicher-Integration`,n={EXT_WEBDAV_NAME:e,EXT_WEBDAV_DESC:t};export{t as EXT_WEBDAV_DESC,e as EXT_WEBDAV_NAME,n as default};

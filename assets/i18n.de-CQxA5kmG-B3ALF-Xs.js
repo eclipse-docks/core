@@ -1,1 +1,0 @@
-var e=`WebLLM`,t=`LLM-Inferenz im Browser`,n={EXT_WEBLLM_NAME:e,EXT_WEBLLM_DESC:t};export{t as EXT_WEBLLM_DESC,e as EXT_WEBLLM_NAME,n as default};

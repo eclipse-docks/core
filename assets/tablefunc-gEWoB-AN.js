@@ -1,1 +1,0 @@
-import{l as e}from"./chunk-QY3QWFKW-B70RMZ7m.js";e();var t={name:`tablefunc`,setup:async(e,t)=>({bundlePath:new URL(`/assets/tablefunc.tar-Bq1NaYYH.gz`,``+import.meta.url)})};export{t as tablefunc};

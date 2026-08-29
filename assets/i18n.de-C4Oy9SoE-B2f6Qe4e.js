@@ -1,1 +1,0 @@
-var e=`RAG-System`,t=`Retrieval-Augmented Generation System für Dokumentenindizierung, Suche und Abruf`,n={EXT_RAG_SYSTEM_NAME:e,EXT_RAG_SYSTEM_DESC:t};export{t as EXT_RAG_SYSTEM_DESC,e as EXT_RAG_SYSTEM_NAME,n as default};

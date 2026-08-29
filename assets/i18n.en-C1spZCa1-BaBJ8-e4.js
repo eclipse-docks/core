@@ -1,1 +1,0 @@
-var e=`Markdown Editor`,t=`View and render Markdown (.md) files`,n={EXT_MDEDITOR_NAME:e,EXT_MDEDITOR_DESC:t};export{t as EXT_MDEDITOR_DESC,e as EXT_MDEDITOR_NAME,n as default};

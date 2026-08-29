@@ -1,0 +1,1 @@
+var e=`Einfacher Texteditor`,t=`Standard-Text- und Hex-Editor für Workspace-Dateien`,n=`Hex-Ansicht`,r=`Es werden nur die ersten {shown} von {total} Bytes angezeigt (schreibgeschützt).`,i={EXT_PLAIN_NAME:e,EXT_PLAIN_DESC:t,HEX_VIEW_LABEL:n,BINARY_VIEW_TRUNCATED:r};export{r as BINARY_VIEW_TRUNCATED,t as EXT_PLAIN_DESC,e as EXT_PLAIN_NAME,n as HEX_VIEW_LABEL,i as default};

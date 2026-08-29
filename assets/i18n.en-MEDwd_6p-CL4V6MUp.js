@@ -1,1 +1,0 @@
-var e=`PWA`,t=`Service worker update indicator on the main toolbar and install prompt in the center toolbar when the browser supports them.`,n={EXT_PWA_NAME:`PWA`,EXT_PWA_DESC:t};export{t as EXT_PWA_DESC,e as EXT_PWA_NAME,n as default};

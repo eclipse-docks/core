@@ -1,1 +1,0 @@
-import{i as e}from"./fs-access-DTXPsV1W-Dp772n0E.js";export{e as FileSysDirHandleResource};

@@ -1,1 +1,0 @@
-import{l as e}from"./chunk-QY3QWFKW-B70RMZ7m.js";e();var t={name:`pg_buffercache`,setup:async(e,t)=>({bundlePath:new URL(`/assets/pg_buffercache.tar-DDvGXFgy.gz`,``+import.meta.url)})};export{t as pg_buffercache};

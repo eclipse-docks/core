@@ -1,1 +1,0 @@
-var e=`Einstellungs-Baum-Editor`,t=`Baumbasierter Editor für Einstellungen mit direkter Bearbeitung`,n={EXT_SETTINGS_TREE_NAME:e,EXT_SETTINGS_TREE_DESC:t};export{t as EXT_SETTINGS_TREE_DESC,e as EXT_SETTINGS_TREE_NAME,n as default};

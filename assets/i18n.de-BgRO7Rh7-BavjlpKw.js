@@ -1,1 +1,0 @@
-var e=`Medien-Viewer`,t=`PDF-, Bild- und HTML-Dateien im Browser anzeigen`,n={EXT_MEDIAVIEWER_NAME:e,EXT_MEDIAVIEWER_DESC:t};export{t as EXT_MEDIAVIEWER_DESC,e as EXT_MEDIAVIEWER_NAME,n as default};

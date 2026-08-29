@@ -1,0 +1,1 @@
+var e=`Plain text editor`,t=`Default lightweight text and hex editor for workspace files`,n=`Hex view`,r=`Showing first {shown} of {total} bytes (read-only).`,i={EXT_PLAIN_NAME:e,EXT_PLAIN_DESC:t,HEX_VIEW_LABEL:n,BINARY_VIEW_TRUNCATED:r};export{r as BINARY_VIEW_TRUNCATED,t as EXT_PLAIN_DESC,e as EXT_PLAIN_NAME,n as HEX_VIEW_LABEL,i as default};

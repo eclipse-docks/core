@@ -22,7 +22,7 @@ export default defineConfig({
   },
   plugins: [
     appSplashPlugin(),
-    /** Side-effect-imports every `extension-*` / `@scope/extension-*` direct dependency from package.json (virtual module before main). */
+    /** Side-effect-imports every `extension-*` / `@scope/extension-*` direct dependency from package.json (virtual import prepended to main.ts). */
     resolveDepVersionsPlugin(),
     localAliasesPlugin({
       useSrcInDev: true,

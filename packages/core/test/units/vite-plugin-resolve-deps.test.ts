@@ -2,19 +2,15 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { IndexHtmlTransformContext, Plugin, ResolvedConfig } from 'vite';
+import type { Plugin, ResolvedConfig } from 'vite';
 import {
   collectTransitiveExtensionPackages,
   listExtensionSideEffectPackages,
+  prependExtensionSideEffectImport,
   resolveDepVersionsPlugin,
   resolveExtensionSideEffectPackages,
   VIRTUAL_EXTENSION_IMPORTS,
 } from '../../src/vite-plugin-resolve-deps';
-
-const minimalCtx = {
-  path: '/index.html',
-  filename: 'index.html',
-} as IndexHtmlTransformContext;
 
 const defaultSideEffects = {
   exclude: new Set<string>(),
@@ -189,24 +185,6 @@ function runConfigResolved(plugin: Plugin, root: string) {
   }
 }
 
-function runHtmlTransform(
-  html: string,
-  plugin: Plugin,
-): string {
-  const tih = plugin.transformIndexHtml;
-  if (!tih || typeof tih !== 'object' || !('handler' in tih)) {
-    throw new Error('missing transformIndexHtml handler');
-  }
-  const result = (tih.handler as (h: string, c: IndexHtmlTransformContext) => string)(
-    html,
-    minimalCtx,
-  );
-  if (typeof result !== 'string') {
-    throw new Error('expected synchronous html string');
-  }
-  return result;
-}
-
 function withTempPackageJson(
   dependencies: Record<string, string>,
   fn: (root: string) => void,
@@ -223,53 +201,86 @@ function withTempPackageJson(
   }
 }
 
-describe('resolveDepVersionsPlugin extension side-effects', () => {
-  const indexHtml = `<!doctype html><body>
-  <div id="app-root"></div>
-  <script type="module" src="/src/main.ts"></script>
-</body></html>`;
+function runMainTsTransform(
+  code: string,
+  plugin: Plugin,
+  id = '/app/packages/app/src/main.ts',
+): string | null {
+  const transform = plugin.transform;
+  if (!transform) {
+    throw new Error('missing transform');
+  }
+  const handler = typeof transform === 'function' ? transform : transform.handler;
+  const result = handler.call({} as never, code, id);
+  if (result && typeof result === 'object' && 'then' in result) {
+    throw new Error('expected synchronous transform result');
+  }
+  if (typeof result === 'string') {
+    return result;
+  }
+  if (result && typeof result === 'object' && 'code' in result) {
+    return result.code;
+  }
+  return null;
+}
 
-  it('does not inject when extensionSideEffects is disabled', () => {
+describe('prependExtensionSideEffectImport', () => {
+  it('prepends virtual import when missing', () => {
+    const input = `import { appLoaderService } from '@eclipse-docks/core';\n`;
+    expect(prependExtensionSideEffectImport(input)).toBe(
+      `import ${JSON.stringify(VIRTUAL_EXTENSION_IMPORTS)};\n` + input,
+    );
+  });
+
+  it('is idempotent when virtual import already present', () => {
+    const input = `import ${JSON.stringify(VIRTUAL_EXTENSION_IMPORTS)};\nimport './app';\n`;
+    expect(prependExtensionSideEffectImport(input)).toBe(input);
+  });
+});
+
+describe('resolveDepVersionsPlugin extension side-effects', () => {
+  const mainTs = `import { appLoaderService } from '@eclipse-docks/core';\n`;
+
+  it('does not transform main.ts when extensionSideEffects is disabled', () => {
     withTempPackageJson({ '@eclipse-docks/extension-pwa': '*' }, (root) => {
       const plugin = resolveDepVersionsPlugin({ extensionSideEffects: false }) as Plugin;
       runConfigResolved(plugin, root);
-      const out = runHtmlTransform(indexHtml, plugin);
-      expect(out).toBe(indexHtml);
+      expect(runMainTsTransform(mainTs, plugin)).toBeNull();
     });
   });
 
-  it('injects virtual import before main by default when deps match', () => {
+  it('prepends virtual import to main.ts when deps match', () => {
     withTempPackageJson(
       {
         '@eclipse-docks/extension-pwa': '*',
-        '@eclipse-docks/extension-z': '*',
+        '@kispace-io/extension-openneuro': '*',
       },
       (root) => {
         const plugin = resolveDepVersionsPlugin() as Plugin;
         runConfigResolved(plugin, root);
-        const out = runHtmlTransform(indexHtml, plugin);
+        const out = runMainTsTransform(mainTs, plugin);
         expect(out).toContain(VIRTUAL_EXTENSION_IMPORTS);
-        expect(out.indexOf(VIRTUAL_EXTENSION_IMPORTS)).toBeLessThan(out.indexOf('/src/main.ts'));
+        expect(out?.indexOf(VIRTUAL_EXTENSION_IMPORTS)).toBeLessThan(
+          out?.indexOf('@eclipse-docks/core') ?? -1,
+        );
       },
     );
   });
 
-  it('is idempotent when virtual id already present', () => {
+  it('is idempotent when virtual id already present in main.ts', () => {
     withTempPackageJson({ '@eclipse-docks/extension-pwa': '*' }, (root) => {
       const plugin = resolveDepVersionsPlugin() as Plugin;
       runConfigResolved(plugin, root);
-      const once = runHtmlTransform(indexHtml, plugin);
-      const twice = runHtmlTransform(once, plugin);
-      expect(twice).toBe(once);
+      const withImport = prependExtensionSideEffectImport(mainTs);
+      expect(runMainTsTransform(withImport, plugin)).toBeNull();
     });
   });
 
-  it('does not inject when no matching dependencies', () => {
+  it('does not transform main.ts when no matching dependencies', () => {
     withTempPackageJson({ other: '*' }, (root) => {
       const plugin = resolveDepVersionsPlugin() as Plugin;
       runConfigResolved(plugin, root);
-      const out = runHtmlTransform(indexHtml, plugin);
-      expect(out).toBe(indexHtml);
+      expect(runMainTsTransform(mainTs, plugin)).toBeNull();
     });
   });
 });

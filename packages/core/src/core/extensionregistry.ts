@@ -310,7 +310,7 @@ class ExtensionRegistry {
             return;
         }
         try {
-            await import(/* @vite-ignore */ extensionId);
+            await import(extensionId);
         } catch (error) {
             logger.debug(`Could not side-effect import extension package ${extensionId}: ${error}`);
         }

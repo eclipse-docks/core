@@ -103,19 +103,28 @@ export function resolveDepVersions(
 
 const RESOLVED_PACKAGE_INFO_KEY = '__RESOLVED_PACKAGE_INFO__';
 
-/** Virtual module id; injected into `index.html` before `main.ts` when extension side-effects are enabled. */
+/** Virtual module id; prepended to `src/main.ts` when extension side-effects are enabled. */
 export const VIRTUAL_EXTENSION_IMPORTS = 'virtual:eclipse-docks-extension-imports';
 
 const RESOLVED_VIRTUAL_EXTENSION_IMPORTS = `\0${VIRTUAL_EXTENSION_IMPORTS}`;
+
+/** App entry module transformed by {@link resolveDepVersionsPlugin}. */
+const MAIN_TS_MODULE_RE = /[/\\]src[/\\]main\.ts$/;
+
+const EXTENSION_IMPORT_STATEMENT = `import ${JSON.stringify(VIRTUAL_EXTENSION_IMPORTS)};\n`;
+
+/** Prepends the virtual extension side-effect import when not already present. */
+export function prependExtensionSideEffectImport(code: string): string {
+  if (code.includes(VIRTUAL_EXTENSION_IMPORTS)) {
+    return code;
+  }
+  return EXTENSION_IMPORT_STATEMENT + code;
+}
 
 /** Unscoped `extension-*` or scoped `@namespace/extension-*` (any npm scope). */
 const DEFAULT_EXTENSION_PATTERN = /^(?:@[^/]+\/)?extension-/;
 
 const DEFAULT_PRIORITY_FIRST = ['@eclipse-docks/extension-pwa', 'extension-pwa'];
-
-/** Matches Vite’s default app entry in index.html. */
-const MAIN_TS_SCRIPT_RE =
-  /<script\b[^>]*\btype\s*=\s*["']module["'][^>]*\bsrc\s*=\s*["'][^"']*\/src\/main\.ts["'][^>]*>\s*<\/script>/i;
 
 export interface ExtensionSideEffectsOptions {
   /**
@@ -140,8 +149,9 @@ export type ResolveDepVersionsPluginOptions = {
   includeDevDependencies?: boolean;
   /**
    * By default, registers a virtual module that side-effect-imports every matching direct
-   * `dependencies` entry (see `ExtensionSideEffectsOptions`), and injects
-   * `import 'virtual:eclipse-docks-extension-imports'` into `index.html` **before** `/src/main.ts`.
+   * `dependencies` entry (see `ExtensionSideEffectsOptions`), and prepends
+   * `import 'virtual:eclipse-docks-extension-imports'` to `src/main.ts` so extension
+   * registration completes before `registerApp({ autoStart: true })`.
    * Pass `false` or `{ enabled: false }` to disable.
    */
   extensionSideEffects?: boolean | ExtensionSideEffectsOptions;
@@ -287,24 +297,18 @@ export function resolveDepVersionsPlugin(
       }
       return extensionImportPackages.map((pkg) => `import ${JSON.stringify(pkg)};\n`).join('');
     },
-    transformIndexHtml: {
-      order: 'pre',
-      handler(html) {
-        if (!extensionSideEffectsActive) {
-          return html;
-        }
-        if (extensionImportPackages.length === 0) {
-          return html;
-        }
-        if (html.includes(VIRTUAL_EXTENSION_IMPORTS)) {
-          return html;
-        }
-        if (!MAIN_TS_SCRIPT_RE.test(html)) {
-          return html;
-        }
-        const inject = `<script type="module">import ${JSON.stringify(VIRTUAL_EXTENSION_IMPORTS)};</script>\n`;
-        return html.replace(MAIN_TS_SCRIPT_RE, (match) => `${inject}${match}`);
-      },
+    transform(code, id) {
+      if (!extensionSideEffectsActive || extensionImportPackages.length === 0) {
+        return null;
+      }
+      if (!MAIN_TS_MODULE_RE.test(id)) {
+        return null;
+      }
+      const next = prependExtensionSideEffectImport(code);
+      if (next === code) {
+        return null;
+      }
+      return next;
     },
   };
 }

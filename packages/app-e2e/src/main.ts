@@ -12,9 +12,24 @@ import {
 } from '@eclipse-docks/core';
 import { html } from '@eclipse-docks/core/externals/lit';
 
+import './e2e-contextmenu-panel';
 import './e2e-coupled-panel';
 
 function registerE2eHarnessContributions(): void {
+    contributionRegistry.registerContribution('contextmenu:e2e-contextmenu', {
+        name: 'contextmenu.e2e.test.item',
+        command: 'touch',
+        label: 'From registry',
+    });
+
+    contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {
+        name: 'e2e-contextmenu',
+        label: 'E2E Context Menu',
+        icon: 'mouse-pointer',
+        closable: false,
+        component: () => html`<e2e-contextmenu-panel id="e2e-contextmenu"></e2e-contextmenu-panel>`,
+    });
+
     contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {
         name: 'e2e-coupled-ai-config',
         label: 'E2E Coupled',

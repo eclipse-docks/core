@@ -6,15 +6,11 @@ import { keyBindingManager } from '../core/keybindings'
 import {
     contributionRegistry,
     Contribution,
-    CommandContribution,
-    HTMLContribution,
     ContributionChangeEvent,
     TOPIC_CONTRIBUTEIONS_CHANGED,
-    getContributionDisabled,
-    getContributionVisible,
 } from '../core/contributionregistry'
 import { subscribe } from '../core/events'
-import { unsafeHTML } from 'lit/directives/unsafe-html.js'
+import { renderDropdownItem, renderDropdownContribution } from '../core/dropdown-item'
 
 @customElement('docks-command')
 export class DocksCommand extends DocksWidget {
@@ -66,41 +62,32 @@ export class DocksCommand extends DocksWidget {
         }
     }
 
-    private closeParentDropdown() {
-        this.closeDropdown(this.closest('wa-dropdown') as { open?: boolean } | null)
-    }
-
-    private handleClick(event?: Event) {
-        if (this.disabled) return
-
-        if (event) {
-            event.stopPropagation()
-        }
-
-        this.closeParentDropdown()
-
-        if (this.action) {
-            this.action(event)
-            return
-        }
-
-        if (this.cmd) {
-            void this.executeCommand(this.cmd, this.params);
-        }
-    }
-
     private handleSelect(event: CustomEvent) {
         this.closeDropdown(event.target as { open?: boolean })
-    }
-
-    private isInDropdown(): boolean {
-        return !!this.closest('wa-dropdown, wa-dropdown-menu')
     }
 
     private getKeybinding(): string | null {
         if (!this.cmd || this.action) return null
         const keybindings = keyBindingManager.getKeyBindingsForCommand(this.cmd)
         return keybindings.length > 0 ? keybindings[0] : null
+    }
+
+    private hasLightDomContent(): boolean {
+        return Array.from(this.childNodes).some((node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                return (node.textContent?.trim().length ?? 0) > 0
+            }
+            return node.nodeType === Node.ELEMENT_NODE
+        })
+    }
+
+    private isIconOnlyDropdownTrigger(): boolean {
+        return !this.label && !this.hasLightDomContent()
+    }
+
+    private renderDropdownTriggerIcon(iconSlot: 'start' | undefined) {
+        if (!this.icon) return nothing
+        return icon(this.icon, { label: this.title, slot: iconSlot })
     }
 
     protected doBeforeUI() {
@@ -122,66 +109,29 @@ export class DocksCommand extends DocksWidget {
         }
     }
 
-    private renderContribution(contribution: Contribution, slot?: string) {
-        if ('command' in contribution) {
-            const commandContribution = contribution as CommandContribution
-            if (!getContributionVisible(commandContribution)) {
-                return nothing
-            }
-            const disabled = getContributionDisabled(commandContribution)
-            return html`
-                <docks-command 
-                    slot=${slot ?? nothing}
-                    cmd="${commandContribution.command}"
-                    icon="${commandContribution.icon || ''}"
-                    .params=${commandContribution.params || {}}
-                    ?disabled="${disabled}">
-                    ${commandContribution.label}
-                </docks-command>
-            `
+    private handleToolbarClick(event?: Event) {
+        if (this.disabled) return
+
+        if (event) {
+            event.stopPropagation()
         }
-        
-        if ('component' in contribution) {
-            const htmlContribution = contribution as HTMLContribution
-            const contents = htmlContribution.component
-            if (contents instanceof Function) {
-                return contents()
-            }
-            return unsafeHTML(contents)
+
+        if (this.action) {
+            this.action(event)
+            return
         }
-        
-        return nothing
+
+        if (this.cmd) {
+            void this.executeCommand(this.cmd, this.params);
+        }
     }
 
     render() {
         const keybinding = this.getKeybinding()
 
-        // Nested dropdown menu item (e.g. context menu "Create new…").
-        // docks-command renders the submenu; docks-contextmenu closes sibling
-        // submenus across shadow boundaries when one opens.
-        if (this.isInDropdown() && this.dropdown) {
-            return html`
-                <wa-dropdown-item ?disabled=${this.disabled}>
-                    ${icon(this.icon, { label: this.title, slot: 'icon' })}
-                    <slot></slot>
-                    ${this.dropdownContributions.map(c => this.renderContribution(c, 'submenu'))}
-                </wa-dropdown-item>
-            `
-        }
-
-        if (this.isInDropdown()) {
-            return html`
-                <wa-dropdown-item 
-                    ?disabled=${this.disabled}
-                    @click=${(e: Event) => this.handleClick(e)}>
-                    ${icon(this.icon, { label: this.title, slot: 'icon' })}
-                    <slot></slot>
-                    ${keybinding ? html`<span class="keybinding">${keybinding}</span>` : ''}
-                </wa-dropdown-item>
-            `
-        }
-
         if (this.dropdown) {
+            const iconOnlyTrigger = this.isIconOnlyDropdownTrigger()
+            const iconSlot = iconOnlyTrigger ? undefined : 'start'
             return html`
                 <wa-dropdown 
                     placement=${this.placement}
@@ -194,8 +144,8 @@ export class DocksCommand extends DocksWidget {
                         ?disabled=${this.disabled}
                         ?with-caret=${this.withCaret}
                         title=${keybinding ? `${this.title} (${keybinding})` : this.title}>
-                        ${icon(this.icon, { label: this.title, slot: 'start' })}
-                        <slot></slot>
+                        ${this.renderDropdownTriggerIcon(iconSlot)}
+                        ${iconOnlyTrigger ? nothing : html`<slot></slot>`}
                         ${this.label ? this.title : nothing}
                     </wa-button>
                     
@@ -205,18 +155,17 @@ export class DocksCommand extends DocksWidget {
                         </h6>
                     ` : nothing}
                     
-                    ${this.dropdownContributions.map(c => this.renderContribution(c))}
+                    ${this.dropdownContributions.map(c => renderDropdownContribution(c))}
                     
                     ${this.cmd ? html`
                         <wa-divider></wa-divider>
-                        <docks-command 
-                            cmd="${this.cmd}"
-                            icon="${this.icon || ''}"
-                            .params=${this.params}
-                            ?disabled=${this.disabled}>
-                            <slot></slot>
-                            ${this.title}
-                        </docks-command>
+                        ${renderDropdownItem({
+                            cmd: this.cmd,
+                            icon: this.icon,
+                            label: this.title,
+                            params: this.params,
+                            disabled: this.disabled,
+                        })}
                     ` : nothing}
                 </wa-dropdown>
             `
@@ -229,7 +178,7 @@ export class DocksCommand extends DocksWidget {
                 size=${this.size}
                 ?disabled=${this.disabled}
                 title=${keybinding ? `${this.title} (${keybinding})` : this.title}
-                @click=${(e: Event) => this.handleClick(e)}>
+                @click=${(e: Event) => this.handleToolbarClick(e)}>
                 ${icon(this.icon, { label: this.title, slot: 'start' })}
                 <slot></slot>
             </wa-button>
@@ -240,22 +189,6 @@ export class DocksCommand extends DocksWidget {
         :host {
             display: inline-block;
         }
-
-        .keybinding {
-            margin-left: auto;
-            padding: 2px 6px;
-            background: var(--wa-color-neutral-15);
-            border: 1px solid var(--wa-color-neutral-25);
-            border-radius: 3px;
-            font-size: 10px;
-            font-family: monospace;
-            opacity: 0.7;
-        }
-
-        :host-context(.wa-light) .keybinding {
-            background: var(--wa-color-neutral-85);
-            border: 1px solid var(--wa-color-neutral-75);
-        }
     `
 }
 
@@ -264,4 +197,3 @@ declare global {
         'docks-command': DocksCommand
     }
 }
-

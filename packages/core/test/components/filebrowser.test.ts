@@ -430,6 +430,7 @@ describe('docks-filebrowser', () => {
 
     expect(container.textContent).toContain('Open with');
     expect(container.textContent).toContain('Editor 1');
+    expect(container.textContent).toContain('Refresh');
     fb.remove();
   });
 

@@ -22,6 +22,7 @@ import { confirmDialog, infoDialog } from "../dialogs";
 import { editorRegistry } from "../core/editorregistry";
 import { TOPIC_CONTRIBUTEIONS_CHANGED, type ContributionChangeEvent } from '../core/contributionregistry';
 import { icon } from '../core/icon-utils';
+import { renderDropdownItem, renderDropdownSubmenu } from '../core/dropdown-item';
 import { i18n } from '../core/i18n';
 import { createLogger } from '../core/logger';
 
@@ -95,7 +96,6 @@ export class DocksFileBrowser extends DocksPart {
     protected renderToolbar() {
         return html`
             <docks-command icon="folder-open" title="${t.CONNECT_WORKSPACE}" dropdown="filebrowser.connections"></docks-command>
-            <docks-command cmd="refresh_resource" icon="repeat" title="${t.REFRESH_RESOURCE}"></docks-command>
             <docks-command icon="docks file-plus" title="${t.CREATE_NEW}" dropdown="filebrowser.create"></docks-command>
         `;
     }
@@ -106,23 +106,26 @@ export class DocksFileBrowser extends DocksPart {
         const editorOptions = file ? editorRegistry.getEditorOptionsForInput(file) : []
         const hasOpenWith = editorOptions.length > 0
         return html`
-            <docks-command cmd="open_editor" icon="folder-open">${t.OPEN}</docks-command>
+            ${renderDropdownItem({ cmd: 'open_editor', icon: 'folder-open', label: t.OPEN })}
             ${hasOpenWith ? html`
                 <wa-dropdown-item>
                     ${icon('folder-open', { slot: 'icon' })}
                     ${t.OPEN_WITH}
-                    ${editorOptions.map(opt => html`
-                        <docks-command
-                            slot="submenu"
-                            cmd="open_editor"
-                            icon="${opt.icon ?? 'file'}"
-                            .params=${{ path: file!.getWorkspacePath(), editorId: opt.editorId }}>
-                            ${opt.title}
-                        </docks-command>
-                    `)}
+                    ${editorOptions.map(opt => renderDropdownItem({
+                        cmd: 'open_editor',
+                        icon: opt.icon ?? 'file',
+                        label: opt.title,
+                        params: { path: file!.getWorkspacePath(), editorId: opt.editorId },
+                        slot: 'submenu',
+                    }))}
                 </wa-dropdown-item>
             ` : nothing}
-            <docks-command icon="docks file-plus" dropdown="filebrowser.create">${t.CREATE_NEW}</docks-command>
+            ${renderDropdownSubmenu({
+                icon: 'docks file-plus',
+                label: t.CREATE_NEW,
+                contributionTarget: 'filebrowser.create',
+            })}
+            ${renderDropdownItem({ cmd: 'refresh_resource', icon: 'repeat', label: t.REFRESH_RESOURCE })}
         `;
     }
 

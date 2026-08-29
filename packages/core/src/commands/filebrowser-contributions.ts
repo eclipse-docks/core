@@ -30,22 +30,6 @@ contributionRegistry.registerContribution("filebrowser.create", {
     params: { ask: true }
 });
 
-contributionRegistry.registerContribution("toolbar:view.filebrowser", {
-    name: "toolbar.filebrowser.rename",
-    command: "mv",
-    icon: "pen",
-    label: "Rename",
-    disabled
-});
-
-contributionRegistry.registerContribution("toolbar:view.filebrowser", {
-    name: "toolbar.filebrowser.delete",
-    command: "rm",
-    icon: "trash",
-    label: "Delete",
-    disabled: deleteDisabled
-});
-
 contributionRegistry.registerContribution("contextmenu:view.filebrowser", {
     name: "contextmenu.filebrowser.create-folder",
     command: "mkdir",

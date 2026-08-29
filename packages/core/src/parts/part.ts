@@ -135,11 +135,13 @@ export abstract class DocksPart extends DocksContainer {
         return nothing;
     }
 
+    /** Part-level toolbar contributions (`toolbar:${partId}`). */
     private getToolbarTarget(): string | undefined {
         const contributionKey = this.tabContribution?.editorId ?? this.id ?? this.tabContribution?.name;
         return contributionKey ? `toolbar:${contributionKey}` : undefined;
     }
 
+    /** Part-level context-menu contributions (`contextmenu:${partId}`). */
     private getContextMenuTarget(): string | undefined {
         const contributionKey = this.tabContribution?.editorId ?? this.id ?? this.tabContribution?.name;
         return contributionKey ? `contextmenu:${contributionKey}` : undefined;

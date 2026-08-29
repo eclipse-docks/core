@@ -165,7 +165,9 @@ test.describe('Storyboard: Docks walkthrough', () => {
             }).toPass({ timeout: UI_MS });
 
             await page.keyboard.press('Escape');
-            await fileBrowser.locator('docks-command[cmd="refresh_resource"]').locator('wa-button').click();
+            const rootFolder = fileBrowser.locator('wa-tree-item').filter({ hasText: 'My Folder' }).first();
+            await rootFolder.click({ button: 'right' });
+            await fileBrowser.getByRole('menuitem', { name: /Refresh/i }).click();
             await beat(page);
         });
 

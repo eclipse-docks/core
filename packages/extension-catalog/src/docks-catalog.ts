@@ -19,6 +19,7 @@ import {
     TOPIC_CONTRIBUTEIONS_CHANGED,
     type ContributionChangeEvent,
     icon,
+    renderDropdownItem,
 } from "@eclipse-docks/core";
 
 export const CID_CATALOG_ROOT = "catalog.root";
@@ -137,12 +138,13 @@ export class DocksCatalog extends DocksPart {
         const item = activePartSignal.get() instanceof DocksCatalog ? activeSelectionSignal.get() : undefined;
         const hasUrl = item && "url" in item && item.url;
         return html`
-            <docks-command
-                icon="file-arrow-down"
-                title="Checkout"
-                ?disabled=${!hasUrl}
-                .action=${() => this.runWgetForSelection()}
-            >Checkout</docks-command>
+            ${renderDropdownItem({
+                icon: 'file-arrow-down',
+                label: 'Checkout',
+                title: 'Checkout',
+                disabled: !hasUrl,
+                action: () => this.runWgetForSelection(),
+            })}
         `;
     }
 

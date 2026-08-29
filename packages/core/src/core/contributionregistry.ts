@@ -39,6 +39,24 @@ export function isCommandContribution(contribution: Contribution): contribution 
     return "command" in contribution;
 }
 
+export type ReactiveBoolean = boolean | (() => boolean) | Signal.Computed<boolean>;
+
+/** Reads a static or reactive boolean; plain functions and {@link Signal.Computed} are evaluated at call time. */
+export function readReactiveBoolean(
+    value: ReactiveBoolean | undefined,
+    defaultValue: boolean
+): boolean {
+    if (value === undefined) return defaultValue;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'object' && value !== null && 'get' in value) {
+        return (value as Signal.Computed<boolean>).get() === true;
+    }
+    if (typeof value === 'function') {
+        return (value as () => boolean)() === true;
+    }
+    return defaultValue;
+}
+
 /** Default true when `visible` is omitted. */
 export function getContributionVisible(contribution: Contribution): boolean {
     const visible = contribution.visible as Signal.Computed<boolean> | undefined;
@@ -48,9 +66,7 @@ export function getContributionVisible(contribution: Contribution): boolean {
 
 /** Default false when `disabled` is omitted. */
 export function getContributionDisabled(contribution: Contribution): boolean {
-    const disabled = contribution.disabled as Signal.Computed<boolean> | undefined;
-    if (!disabled) return false;
-    return disabled.get() === true;
+    return readReactiveBoolean(contribution.disabled as ReactiveBoolean | undefined, false);
 }
 
 function wrapContributionReactiveFlags(contribution: Contribution): void {

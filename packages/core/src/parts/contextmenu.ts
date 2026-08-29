@@ -2,20 +2,15 @@ import {css, html, nothing} from 'lit'
 import {customElement, property, state} from 'lit/decorators.js'
 import {DocksElement} from "./element";
 import {
-    CommandContribution,
     Contribution,
     ContributionChangeEvent,
     contributionRegistry,
-    getContributionDisabled,
-    HTMLContribution,
-    getContributionVisible,
     TOPIC_CONTRIBUTEIONS_CHANGED
 } from "../core/contributionregistry";
-import {unsafeHTML} from "lit/directives/unsafe-html.js";
 import {subscribe} from "../core/events";
 import {closeSiblingSubmenus} from "../core/dropdown-menu-utils";
 import {createRef, ref} from "lit/directives/ref.js";
-import '../components/command';
+import {renderDropdownContribution} from "../core/dropdown-item";
 
 @customElement('docks-contextmenu')
 export class DocksContextMenu extends DocksElement {
@@ -239,29 +234,7 @@ export class DocksContextMenu extends DocksElement {
     }
 
     private renderContribution(contribution: Contribution) {
-        if ("command" in contribution) {
-            const commandContribution = contribution as CommandContribution;
-            if (!getContributionVisible(commandContribution)) {
-                return nothing;
-            }
-            const disabled = getContributionDisabled(commandContribution);
-            return html`
-                <docks-command
-                    cmd="${commandContribution.command}"
-                    icon="${commandContribution.icon ?? ''}"
-                    .params=${commandContribution.params ?? {}}
-                    ?disabled="${disabled}">
-                    ${commandContribution.label}
-                </docks-command>
-            `;
-        } else if ("component" in contribution) {
-            const contents = (contribution as HTMLContribution).component;
-            if (contents instanceof Function) {
-                return contents();
-            }
-            return unsafeHTML(contents);
-        }
-        return nothing;
+        return renderDropdownContribution(contribution);
     }
 
     render() {

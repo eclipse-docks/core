@@ -5,6 +5,7 @@ import {
   i18n,
   PANEL_BOTTOM,
   publish,
+  renderDropdownItem,
   rootContext,
   subscribe,
   unsubscribe,
@@ -387,17 +388,14 @@ export function registerTerminalProfile(contribution: TerminalProfileContributio
   contributionRegistry.registerContribution(TERMINAL_NEW_DROPDOWN, {
     label: contribution.label,
     icon: contribution.icon ?? 'terminal',
-    component: () => html`
-      <docks-command
-        icon="${contribution.icon ?? 'terminal'}"
-        title="${contribution.label}"
-        .action=${() => {
-          terminalService.setPreferredProfile(profileId);
-          void terminalService.createTerminal({ profileId });
-        }}
-      >
-        ${contribution.label}
-      </docks-command>
-    `,
+    component: () => renderDropdownItem({
+      icon: contribution.icon ?? 'terminal',
+      label: contribution.label,
+      title: contribution.label,
+      action: () => {
+        terminalService.setPreferredProfile(profileId);
+        void terminalService.createTerminal({ profileId });
+      },
+    }),
   });
 }

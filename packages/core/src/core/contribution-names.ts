@@ -27,8 +27,5 @@ export const ABOUT_TAB_ATTRIBUTIONS = "about.tab.attributions";
 
 export const ATTRIBUTION_ECLIPSE_DOCKS = "attribution.eclipse-docks";
 
-export const TOOLBAR_FILEBROWSER_RENAME = "toolbar.filebrowser.rename";
-export const TOOLBAR_FILEBROWSER_DELETE = "toolbar.filebrowser.delete";
-
 export const CTXMENU_FILEBROWSER_RENAME = "contextmenu.filebrowser.rename";
 export const CTXMENU_FILEBROWSER_DELETE = "contextmenu.filebrowser.delete";

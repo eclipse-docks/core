@@ -3,6 +3,8 @@ name: Release
 # Release only after CI succeeds on main and the tested commit has a vX.Y.Z tag.
 # `docks release` pushes main + tag together; CI runs on main, then this workflow
 # runs via workflow_run (not on tag push — that raced CI and produced false failures).
+# If CI fails, cleanup-orphan-tag removes semver tags on that commit that never
+# received a GitHub Release, so release history stays contiguous.
 on:
   workflow_run:
     workflows: [CI]
@@ -41,6 +43,41 @@ jobs:
           fi
           echo "CI success: release tag $VERSION on $SHA"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  cleanup-orphan-tag:
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Delete unreleased semver tags from failed CI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          git fetch --tags origin
+          mapfile -t TAGS < <(git tag --points-at "$SHA" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)
+          if [ ${#TAGS[@]} -eq 0 ]; then
+            echo "No semver tags on $SHA"
+            exit 0
+          fi
+          for TAG in "${TAGS[@]}"; do
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "GitHub Release exists for $TAG; keeping tag"
+              continue
+            fi
+            echo "Deleting orphan tag $TAG (CI failed before release)"
+            git push origin ":refs/tags/$TAG"
+          done
 
   release:
     needs: resolve

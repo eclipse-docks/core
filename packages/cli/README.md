@@ -23,6 +23,9 @@ to `origin` first. The tag message body becomes the GitHub Release notes.
 Wire release in CI with [`.github/workflows/app-release.yml`](../../.github/workflows/app-release.yml):
 downstream apps usually trigger it on `v*` tag push; this monorepo waits for a green
 **CI** run on `main` first (see [`.github/workflows/release.yml`](../../.github/workflows/release.yml)).
+If CI fails after the tag was pushed, that workflow deletes the orphan remote tag so
+GitHub Release history has no gaps. Remove the local tag before retrying:
+`git tag -d vX.Y.Z`.
 
 The last version is the most recent `vX.Y.Z` tag reachable from `HEAD` (via
 `git describe`), not the highest semver tag in the repository. That drives the

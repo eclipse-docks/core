@@ -220,6 +220,8 @@ export async function release(argv, cwd = process.cwd()) {
   if (opts.push) {
     git(['push', 'origin', version], cwd);
     console.log(`\nPushed tag ${version}. Release runs after CI succeeds on main.`);
+    console.log('If CI fails, the remote tag is removed automatically; delete your local tag before retrying:');
+    console.log(`  git tag -d ${version}`);
   } else {
     console.log(`\nCreated annotated tag ${version}. Push your branch and tag to trigger the release:`);
     const branch = currentBranch(cwd);

@@ -18,16 +18,12 @@ export const DEFAULT_LAYOUT_PANEL_VISIBILITY: LayoutPanelVisibility = {
     showRightAux: false,
 };
 
-function normalizePanelVisibility(
-    stored: Partial<LayoutPanelVisibility> & { showBottomSidebar?: boolean },
-): LayoutPanelVisibility {
-    const showLeftAux = stored.showLeftAux ?? stored.showBottomSidebar;
-
+function normalizePanelVisibility(stored: Partial<LayoutPanelVisibility>): LayoutPanelVisibility {
     return {
         showLeftSidebar: stored.showLeftSidebar ?? DEFAULT_LAYOUT_PANEL_VISIBILITY.showLeftSidebar,
         showAuxSidebar: stored.showAuxSidebar ?? DEFAULT_LAYOUT_PANEL_VISIBILITY.showAuxSidebar,
         showBottomPanel: stored.showBottomPanel ?? DEFAULT_LAYOUT_PANEL_VISIBILITY.showBottomPanel,
-        showLeftAux: showLeftAux ?? DEFAULT_LAYOUT_PANEL_VISIBILITY.showLeftAux,
+        showLeftAux: stored.showLeftAux ?? DEFAULT_LAYOUT_PANEL_VISIBILITY.showLeftAux,
         showRightAux: stored.showRightAux ?? DEFAULT_LAYOUT_PANEL_VISIBILITY.showRightAux,
     };
 }
@@ -68,7 +64,7 @@ export function resolveInitialPanelVisibilityFromApp(appLayout?: LayoutDescripto
             showLeftSidebar: appLayout.props.showLeftSidebar !== false,
             showAuxSidebar: appLayout.props.showAuxSidebar !== false,
             showBottomPanel: appLayout.props.showBottomPanel === true,
-            showLeftAux: appLayout.props.showLeftAux === true || appLayout.props.showBottomSidebar === true,
+            showLeftAux: appLayout.props.showLeftAux === true,
             showRightAux: appLayout.props.showRightAux === true,
         };
     }
@@ -82,9 +78,7 @@ export async function resolveStoredPanelVisibility(
     appLayout?: LayoutDescriptor,
 ): Promise<LayoutPanelVisibility> {
     try {
-        const saved = await appSettings.get(LAYOUT_PANEL_SETTINGS_KEY) as
-            | (Partial<LayoutPanelVisibility> & { showBottomSidebar?: boolean })
-            | undefined;
+        const saved = await appSettings.get(LAYOUT_PANEL_SETTINGS_KEY) as Partial<LayoutPanelVisibility> | undefined;
         if (saved && typeof saved === 'object') {
             return normalizePanelVisibility(saved);
         }

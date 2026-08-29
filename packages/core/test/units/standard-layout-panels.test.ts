@@ -51,7 +51,7 @@ describe('standard layout panel visibility', () => {
     });
     expect(resolveInitialPanelVisibilityFromApp({
       id: 'standard',
-      props: { showBottomSidebar: true },
+      props: { showLeftAux: true },
     }).showLeftAux).toBe(true);
   });
 

@@ -67,7 +67,7 @@ export class DocksLayoutSwitcher extends DocksElement {
                     size="s"
                     with-caret
                     title="Show or hide layout panels">
-                    <wa-icon name="table-cells" label="Layout panels"></wa-icon>
+                    ${icon('docks layout-standard-full', { label: 'Layout panels' })}
                 </wa-button>
                 ${LAYOUT_PANEL_OPTIONS.map(
                     (panel) => html`

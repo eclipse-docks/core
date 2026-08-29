@@ -115,6 +115,8 @@ function createDocksBridge() {
     return {
         read_file: (path: string, binary?: boolean) =>
             createWorkspaceRequest('read', path, { binary: !!binary }),
+        read_file_range: (path: string, offset: number, length: number, binary?: boolean) =>
+            createWorkspaceRequest('read_range', path, { offset, length, binary: binary !== false }),
         write_file: (path: string, content: string | ArrayBuffer | Uint8Array) =>
             createWorkspaceRequest('write', path, { content }),
         list_dir: (path: string) =>
@@ -251,7 +253,7 @@ import sys
 import types
 __bridge__ = __docks_bridge__
 __m__ = types.ModuleType('docks')
-for __a__ in ('read_file', 'write_file', 'list_dir', 'exists', 'is_file', 'is_dir', 'get_uri', 'revoke_uri', 'fetch', 'uri'):
+for __a__ in ('read_file', 'read_file_range', 'write_file', 'list_dir', 'exists', 'is_file', 'is_dir', 'get_uri', 'revoke_uri', 'fetch', 'uri'):
     setattr(__m__, __a__, getattr(__bridge__, __a__))
 sys.modules['docks'] = __m__
 del __docks_bridge__, __bridge__, __m__, __a__

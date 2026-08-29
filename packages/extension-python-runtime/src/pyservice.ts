@@ -75,6 +75,42 @@ export class PyEnv {
                     }
                     return;
                 }
+                case 'read_range': {
+                    const resource = await workspace.getResource(resolvePath(path));
+                    if (!resource || !(resource instanceof File)) {
+                        send(false, undefined, `File not found: ${path}`);
+                        return;
+                    }
+                    const offset = Math.max(0, Number(extra.offset) || 0);
+                    const length = Math.max(0, Number(extra.length) || 0);
+                    const binary = extra.binary !== false;
+                    if (length === 0) {
+                        send(true, binary ? new ArrayBuffer(0) : '');
+                        return;
+                    }
+                    const file = resource as File;
+                    const uri = await file.getContents({ uri: true });
+                    if (typeof uri === 'string' && (uri.startsWith('http://') || uri.startsWith('https://'))) {
+                        const end = offset + length - 1;
+                        const res = await fetch(uri, { headers: { Range: `bytes=${offset}-${end}` } });
+                        if (!res.ok && res.status !== 206) {
+                            send(false, undefined, `Range read failed: ${res.status} ${res.statusText}`);
+                            return;
+                        }
+                        send(true, await res.arrayBuffer());
+                        return;
+                    }
+                    if (binary) {
+                        const blob = await file.getContents({ blob: true });
+                        const buf = blob instanceof Blob ? await blob.arrayBuffer() : new ArrayBuffer(0);
+                        send(true, buf.slice(offset, offset + length));
+                        return;
+                    }
+                    const content = await file.getContents();
+                    const text = typeof content === 'string' ? content : String(content ?? '');
+                    send(true, text.slice(offset, offset + length));
+                    return;
+                }
                 case 'write': {
                     let content = extra.content;
                     if (content instanceof ArrayBuffer || ArrayBuffer.isView(content)) {

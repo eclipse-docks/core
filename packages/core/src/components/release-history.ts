@@ -40,6 +40,12 @@ function isNewerThan(releaseTag: string, currentVersion: string): boolean {
     return false;
 }
 
+export type ReleaseHistoryNavState = {
+    hasMultiple: boolean;
+    atOldest: boolean;
+    atNewest: boolean;
+};
+
 @customElement("docks-release-history")
 export class DocksReleaseHistory extends DocksPart {
     protected scrollMode: "scroller" | "native" | "none" = "none";
@@ -59,19 +65,12 @@ export class DocksReleaseHistory extends DocksPart {
                 display: flex;
                 flex-direction: column;
                 gap: 0.5rem;
-                height: 100%;
                 padding: 0.75rem;
                 box-sizing: border-box;
             }
 
-            .release-panel wa-scroller {
-                flex: 1;
-                min-height: 0;
-            }
-
-            .release-nav {
-                display: flex;
-                gap: 0.5rem;
+            .release-body {
+                white-space: normal;
             }
         `,
     ];
@@ -88,18 +87,33 @@ export class DocksReleaseHistory extends DocksPart {
             semverEqual(release.tag_name, this.appVersion),
         );
         this.currentReleaseIndex = currentIndex >= 0 ? currentIndex : 0;
+        this.notifyChanged();
     }
 
-    private showOlder() {
+    public getNavState(): ReleaseHistoryNavState {
+        return {
+            hasMultiple: this.releases.length > 1,
+            atOldest: this.currentReleaseIndex >= this.releases.length - 1,
+            atNewest: this.currentReleaseIndex <= 0,
+        };
+    }
+
+    public showOlder() {
         if (this.currentReleaseIndex < this.releases.length - 1) {
             this.currentReleaseIndex += 1;
+            this.notifyChanged();
         }
     }
 
-    private showNewer() {
+    public showNewer() {
         if (this.currentReleaseIndex > 0) {
             this.currentReleaseIndex -= 1;
+            this.notifyChanged();
         }
+    }
+
+    private notifyChanged() {
+        this.dispatchEvent(new CustomEvent("release-history-changed", { bubbles: true, composed: true }));
     }
 
     protected renderContent() {
@@ -110,8 +124,6 @@ export class DocksReleaseHistory extends DocksPart {
 
         const isCurrent = semverEqual(release.tag_name, this.appVersion);
         const showUpdateHint = !isCurrent && isNewerThan(release.tag_name, this.appVersion);
-        const atOldest = this.currentReleaseIndex === this.releases.length - 1;
-        const atNewest = this.currentReleaseIndex === 0;
         const bodyHtml = release.body ? parseMarkdownHtml(release.body) : "";
 
         return html`
@@ -136,32 +148,8 @@ export class DocksReleaseHistory extends DocksPart {
                         </wa-callout>
                     `
                     : ""}
-                <wa-scroller orientation="vertical">
-                    ${bodyHtml
-                        ? html`<div style="white-space: normal;">${unsafeHTML(bodyHtml)}</div>`
-                        : ""}
-                </wa-scroller>
-                ${this.releases.length > 1
-                    ? html`
-                        <div class="release-nav">
-                            <wa-button-group>
-                                <wa-button
-                                    variant="default"
-                                    ?disabled=${atOldest}
-                                    @click=${() => this.showOlder()}
-                                >
-                                    ← Previous
-                                </wa-button>
-                                <wa-button
-                                    variant="default"
-                                    ?disabled=${atNewest}
-                                    @click=${() => this.showNewer()}
-                                >
-                                    Next →
-                                </wa-button>
-                            </wa-button-group>
-                        </div>
-                    `
+                ${bodyHtml
+                    ? html`<div class="release-body">${unsafeHTML(bodyHtml)}</div>`
                     : ""}
             </div>
         `;

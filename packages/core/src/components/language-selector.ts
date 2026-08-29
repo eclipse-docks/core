@@ -58,7 +58,6 @@ export const showLanguageSelectorDialog = async (): Promise<void> => {
                 label="Select Language" 
                 open 
                 light-dismiss
-                @wa-request-close=${handleClose}
                 @wa-after-hide=${handleAfterHide}>
                 <style>
                     .language-list {

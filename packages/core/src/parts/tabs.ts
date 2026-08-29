@@ -45,6 +45,14 @@ export class DocksTabs extends DocksContainer {
     @property({ type: Boolean, reflect: true, attribute: 'hide-tabs' })
     hideTabs: boolean = false;
 
+    /** Size to tab content instead of filling the parent height (e.g. About dialog). */
+    @property({ type: Boolean, reflect: true, attribute: 'fit-content' })
+    fitContent: boolean = false;
+
+    /** Fill a fixed-height parent; tab body scrolls instead of resizing the container. */
+    @property({ type: Boolean, reflect: true, attribute: 'fill-height' })
+    fillHeight: boolean = false;
+
     /** Tab and nav-toolbar control sizing (`s` | `m` | `l`). */
     @property({ reflect: true, attribute: 'item-size' })
     itemSize: 's' | 'm' | 'l' = 'm';
@@ -127,6 +135,12 @@ export class DocksTabs extends DocksContainer {
     public getActiveEditor(): string | null {
         if (!this.tabGroup.value) return null;
         return this.tabGroup.value.getAttribute("active");
+    }
+
+    public getTabPart(tabName: string): DocksPart | null {
+        const tabPanel = this.getTabPanel(tabName);
+        if (!tabPanel) return null;
+        return this.getPartFromPanel(tabPanel);
     }
 
     open(contribution: TabContribution): void {
@@ -470,6 +484,95 @@ export class DocksTabs extends DocksContainer {
         :host {
             height: 100%;
             width: 100%;
+        }
+
+        :host([fit-content]) {
+            display: flex;
+            flex-direction: column;
+            height: auto;
+            max-height: 100%;
+            min-height: 0;
+        }
+
+        :host([fit-content]) wa-tab-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            height: auto;
+            max-height: 100%;
+        }
+
+        :host([fit-content]) wa-tab-group::part(base) {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: 100%;
+            height: auto;
+        }
+
+        :host([fit-content]) wa-tab-group::part(body) {
+            flex: 1 1 auto;
+            min-height: 0;
+            height: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        :host([fit-content]) wa-tab-panel[active] {
+            display: block;
+            height: auto;
+            overflow: visible;
+        }
+
+        :host([fit-content]) wa-tab-panel > * {
+            height: auto;
+            min-height: 0;
+        }
+
+        :host([fill-height]) {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+            max-height: 100%;
+        }
+
+        :host([fill-height]) wa-tab-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            height: 100%;
+            max-height: 100%;
+        }
+
+        :host([fill-height]) wa-tab-group::part(base) {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: 100%;
+            height: 100%;
+        }
+
+        :host([fill-height]) wa-tab-group::part(body) {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        :host([fill-height]) wa-tab-panel[active] {
+            display: block;
+            height: auto;
+            overflow: visible;
+        }
+
+        :host([fill-height]) wa-tab-panel > * {
+            height: auto;
+            min-height: 0;
         }
 
         wa-tab-group {

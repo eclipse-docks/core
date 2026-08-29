@@ -21,6 +21,8 @@ function renderHtmlContribution(contribution: HTMLContribution) {
 
 @customElement("docks-attribution")
 export class DocksAttributionPart extends DocksPart {
+    protected scrollMode: 'scroller' | 'native' | 'none' = 'none';
+
     @state()
     private attributions: HTMLContribution[] = [];
 

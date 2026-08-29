@@ -21,6 +21,10 @@ export abstract class DocksPart extends DocksContainer {
     @property({ type: Boolean, attribute: false })
     public isEditor: boolean = false;
 
+    /** Compact layout for dialog/tab embedding (no fill-height shell or nested scroll). */
+    @property({ type: Boolean, reflect: true })
+    embedded = false;
+
     protected commandStack?: CommandStack;
 
     public getCommandStack(): CommandStack | undefined {
@@ -292,6 +296,26 @@ export abstract class DocksPart extends DocksContainer {
         .part-content-inner {
             height: 100%;
             min-height: 100%;
+        }
+
+        :host([embedded]) {
+            height: auto;
+        }
+
+        :host([embedded]) .part-shell {
+            height: auto;
+            overflow: visible;
+            grid-template-rows: auto;
+        }
+
+        :host([embedded]) .part-content {
+            overflow: visible;
+            min-height: 0;
+        }
+
+        :host([embedded]) .part-content-inner {
+            height: auto;
+            min-height: 0;
         }
 
         .part-toolbar {

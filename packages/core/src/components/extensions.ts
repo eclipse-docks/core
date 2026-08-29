@@ -225,7 +225,7 @@ export class DocksExtensions extends DocksPart {
                 await extensionRegistry.loadExtensionFromUrl(this.registerExtensionData.url!, extension.id);
                 
                 toastInfo(`Extension ${extension.name} registered successfully`);
-                this.showRegisterDialog = false;
+                this.closeRegisterDialog();
                 this.registerExtensionData = {};
                 this.requestUpdate();
             });
@@ -234,10 +234,27 @@ export class DocksExtensions extends DocksPart {
         }
     }
 
-    private cancelRegisterExtension() {
+    private closeRegisterDialog() {
+        const dialog = this.renderRoot.querySelector('wa-dialog') as (HTMLElement & { open?: boolean }) | null;
+        if (dialog?.open !== false) {
+            dialog.open = false;
+            return;
+        }
+        this.finishRegisterDialogClose();
+    }
+
+    private handleRegisterDialogAfterHide = () => {
+        this.finishRegisterDialogClose();
+    };
+
+    private finishRegisterDialogClose() {
         this.showRegisterDialog = false;
         this.registerExtensionData = {};
         this.requestUpdate();
+    }
+
+    private cancelRegisterExtension() {
+        this.closeRegisterDialog();
     }
 
     protected renderToolbar() {
@@ -272,7 +289,7 @@ export class DocksExtensions extends DocksPart {
                 <wa-dialog 
                     label="Register Extension"
                     open
-                    @wa-request-close=${() => this.cancelRegisterExtension()}
+                    @wa-after-hide=${this.handleRegisterDialogAfterHide}
                     style="--wa-dialog-width: 500px;">
                     <div style="display: flex; flex-direction: column; gap: 1rem; padding: 1rem;">
                         <wa-input

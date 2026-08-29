@@ -60,9 +60,11 @@ export const DELETE_BUTTON: DialogButton = {
 
 export interface DialogContribution extends Contribution {
     id: string;
+    /** When true, `component` renders a complete `wa-dialog`. The service only mounts and manages lifecycle. */
+    selfContained?: boolean;
     buttons?: DialogButton[];
     component: (state?: any) => TemplateResult;
-    onButton: (id: string, result: any, state?: any) => boolean | Promise<boolean> | void | Promise<void>;
+    onButton?: (id: string, result: any, state?: any) => boolean | Promise<boolean> | void | Promise<void>;
 }
 
 let dialogContainer: HTMLElement | null = null;
@@ -74,6 +76,38 @@ function getDialogContainer(): HTMLElement {
         document.body.appendChild(dialogContainer);
     }
     return dialogContainer;
+}
+
+type WaDialogElement = HTMLElement & { open?: boolean };
+
+function findWaDialog(root: ParentNode): WaDialogElement | null {
+    if (root instanceof Element && root.tagName.toLowerCase() === 'wa-dialog') {
+        return root as WaDialogElement;
+    }
+
+    const children = root instanceof Document || root instanceof DocumentFragment || root instanceof Element
+        ? Array.from(root.children)
+        : root instanceof ShadowRoot
+            ? Array.from(root.children)
+            : [];
+
+    for (const child of children) {
+        if (child instanceof Element && child.tagName.toLowerCase() === 'wa-dialog') {
+            return child as WaDialogElement;
+        }
+        if (child instanceof Element && child.shadowRoot) {
+            const nested = findWaDialog(child.shadowRoot);
+            if (nested) {
+                return nested;
+            }
+        }
+        const nested = findWaDialog(child);
+        if (nested) {
+            return nested;
+        }
+    }
+
+    return null;
 }
 
 class DialogService {
@@ -111,7 +145,7 @@ class DialogService {
                 continue;
             }
 
-            if (!contribution.onButton) {
+            if (!contribution.onButton && !contribution.selfContained) {
                 logger.warn(`Dialog contribution "${contribution.id}" has no onButton callback, skipping`);
                 continue;
             }
@@ -130,13 +164,13 @@ class DialogService {
 
         return new Promise((resolve) => {
             const container = getDialogContainer();
-            let isOpen = true;
+            let closed = false;
             let dialogContentElement: DocksDialogContent | null = null;
 
             const cleanup = async () => {
-                if (!isOpen) return;
-                isOpen = false;
-                
+                if (closed) return;
+                closed = true;
+
                 if (dialogContentElement) {
                     try {
                         await dialogContentElement.dispose();
@@ -145,50 +179,72 @@ class DialogService {
                         logger.error(`Error disposing dialog content for "${dialogId}": ${errorMessage}`);
                     }
                 }
-                
+
                 try {
                     const result = dialogContentElement ? dialogContentElement.getResult() : undefined;
-                    await contribution.onButton('close', result, stateWithClose);
+                    if (contribution.onButton) {
+                        await contribution.onButton('close', result, stateWithClose);
+                    }
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : String(error);
                     logger.error(`Error executing close callback for dialog "${dialogId}": ${errorMessage}`);
                 }
-                
+
                 render(html``, container);
                 resolve();
             };
 
+            const closeDialog = () => {
+                if (closed) return;
+                const dialog = findWaDialog(container);
+                if (dialog?.open !== false) {
+                    dialog.open = false;
+                    return;
+                }
+                void cleanup();
+            };
+
+            const handleAfterHide = () => {
+                void cleanup();
+            };
+
             const handleButtonClick = async (buttonId: string) => {
+                if (!contribution.onButton) {
+                    return;
+                }
                 try {
                     const result = dialogContentElement ? dialogContentElement.getResult() : undefined;
                     const shouldClose = await contribution.onButton(buttonId, result, stateWithClose);
-                    
+
                     if (shouldClose !== false) {
-                        cleanup();
+                        closeDialog();
                     }
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : String(error);
                     logger.error(`Error executing button callback for dialog "${dialogId}": ${errorMessage}`);
-                    cleanup();
+                    closeDialog();
                 }
             };
 
-            const buttons = contribution.buttons && contribution.buttons.length > 0 
-                ? contribution.buttons 
+            const buttons = contribution.buttons && contribution.buttons.length > 0
+                ? contribution.buttons
                 : [OK_BUTTON];
 
+            const stateWithClose = { ...state, close: closeDialog, onAfterHide: handleAfterHide };
             if (state && typeof state === 'object') {
-                (state as any).close = cleanup;
+                (state as { close?: () => void }).close = closeDialog;
+                (state as { onAfterHide?: () => void }).onAfterHide = handleAfterHide;
             }
-            const stateWithClose = { ...state, close: cleanup };
 
             const dialogLabel =
                 state && typeof state === 'object' && typeof (state as { label?: unknown }).label === 'string'
                     ? (state as { label: string }).label
                     : (contribution.label || dialogId);
 
-            const template = html`
-                <wa-dialog label="${dialogLabel}" open @wa-request-close=${cleanup}>
+            const template = contribution.selfContained
+                ? contribution.component(stateWithClose)
+                : html`
+                <wa-dialog label="${dialogLabel}" open @wa-after-hide=${handleAfterHide}>
                     <style>
                         .dialog-service-content {
                             display: flex;
@@ -224,7 +280,7 @@ class DialogService {
                              if (cancelButton) {
                                  handleButtonClick(cancelButton.id);
                              } else {
-                                 cleanup();
+                                 closeDialog();
                              }
                          }}>
                         ${contribution.component(state)}
@@ -232,6 +288,7 @@ class DialogService {
                         <div class="dialog-service-footer">
                             ${buttons.map(button => html`
                                 <wa-button 
+                                    data-dialog-button="${button.id}"
                                     variant="${button.variant || 'default'}"
                                     ?disabled=${button.disabled}
                                     @click=${() => handleButtonClick(button.id)}

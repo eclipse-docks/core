@@ -44,7 +44,7 @@ contributionRegistry.registerContribution(ABOUT_TABS, {
     ranking: 100,
     toolbar: false,
     contextMenu: false,
-    component: (id: string) => html`<docks-attribution id="${id}"></docks-attribution>`
+    component: (id: string) => html`<docks-attribution id="${id}" embedded></docks-attribution>`
 });
 
 contributionRegistry.registerContribution(ABOUT_TABS, {
@@ -54,7 +54,7 @@ contributionRegistry.registerContribution(ABOUT_TABS, {
     ranking: 50,
     toolbar: false,
     contextMenu: false,
-    component: (id: string) => html`<docks-release-history id="${id}"></docks-release-history>`
+    component: (id: string) => html`<docks-release-history id="${id}" embedded></docks-release-history>`
 });
 
 contributionRegistry.registerContribution(ABOUT_TABS, {
@@ -64,7 +64,7 @@ contributionRegistry.registerContribution(ABOUT_TABS, {
     ranking: 0,
     toolbar: false,
     contextMenu: false,
-    component: (id: string) => html`<docks-npm-packages id="${id}"></docks-npm-packages>`
+    component: (id: string) => html`<docks-npm-packages id="${id}" embedded></docks-npm-packages>`
 });
 
 contributionRegistry.registerContribution(SYSTEM_ATTRIBUTIONS, {

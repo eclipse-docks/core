@@ -76,7 +76,6 @@ function updateProgressDialog(forceOpen = false) {
             open
             light-dismiss
             style="--width: 600px;"
-            @wa-request-close=${handleClose}
             @wa-after-hide=${handleAfterHide}
         >
             <style>

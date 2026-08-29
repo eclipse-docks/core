@@ -5,6 +5,8 @@ import { appLoaderService } from "../core/apploader";
 
 @customElement("docks-npm-packages")
 export class DocksNpmPackages extends DocksPart {
+    protected scrollMode: "scroller" | "native" | "none" = "none";
+
     static styles = [
         css`
             .packages-panel {

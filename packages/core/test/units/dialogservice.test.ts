@@ -65,6 +65,15 @@ describe('dialogservice', () => {
     expect(dialogService.getDialogIds()).toEqual(['valid']);
   });
 
+  it('loads self-contained dialog contributions without onButton', async () => {
+    (getContributionsMock as any).mockReturnValue([
+      { id: 'custom', selfContained: true, component: () => ({}) },
+    ]);
+
+    const { dialogService } = await import('../../src/core/dialogservice');
+    expect(dialogService.hasDialog('custom')).toBe(true);
+  });
+
   it('throws on opening unknown dialog', async () => {
     (getContributionsMock as any).mockReturnValue([]);
     const { dialogService } = await import('../../src/core/dialogservice');

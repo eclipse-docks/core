@@ -89,7 +89,7 @@ export class DocksNavigableInfoDialogContent extends DocksDialogContent {
             this.resolveCallback();
         }
         const dialog = this.closest('wa-dialog') as (HTMLElement & { open?: boolean }) | null;
-        if (dialog?.open !== false) {
+        if (dialog && dialog.open !== false) {
             dialog.open = false;
         }
     }

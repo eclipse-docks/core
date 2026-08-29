@@ -236,7 +236,7 @@ export class DocksExtensions extends DocksPart {
 
     private closeRegisterDialog() {
         const dialog = this.renderRoot.querySelector('wa-dialog') as (HTMLElement & { open?: boolean }) | null;
-        if (dialog?.open !== false) {
+        if (dialog && dialog.open !== false) {
             dialog.open = false;
             return;
         }

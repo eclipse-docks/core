@@ -197,7 +197,7 @@ class DialogService {
             const closeDialog = () => {
                 if (closed) return;
                 const dialog = findWaDialog(container);
-                if (dialog?.open !== false) {
+                if (dialog && dialog.open !== false) {
                     dialog.open = false;
                     return;
                 }

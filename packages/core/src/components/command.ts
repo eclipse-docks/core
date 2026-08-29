@@ -10,7 +10,7 @@ import {
     TOPIC_CONTRIBUTEIONS_CHANGED,
 } from '../core/contributionregistry'
 import { subscribe } from '../core/events'
-import { renderDropdownItem, renderDropdownContribution } from '../core/dropdown-item'
+import { renderDropdownItem, renderDropdownContribution, handleDropdownWaSelect } from '../core/dropdown-item'
 
 @customElement('docks-command')
 export class DocksCommand extends DocksWidget {
@@ -56,14 +56,8 @@ export class DocksCommand extends DocksWidget {
     @state()
     private dropdownContributions: Contribution[] = []
 
-    private closeDropdown(dropdown: { open?: boolean } | null | undefined) {
-        if (dropdown && dropdown.open !== undefined) {
-            dropdown.open = false
-        }
-    }
-
     private handleSelect(event: CustomEvent) {
-        this.closeDropdown(event.target as { open?: boolean })
+        handleDropdownWaSelect(event);
     }
 
     private getKeybinding(): string | null {

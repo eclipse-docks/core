@@ -10,7 +10,7 @@ import {
 import {subscribe} from "../core/events";
 import {closeSiblingSubmenus} from "../core/dropdown-menu-utils";
 import {createRef, ref} from "lit/directives/ref.js";
-import {renderDropdownContribution} from "../core/dropdown-item";
+import {renderDropdownContribution, handleDropdownWaSelect} from "../core/dropdown-item";
 
 interface VirtualPopupAnchor {
     getBoundingClientRect(): DOMRect;
@@ -276,6 +276,7 @@ export class DocksContextMenu extends DocksElement {
                 ${ref(this.dropdownRef)}
                 ?open=${this.isOpen}
                 @submenu-opening=${this.handleSubmenuOpening}
+                @wa-select=${handleDropdownWaSelect}
                 @wa-after-hide=${this.onClose}>
                 <span slot="trigger" hidden aria-hidden="true"></span>
                 

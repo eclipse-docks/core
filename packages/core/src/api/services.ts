@@ -76,6 +76,7 @@ export {
     renderDropdownSubmenu,
     renderDropdownContribution,
     renderCommandContribution,
+    handleDropdownWaSelect,
 } from '../core/dropdown-item';
 export type { DropdownItemOptions, ReactiveBoolean } from '../core/dropdown-item';
 export { sanitizeHtml, parseMarkdownHtml } from '../core/markdown-html';

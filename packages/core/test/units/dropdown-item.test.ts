@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render } from 'lit';
+import { html, render } from 'lit';
 import { Signal } from '@lit-labs/signals';
 import { commandRegistry } from '../../src/core/commandregistry';
 import {
@@ -8,8 +8,30 @@ import {
   renderDropdownContributions,
   renderDropdownSubmenu,
   renderCommandContribution,
+  handleDropdownWaSelect,
 } from '../../src/core/dropdown-item';
 import { contributionRegistry, type CommandContribution } from '../../src/core/contributionregistry';
+
+function renderInDropdown(item: ReturnType<typeof renderDropdownItem>) {
+  const host = document.createElement('div');
+  render(
+    html`
+      <wa-dropdown @wa-select=${handleDropdownWaSelect}>
+        ${item}
+      </wa-dropdown>
+    `,
+    host,
+  );
+  return host;
+}
+
+function selectDropdownItem(host: ParentNode) {
+  const item = host.querySelector('wa-dropdown-item') as HTMLElement;
+  host.querySelector('wa-dropdown')?.dispatchEvent(
+    new CustomEvent('wa-select', { detail: { item }, bubbles: true }),
+  );
+  return item;
+}
 
 describe('dropdown-item', () => {
   beforeEach(() => {
@@ -27,11 +49,10 @@ describe('dropdown-item', () => {
     expect(host.textContent).toContain('Create File');
   });
 
-  it('renderDropdownItem executes command on click', async () => {
+  it('handleDropdownWaSelect executes command from wa-select', async () => {
     const execute = vi.spyOn(commandRegistry, 'execute').mockResolvedValue(undefined);
-    const host = document.createElement('div');
-    render(renderDropdownItem({ cmd: 'refresh_resource', label: 'Refresh' }), host);
-    host.querySelector('wa-dropdown-item')?.dispatchEvent(new Event('click', { bubbles: true }));
+    const host = renderInDropdown(renderDropdownItem({ cmd: 'refresh_resource', label: 'Refresh' }));
+    selectDropdownItem(host);
     expect(execute).toHaveBeenCalledWith('refresh_resource', expect.any(Object));
   });
 
@@ -63,27 +84,26 @@ describe('dropdown-item', () => {
     expect(host.querySelectorAll('wa-dropdown-item').length).toBeGreaterThan(0);
   });
 
-  it('renderDropdownItem resolves reactive disabled at render and click time', () => {
+  it('handleDropdownWaSelect skips disabled items', () => {
     const enabled = new Signal.State(true);
     const disabled = new Signal.Computed(() => enabled.get());
     const execute = vi.spyOn(commandRegistry, 'execute').mockResolvedValue(undefined);
-    const host = document.createElement('div');
-    render(
+    const host = renderInDropdown(
       renderDropdownItem({ cmd: 'touch', label: 'Create File', disabled }),
-      host
     );
-    const item = host.querySelector('wa-dropdown-item');
-    expect(item?.hasAttribute('disabled')).toBe(true);
-    item?.dispatchEvent(new Event('click', { bubbles: true }));
+    selectDropdownItem(host);
     expect(execute).not.toHaveBeenCalled();
 
     enabled.set(false);
     render(
-      renderDropdownItem({ cmd: 'touch', label: 'Create File', disabled }),
-      host
+      html`
+        <wa-dropdown @wa-select=${handleDropdownWaSelect}>
+          ${renderDropdownItem({ cmd: 'touch', label: 'Create File', disabled })}
+        </wa-dropdown>
+      `,
+      host,
     );
-    expect(host.querySelector('wa-dropdown-item')?.hasAttribute('disabled')).toBe(false);
-    host.querySelector('wa-dropdown-item')?.dispatchEvent(new Event('click', { bubbles: true }));
+    selectDropdownItem(host);
     expect(execute).toHaveBeenCalledWith('touch', expect.any(Object));
   });
 

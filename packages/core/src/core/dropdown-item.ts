@@ -11,6 +11,10 @@
  * A part can expose both surfaces with the same part id but different prefixes, registering
  * different contributions on each. Feature-scoped targets (e.g. `filebrowser.create`) may also
  * be referenced explicitly from either surface when several controls share the same item set.
+ *
+ * Command-backed items rely on the parent {@link https://webawesome.com/docs/components/dropdown | wa-dropdown}
+ * `wa-select` event (see {@link handleDropdownWaSelect}) so the popup closes cleanly before
+ * native dialogs such as `showDirectoryPicker` open.
  */
 import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
@@ -41,28 +45,51 @@ export interface DropdownItemOptions {
     action?: (event: Event) => void;
 }
 
-function closeParentDropdown(event: Event): void {
-    const dropdown = (event.target as Element | null)?.closest('wa-dropdown') as { open?: boolean } | null;
-    if (dropdown && dropdown.open !== undefined) {
-        dropdown.open = false;
+type WaSelectDetail = {
+    item?: HTMLElement & { value?: string; disabled?: boolean };
+};
+
+function parseDropdownItemParams(item: HTMLElement): Record<string, unknown> {
+    const raw = item.getAttribute('data-params');
+    if (!raw) {
+        return {};
+    }
+    try {
+        return JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+        return {};
     }
 }
 
-function onDropdownItemClick(options: DropdownItemOptions) {
+function getDropdownItemCommand(item: HTMLElement): string | undefined {
+    return item.getAttribute('data-cmd') || item.getAttribute('value') || undefined;
+}
+
+/** Handles `wa-select` from a parent `wa-dropdown` and runs the backing command. */
+export function handleDropdownWaSelect(event: CustomEvent<WaSelectDetail>): void {
+    const item = event.detail?.item;
+    if (!item || item.disabled || item.hasAttribute('disabled')) {
+        return;
+    }
+
+    const cmd = getDropdownItemCommand(item);
+    if (!cmd) {
+        return;
+    }
+
+    void commandRegistry.execute(
+        cmd,
+        commandRegistry.createExecutionContext(parseDropdownItemParams(item)),
+    );
+}
+
+function onDropdownActionClick(options: DropdownItemOptions) {
     return (event: Event) => {
-        if (readReactiveBoolean(options.disabled, false)) return;
-        event.stopPropagation();
-        closeParentDropdown(event);
-        if (options.action) {
-            options.action(event);
+        if (readReactiveBoolean(options.disabled, false)) {
             return;
         }
-        if (options.cmd) {
-            void commandRegistry.execute(
-                options.cmd,
-                commandRegistry.createExecutionContext(options.params ?? {})
-            );
-        }
+        event.stopPropagation();
+        options.action?.(event);
     };
 }
 
@@ -76,12 +103,20 @@ function keybindingDetails(cmd?: string): TemplateResult | typeof nothing {
 /** Renders a native {@link https://webawesome.com/docs/components/dropdown-item | wa-dropdown-item}. */
 export function renderDropdownItem(options: DropdownItemOptions): TemplateResult {
     const iconSpec = options.icon ?? '';
+    const paramsJson =
+        options.params && Object.keys(options.params).length > 0
+            ? JSON.stringify(options.params)
+            : undefined;
+
     return html`
         <wa-dropdown-item
             slot=${options.slot ?? nothing}
             variant=${options.variant ?? 'default'}
+            value=${options.cmd ?? nothing}
+            data-cmd=${options.cmd ?? nothing}
+            data-params=${paramsJson ?? nothing}
             ?disabled=${readReactiveBoolean(options.disabled, false)}
-            @click=${onDropdownItemClick(options)}>
+            @click=${options.action ? onDropdownActionClick(options) : nothing}>
             ${iconSpec ? icon(iconSpec, { label: options.title ?? options.label, slot: 'icon' }) : nothing}
             ${options.label}
             ${keybindingDetails(options.cmd)}

@@ -144,7 +144,8 @@ export class DocksReleaseHistory extends DocksPart {
                     ? html`
                         <wa-callout variant="warning">
                             <wa-icon slot="icon" name="triangle-exclamation"></wa-icon>
-                            Update available — reload the page to update
+                            A newer release is available than the version you are running.
+                            Use <strong>Update Available</strong> in the toolbar when it appears.
                         </wa-callout>
                     `
                     : ""}

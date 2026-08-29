@@ -12,7 +12,8 @@ type SwUpdateProgressMessage = {
 };
 
 /**
- * Shows a toolbar icon when a new service worker is waiting (vite-plugin-pwa injectManifest + SKIP_WAITING message).
+ * Shows a toolbar button when a new service worker is waiting (vite-plugin-pwa injectManifest + SKIP_WAITING message).
+ * Displays download progress while the worker installs; then a brand "Update Available" button to activate it.
  * Hidden when there is no update or when service workers are unavailable.
  *
  * Safe when the extension loads late: attaches via `getRegistration()`, reads `registration.waiting`,
@@ -256,27 +257,14 @@ export class DocksSwUpdateIndicator extends DocksElement {
     }
 
     return html`
-      <wa-animation
-        style="display: inline-flex; align-items: center;"
-        name="zoomIn"
-        duration="1400"
-        easing="ease-out"
-        iterations="Infinity"
-        ?play=${true}
+      <wa-button
+        variant="brand"
+        title="A new version is available. Click to update."
+        aria-label="Update available. Click to reload with the latest version."
+        @click=${this.onActivateClick}
       >
-        <wa-button
-          appearance="plain"
-          title="A new version is available. Click to reload."
-          aria-label="A new version is available. Reload to update."
-          @click=${this.onActivateClick}
-        >
-          <wa-icon
-            name="arrows-rotate"
-            label=""
-            style="color: var(--wa-color-success-fill-loud)"
-          ></wa-icon>
-        </wa-button>
-      </wa-animation>
+        Update Available
+      </wa-button>
     `;
   }
 }

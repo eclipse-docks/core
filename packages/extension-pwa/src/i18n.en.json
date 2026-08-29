@@ -1,4 +1,4 @@
 {
   "EXT_PWA_NAME": "PWA",
-  "EXT_PWA_DESC": "Service worker update control and install prompt in the main center toolbar when the browser supports them."
+  "EXT_PWA_DESC": "Service worker update indicator on the main toolbar and install prompt in the center toolbar when the browser supports them."
 }

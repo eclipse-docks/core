@@ -27,5 +27,14 @@ export * from './constants';
 export * from './types';
 
 // Re-export AppDefinition for convenience
-export type { AppDefinition, AppContributions, LayoutDescriptor, ReleaseEntry, ReleaseHistory, RenderDescriptor } from '../core/apploader';
+export type {
+    AppDefinition,
+    AppContributions,
+    LayoutDescriptor,
+    ReleaseEntry,
+    ReleaseHistory,
+    RenderDescriptor,
+} from '../core/apploader';
+export type { ResolvedDependencyInfo, ResolvedDependencyMap } from '../core/resolved-package-info';
+export type { LicenseAttributionOptions } from '../core/license-attribution';
 

@@ -28,5 +28,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/eclipse-docks/core"
-  }
+  },
+  "license": "EPL-2.0",
+  "description": "GitHub API integration for releases and repository information"
 }

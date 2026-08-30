@@ -5,7 +5,6 @@ import {
     PANEL_BOTTOM,
     SIDEBAR_MAIN,
     SIDEBAR_MAIN_TOOLBAR,
-    SYSTEM_ATTRIBUTIONS,
     TOOLBAR_BOTTOM_END,
     TOOLBAR_MAIN_RIGHT
 } from "../core/contribution-targets";
@@ -13,7 +12,6 @@ import {
     ABOUT_TAB_ATTRIBUTIONS,
     ABOUT_TAB_PACKAGES,
     ABOUT_TAB_RELEASE,
-    ATTRIBUTION_ECLIPSE_DOCKS,
     VIEW_FILEBROWSER,
     VIEW_LOG_TERMINAL,
     TOOLBAR_LAYOUT_SWITCHER,
@@ -67,17 +65,6 @@ contributionRegistry.registerContribution(ABOUT_TABS, {
     component: (id: string) => html`<docks-npm-packages id="${id}" embedded></docks-npm-packages>`
 });
 
-contributionRegistry.registerContribution(SYSTEM_ATTRIBUTIONS, {
-    name: ATTRIBUTION_ECLIPSE_DOCKS,
-    label: "Eclipse Docks",
-    component: () => html`
-        <p>
-            Eclipse Docks is made available under the
-            <a href="https://www.eclipse.org/legal/epl-2.0" target="_blank" rel="noopener noreferrer">Eclipse Public License 2.0</a>.
-        </p>
-    `
-} as HTMLContribution);
-
 contributionRegistry.registerContribution(TOOLBAR_BOTTOM_END, {
     name: TOOLBAR_INFO,
     label: "Info",
@@ -107,6 +94,6 @@ contributionRegistry.registerContribution(TOOLBAR_MAIN_RIGHT, {
 contributionRegistry.registerContribution(SIDEBAR_MAIN_TOOLBAR, {
     name: SIDEBAR_TOOLBAR_EXTENSIONS,
     command: "open_extensions",
-    icon: "docks extensions",
+    icon: "puzzle-piece",
     label: "Extensions",
 });

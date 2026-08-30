@@ -124,7 +124,7 @@ registerAll({
                 title: "Extensions",
                 data: {},
                 key: "system.extensions",
-                icon: "docks extensions",
+                icon: "puzzle-piece",
                 state: {},
                 component: (id: string) => html`<docks-extensions id="${id}"></docks-extensions>`,
             }

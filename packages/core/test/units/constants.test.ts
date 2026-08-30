@@ -43,6 +43,7 @@ describe('contribution-names', () => {
     expect(names.VIEW_FILEBROWSER).toBe('view.filebrowser');
     expect(names.ABOUT_TAB_ATTRIBUTIONS).toBe('about.tab.attributions');
     expect(names.ATTRIBUTION_ECLIPSE_DOCKS).toBe('attribution.eclipse-docks');
+    expect(names.ATTRIBUTION_FONT_AWESOME).toBe('attribution.font-awesome');
   });
 
   it('ui-ids re-exports names for compatibility', () => {

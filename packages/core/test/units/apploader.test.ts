@@ -90,7 +90,11 @@ describe('apploader', () => {
       name: 'resolved-app',
       version: '1.2.3',
       description: 'from host',
-      dependencies: { a: '1.0.0' },
+      dependencies: {
+        a: { license: 'MIT' },
+      },
+      directDependencies: ['a'],
+      nestedDependencies: {},
       marketplaceCatalogUrls: ['https://example.com/catalog.json'],
     };
   });

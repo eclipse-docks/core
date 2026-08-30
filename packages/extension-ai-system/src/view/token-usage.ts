@@ -1,5 +1,4 @@
-import { css, html } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { css, customElement, html } from '@eclipse-docks/core/externals/lit';
 import { DocksElement } from '@eclipse-docks/core';
 import { subscribe, confirmDialog } from '@eclipse-docks/core';
 import { tokenUsageTracker, EMPTY_USAGE } from '../service/token-usage-tracker';

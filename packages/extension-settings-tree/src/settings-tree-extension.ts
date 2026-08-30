@@ -29,7 +29,7 @@ export default (_uiContext: unknown) => {
                 title: "Settings",
                 data: {},
                 key: ".system.settings",
-                icon: "docks settings",
+                icon: "gear",
                 state: {},
             } as EditorInput;
             editorRegistry.loadEditor(editorInput);
@@ -38,7 +38,7 @@ export default (_uiContext: unknown) => {
 
     contributionRegistry.registerContribution(SIDEBAR_MAIN_TOOLBAR, {
         command: "open_settings",
-        icon: "docks settings",
+        icon: "gear",
         label: "Settings",
     });
 };

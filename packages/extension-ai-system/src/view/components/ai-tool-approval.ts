@@ -1,6 +1,4 @@
-import { css, html, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import { repeat } from 'lit/directives/repeat.js';
+import { css, customElement, html, LitElement, property, repeat } from '@eclipse-docks/core/externals/lit';
 import type { ToolCall } from '../../core/types';
 
 export interface ToolApprovalRequest {

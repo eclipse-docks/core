@@ -1,6 +1,4 @@
-import { css, html, LitElement } from 'lit';
-import { customElement, property, query } from 'lit/decorators.js';
-import { when } from 'lit/directives/when.js';
+import { css, customElement, html, LitElement, property, query, when } from '@eclipse-docks/core/externals/lit';
 
 @customElement('docks-ai-chat-input')
 export class AIChatInput extends LitElement {

@@ -1,7 +1,4 @@
-import { css, html, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { when } from 'lit/directives/when.js';
+import { css, customElement, html, LitElement, property, unsafeHTML, when } from '@eclipse-docks/core/externals/lit';
 import { parseMarkdownHtml } from '@eclipse-docks/core';
 import type { ChatMessage } from '../../core/types';
 

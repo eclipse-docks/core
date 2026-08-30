@@ -43,5 +43,7 @@
       "@cereusdb/minimal",
       "@cereusdb/standard"
     ]
-  }
+  },
+  "license": "EPL-2.0",
+  "description": "Spatial SQL in the browser (SedonaDB / Apache DataFusion)"
 }

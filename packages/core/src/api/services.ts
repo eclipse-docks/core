@@ -91,4 +91,6 @@ export {
     resolveStoredPanelVisibility,
 } from '../core/layout-panels';
 export { sanitizeHtml, parseMarkdownHtml } from '../core/markdown-html';
+export { registerLicenseAttribution } from '../core/license-attribution';
+export type { LicenseAttributionOptions } from '../core/license-attribution';
 

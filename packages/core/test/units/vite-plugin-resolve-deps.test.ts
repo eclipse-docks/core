@@ -9,6 +9,8 @@ import {
   prependExtensionSideEffectImport,
   resolveDepVersionsPlugin,
   resolveExtensionSideEffectPackages,
+  resolvePackageInfo,
+  resolveDependencyInfo,
   VIRTUAL_EXTENSION_IMPORTS,
 } from '../../src/vite-plugin-resolve-deps';
 
@@ -236,6 +238,288 @@ describe('prependExtensionSideEffectImport', () => {
   it('is idempotent when virtual import already present', () => {
     const input = `import ${JSON.stringify(VIRTUAL_EXTENSION_IMPORTS)};\nimport './app';\n`;
     expect(prependExtensionSideEffectImport(input)).toBe(input);
+  });
+});
+
+describe('resolvePackageInfo dependency metadata', () => {
+  it('collects license and links from installed package.json files', () => {
+    withTempPackageJson(
+      {
+        '@eclipse-docks/extension-example': '*',
+      },
+      (root) => {
+        const extDir = path.join(root, 'node_modules', '@eclipse-docks', 'extension-example');
+        mkdirSync(extDir, { recursive: true });
+        writeFileSync(
+          path.join(extDir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-example',
+            version: '2.0.0',
+            license: 'EPL-2.0',
+            homepage: 'https://example.com/ext',
+            dependencies: {
+              'example-lib': '*',
+            },
+          }),
+        );
+
+        const libDir = path.join(root, 'node_modules', 'example-lib');
+        mkdirSync(libDir, { recursive: true });
+        writeFileSync(
+          path.join(libDir, 'package.json'),
+          JSON.stringify({
+            name: 'example-lib',
+            version: '3.1.4',
+            license: 'MIT',
+            repository: 'git+https://github.com/example/example-lib.git',
+            description: 'Example runtime library',
+          }),
+        );
+
+        const info = resolvePackageInfo(root);
+        expect(info?.directDependencies).toEqual(['@eclipse-docks/extension-example']);
+        expect(info?.dependencies['@eclipse-docks/extension-example']).toMatchObject({
+          license: 'EPL-2.0',
+          homepage: 'https://example.com/ext',
+        });
+        expect(info?.nestedDependencies['@eclipse-docks/extension-example']).toEqual(['example-lib']);
+        expect(info?.dependencies['example-lib']).toMatchObject({
+          license: 'MIT',
+          repository: 'https://github.com/example/example-lib',
+          description: 'Example runtime library',
+        });
+        expect(info?.dependencies['example-lib']).not.toHaveProperty('version');
+      },
+    );
+  });
+
+  it('normalizes compound and object license fields', () => {
+    withTempPackageJson({ 'compound-lib': '*' }, (root) => {
+      const libDir = path.join(root, 'node_modules', 'compound-lib');
+      mkdirSync(libDir, { recursive: true });
+      writeFileSync(
+        path.join(libDir, 'package.json'),
+        JSON.stringify({
+          name: 'compound-lib',
+          version: '1.0.0',
+          license: ['MIT', { type: 'Apache-2.0' }],
+        }),
+      );
+
+      expect(resolveDependencyInfo(root, 'compound-lib').license).toBe('MIT AND Apache-2.0');
+    });
+  });
+
+  it('does not pull third-party deps through other extension packages', () => {
+    withTempPackageJson(
+      {
+        '@eclipse-docks/extension-cereusdb': '*',
+        '@eclipse-docks/extension-monaco-editor': '*',
+      },
+      (root) => {
+        const cereusdbDir = path.join(root, 'node_modules', '@eclipse-docks', 'extension-cereusdb');
+        const sqleditorDir = path.join(root, 'node_modules', '@eclipse-docks', 'extension-sqleditor');
+        const monacoExtDir = path.join(
+          root,
+          'node_modules',
+          '@eclipse-docks',
+          'extension-monaco-editor',
+        );
+        mkdirSync(cereusdbDir, { recursive: true });
+        mkdirSync(sqleditorDir, { recursive: true });
+        mkdirSync(monacoExtDir, { recursive: true });
+
+        writeFileSync(
+          path.join(cereusdbDir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-cereusdb',
+            version: '0.0.0',
+            license: 'EPL-2.0',
+            dependencies: {
+              '@cereusdb/full': '*',
+              '@eclipse-docks/extension-sqleditor': '*',
+            },
+          }),
+        );
+        writeFileSync(
+          path.join(sqleditorDir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-sqleditor',
+            version: '0.0.0',
+            dependencies: {
+              '@eclipse-docks/extension-monaco-editor': '*',
+            },
+          }),
+        );
+        writeFileSync(
+          path.join(monacoExtDir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-monaco-editor',
+            version: '0.0.0',
+            license: 'EPL-2.0',
+            dependencies: {
+              'monaco-editor': '*',
+            },
+          }),
+        );
+
+        const monacoDir = path.join(root, 'node_modules', 'monaco-editor');
+        mkdirSync(monacoDir, { recursive: true });
+        writeFileSync(
+          path.join(monacoDir, 'package.json'),
+          JSON.stringify({
+            name: 'monaco-editor',
+            version: '0.55.1',
+            license: 'MIT',
+          }),
+        );
+
+        const cereusdbDir2 = path.join(root, 'node_modules', '@cereusdb', 'full');
+        mkdirSync(cereusdbDir2, { recursive: true });
+        writeFileSync(
+          path.join(cereusdbDir2, 'package.json'),
+          JSON.stringify({
+            name: '@cereusdb/full',
+            version: '0.1.2',
+            license: 'Apache-2.0',
+          }),
+        );
+
+        const info = resolvePackageInfo(root);
+        expect(info?.nestedDependencies['@eclipse-docks/extension-cereusdb']).toEqual([
+          '@cereusdb/full',
+        ]);
+        expect(info?.nestedDependencies['@eclipse-docks/extension-monaco-editor']).toEqual([
+          'monaco-editor',
+        ]);
+      },
+    );
+  });
+
+  it('lists only direct third-party dependencies, not transitive ones', () => {
+    withTempPackageJson({ '@eclipse-docks/extension-monaco-editor': '*' }, (root) => {
+      const monacoExtDir = path.join(
+        root,
+        'node_modules',
+        '@eclipse-docks',
+        'extension-monaco-editor',
+      );
+      mkdirSync(monacoExtDir, { recursive: true });
+      writeFileSync(
+        path.join(monacoExtDir, 'package.json'),
+        JSON.stringify({
+          name: '@eclipse-docks/extension-monaco-editor',
+          version: '0.0.0',
+          license: 'EPL-2.0',
+          dependencies: {
+            'monaco-editor': '*',
+          },
+        }),
+      );
+
+      const monacoDir = path.join(root, 'node_modules', 'monaco-editor');
+      mkdirSync(monacoDir, { recursive: true });
+      writeFileSync(
+        path.join(monacoDir, 'package.json'),
+        JSON.stringify({
+          name: 'monaco-editor',
+          version: '0.55.1',
+          license: 'MIT',
+          dependencies: {
+            marked: '*',
+            dompurify: '*',
+          },
+        }),
+      );
+
+      const info = resolvePackageInfo(root);
+      expect(info?.nestedDependencies['@eclipse-docks/extension-monaco-editor']).toEqual([
+        'monaco-editor',
+      ]);
+      expect(info?.dependencies.marked).toBeUndefined();
+      expect(info?.dependencies.dompurify).toBeUndefined();
+    });
+  });
+
+  it('allows the same third-party package under multiple direct parents', () => {
+    withTempPackageJson(
+      {
+        '@eclipse-docks/extension-a': '*',
+        '@eclipse-docks/extension-b': '*',
+      },
+      (root) => {
+        const extADir = path.join(root, 'node_modules', '@eclipse-docks', 'extension-a');
+        const extBDir = path.join(root, 'node_modules', '@eclipse-docks', 'extension-b');
+        mkdirSync(extADir, { recursive: true });
+        mkdirSync(extBDir, { recursive: true });
+        writeFileSync(
+          path.join(extADir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-a',
+            version: '0.0.0',
+            dependencies: { marked: '*' },
+          }),
+        );
+        writeFileSync(
+          path.join(extBDir, 'package.json'),
+          JSON.stringify({
+            name: '@eclipse-docks/extension-b',
+            version: '0.0.0',
+            dependencies: { marked: '*' },
+          }),
+        );
+
+        const markedDir = path.join(root, 'node_modules', 'marked');
+        mkdirSync(markedDir, { recursive: true });
+        writeFileSync(
+          path.join(markedDir, 'package.json'),
+          JSON.stringify({
+            name: 'marked',
+            version: '18.0.0',
+            license: 'MIT',
+          }),
+        );
+
+        const info = resolvePackageInfo(root);
+        expect(info?.nestedDependencies['@eclipse-docks/extension-a']).toEqual(['marked']);
+        expect(info?.nestedDependencies['@eclipse-docks/extension-b']).toEqual(['marked']);
+      },
+    );
+  });
+
+  it('skips build-time packages when nesting runtime dependencies', () => {
+    withTempPackageJson({ '@eclipse-docks/core': '*' }, (root) => {
+      const coreDir = path.join(root, 'node_modules', '@eclipse-docks', 'core');
+      mkdirSync(coreDir, { recursive: true });
+      writeFileSync(
+        path.join(coreDir, 'package.json'),
+        JSON.stringify({
+          name: '@eclipse-docks/core',
+          version: '0.0.0',
+          license: 'EPL-2.0',
+          dependencies: {
+            lit: '*',
+            typescript: '*',
+            '@types/node': '*',
+          },
+        }),
+      );
+
+      const litDir = path.join(root, 'node_modules', 'lit');
+      mkdirSync(litDir, { recursive: true });
+      writeFileSync(
+        path.join(litDir, 'package.json'),
+        JSON.stringify({
+          name: 'lit',
+          version: '3.3.3',
+          license: 'BSD-3-Clause',
+        }),
+      );
+
+      const info = resolvePackageInfo(root);
+      expect(info?.nestedDependencies['@eclipse-docks/core']).toEqual(['lit']);
+      expect(info?.dependencies['lit']?.license).toBe('BSD-3-Clause');
+    });
   });
 });
 

@@ -1,7 +1,4 @@
-import { css, html } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { repeat } from 'lit/directives/repeat.js';
-import { when } from 'lit/directives/when.js';
+import { css, customElement, html, property, repeat, state, when } from '@eclipse-docks/core/externals/lit';
 import { DocksPart } from '@eclipse-docks/core';
 import { EditorInput } from '@eclipse-docks/core';
 import { appSettings, TOPIC_SETTINGS_CHANGED } from '@eclipse-docks/core';

@@ -1,7 +1,4 @@
-import { css, html, LitElement } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-import { repeat } from 'lit/directives/repeat.js';
-import { when } from 'lit/directives/when.js';
+import { css, customElement, html, LitElement, property, repeat, state, when } from '@eclipse-docks/core/externals/lit';
 import type { TaskPlan, TaskStep, StepStatus } from '../core/types';
 
 const STATUS_ICON: Record<StepStatus, string> = {

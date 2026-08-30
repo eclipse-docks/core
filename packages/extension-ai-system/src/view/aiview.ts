@@ -1,8 +1,5 @@
-import { css, html, nothing, TemplateResult } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { css, customElement, html, nothing, repeat, state, TemplateResult, when } from '@eclipse-docks/core/externals/lit';
 import { DocksPart } from '@eclipse-docks/core';
-import { when } from 'lit/directives/when.js';
-import { repeat } from 'lit/directives/repeat.js';
 import { commandRegistry as globalCommandRegistry } from '@eclipse-docks/core';
 import { taskService, uiContext, appSettings } from '@eclipse-docks/core';
 import { toastError } from '@eclipse-docks/core';

@@ -1,5 +1,4 @@
-import { css, html, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { css, customElement, html, LitElement, property } from '@eclipse-docks/core/externals/lit';
 
 @customElement('docks-ai-empty-state')
 export class AIEmptyState extends LitElement {

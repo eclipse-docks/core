@@ -31,5 +31,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/eclipse-docks/core"
-  }
+  },
+  "license": "EPL-2.0",
+  "description": "View and execute Jupyter-like notebooks (.ipynb) with Python code execution and markdown rendering"
 }

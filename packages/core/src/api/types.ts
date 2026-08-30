@@ -1,5 +1,14 @@
 // Re-export framework types for app usage
-export type { AppDefinition, AppContributions, LayoutDescriptor, ReleaseEntry, ReleaseHistory, RenderDescriptor } from '../core/apploader';
+export type {
+    AppDefinition,
+    AppContributions,
+    LayoutDescriptor,
+    ReleaseEntry,
+    ReleaseHistory,
+    RenderDescriptor,
+} from '../core/apploader';
+export type { ResolvedDependencyInfo, ResolvedDependencyMap } from '../core/resolved-package-info';
+export type { LicenseAttributionOptions } from '../core/license-attribution';
 export type { 
     Command, 
     Parameter, 

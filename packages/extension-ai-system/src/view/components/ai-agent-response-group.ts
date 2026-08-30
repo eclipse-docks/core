@@ -1,7 +1,4 @@
-import { css, html, LitElement } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
-import { when } from 'lit/directives/when.js';
-import { repeat } from 'lit/directives/repeat.js';
+import { css, customElement, html, LitElement, property, repeat, when } from '@eclipse-docks/core/externals/lit';
 import type { ChatMessage } from '../../core/types';
 import type { AgentResponseGroup, AgentResponseInfo } from '../agent-group-manager';
 import './ai-chat-message';

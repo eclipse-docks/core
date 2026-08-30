@@ -12,17 +12,17 @@
  * - App Loader: Bridge between framework and application
  */
 
-import { render, TemplateResult, html } from "lit";
-import { rootContext } from "./di";
-import { createLogger } from "./logger";
-import { extensionRegistry, Extension } from "./extensionregistry";
-import { contributionRegistry, Contribution, LayoutContribution, TOPIC_CONTRIBUTEIONS_CHANGED } from "./contributionregistry";
-import { SYSTEM_LAYOUTS } from "./contribution-targets";
-import { appSettings } from "./settingsservice";
-import { marketplaceRegistry } from "./marketplaceregistry";
+import { render } from "lit";
 import { contributionTargetMappingRegistry, type ContributionNameRemap } from "./contribution-mapping";
+import { SYSTEM_LAYOUTS } from "./contribution-targets";
+import { Contribution, LayoutContribution, TOPIC_CONTRIBUTEIONS_CHANGED, contributionRegistry } from "./contributionregistry";
+import { rootContext } from "./di";
 import { publish } from "./events";
-
+import { Extension, extensionRegistry } from "./extensionregistry";
+import { createLogger } from "./logger";
+import { marketplaceRegistry } from "./marketplaceregistry";
+import type { ResolvedDependencyMap } from "./resolved-package-info";
+import { appSettings } from "./settingsservice";
 
 const logger = createLogger('AppLoader');
 
@@ -179,8 +179,14 @@ export interface AppDefinition {
      */
     dispose?: () => void | Promise<void>;
 
-    /** Resolved dependency versions (e.g. from build plugin). Shown in About / version info. */
-    dependencies?: Record<string, string>;
+    /** Resolved dependency metadata (from build plugin). Shown in About / NPM Packages. */
+    dependencies?: ResolvedDependencyMap;
+
+    /** Direct app package.json dependencies, in declaration order. */
+    directDependencies?: string[];
+
+    /** Third-party packages nested under a direct core/extension dependency in the About tree. */
+    nestedDependencies?: Record<string, string[]>;
 
     /** Marketplace catalog URLs for this app. Registered when the app is registered. */
     marketplaceCatalogUrls?: string[];
@@ -213,7 +219,8 @@ export interface RegisterAppOptions {
     container?: HTMLElement;
 
     /**
-     * When true, fill name, version, description, dependencies, marketplaceCatalogUrls from __RESOLVED_PACKAGE_INFO__ only when not already set on the app.
+     * When true, fill name, version, description, dependencies, directDependencies,
+     * nestedDependencies, and marketplaceCatalogUrls from __RESOLVED_PACKAGE_INFO__ only when not already set on the app.
      */
     hostConfig?: boolean;
 }
@@ -250,6 +257,8 @@ class AppLoaderService {
             if (app.version === undefined) app.version = resolved.version;
             if (app.description === undefined) app.description = resolved.description;
             if (app.dependencies === undefined) app.dependencies = resolved.dependencies;
+            if (app.directDependencies === undefined) app.directDependencies = resolved.directDependencies;
+            if (app.nestedDependencies === undefined) app.nestedDependencies = resolved.nestedDependencies;
             if (app.marketplaceCatalogUrls === undefined) app.marketplaceCatalogUrls = resolved.marketplaceCatalogUrls;
         }
         app.name = app.name ?? 'app';

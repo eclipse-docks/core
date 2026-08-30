@@ -36,5 +36,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/eclipse-docks/core"
-  }
+  },
+  "license": "EPL-2.0",
+  "description": "In-browser SQL engine (DuckDB-WASM) for advanced queries, analytics, and Parquet/CSV/JSON."
 }

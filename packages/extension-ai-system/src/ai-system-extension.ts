@@ -1,4 +1,4 @@
-import { html } from 'lit';
+import { html } from '@eclipse-docks/core/externals/lit';
 import { rootContext } from '@eclipse-docks/core';
 import { aiService } from './service/ai-service';
 import { contributionRegistry } from '@eclipse-docks/core';

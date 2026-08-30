@@ -26,6 +26,7 @@ export const ABOUT_TAB_PACKAGES = "about.tab.packages";
 export const ABOUT_TAB_ATTRIBUTIONS = "about.tab.attributions";
 
 export const ATTRIBUTION_ECLIPSE_DOCKS = "attribution.eclipse-docks";
+export const ATTRIBUTION_FONT_AWESOME = "attribution.font-awesome";
 
 export const CTXMENU_FILEBROWSER_RENAME = "contextmenu.filebrowser.rename";
 export const CTXMENU_FILEBROWSER_DELETE = "contextmenu.filebrowser.delete";

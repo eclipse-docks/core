@@ -12,3 +12,8 @@ extensionRegistry.registerExtension({
 });
 
 export const MONACO_EDITOR_TOOLBAR_TARGET_PREFIX = 'toolbar:system.monaco-editor';
+
+export {
+  MONACO_GRAMMARS,
+  type MonacoGrammarContribution,
+} from './monaco-grammar-api';

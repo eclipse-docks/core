@@ -22,6 +22,7 @@ export default defineConfig({
     lib: {
       entry: {
         index: path.resolve(__dirname, 'src/index.ts'),
+        api: path.resolve(__dirname, 'src/api.ts'),
         widget: path.resolve(__dirname, 'src/monaco-widget.ts'),
       },
       formats: ['es'],

@@ -11,6 +11,8 @@ import CssWorker from 'monaco-editor/esm/vs/language/css/css.worker.js?worker';
 import HtmlWorker from 'monaco-editor/esm/vs/language/html/html.worker.js?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker.js?worker';
 
+import { ensureContributedGrammars, watchContributedGrammars } from './monaco-grammars';
+
 function getMonacoWorker(_: unknown, label: string): Worker {
     switch (label) {
         case 'json': return new JsonWorker();
@@ -27,6 +29,8 @@ function getMonacoWorker(_: unknown, label: string): Worker {
 }
 
 self.MonacoEnvironment = { getWorker: getMonacoWorker };
+
+watchContributedGrammars();
 
 @customElement('docks-monaco-widget')
 export class DocksMonacoWidget extends LitElement {
@@ -83,6 +87,8 @@ export class DocksMonacoWidget extends LitElement {
         const container = this.containerRef.value;
         if (!container || this.editor) return;
         if (this.value === undefined) return;
+
+        ensureContributedGrammars();
 
         const uri = this.uri != null ? monaco.Uri.file(this.uri) : undefined;
         this.model = monaco.editor.createModel(this.value, this.language, uri);

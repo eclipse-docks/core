@@ -39,6 +39,7 @@ appLoaderService.registerApp(
     },
     releaseHistory: fetchReleases,
     extensions: [
+      '@eclipse-docks/extension-pwa',
       '@eclipse-docks/extension-command-palette',
       '@eclipse-docks/extension-terminal',
       '@eclipse-docks/extension-notebook',
@@ -49,10 +50,8 @@ appLoaderService.registerApp(
       '@eclipse-docks/extension-media-viewer',
       '@eclipse-docks/extension-settings-tree',
       '@eclipse-docks/extension-memory-usage',
-      '@eclipse-docks/extension-pwa',
       '@eclipse-docks/extension-ai-system',
-      '@eclipse-docks/extension-dataviewer',
-      '@eclipse-docks/extension-webmcp',
+      '@eclipse-docks/extension-dataviewer'
     ],
   },
   { autoStart: true, hostConfig: true, container: appRoot },

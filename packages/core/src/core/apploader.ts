@@ -411,8 +411,20 @@ class AppLoaderService {
         this.systemRequiredExtensions.forEach(extId => extensionsSet.add(extId));
         app.extensions = Array.from(extensionsSet);
 
-        // Enable and load app extensions first so declared dependencies 
-        // are loaded before persisted settings extensions run.
+        this.currentApp = app;
+        this.updateDocumentMetadata(app);
+
+        // Render the shell before heavy extensions finish loading so LCP is not
+        // blocked by Monaco, Pyodide, AI modules, etc. Sidebars and toolbars
+        // update as extensions register contributions (TOPIC_CONTRIBUTEIONS_CHANGED).
+        if (container) {
+            this.dispatchLoadProgress('Rendering layout…');
+            this.renderApp(container);
+            window.dispatchEvent(new CustomEvent('app-loaded', { detail: { appName: app.name } }));
+        }
+
+        // Enable and load app extensions so declared dependencies are loaded
+        // before persisted settings extensions run.
         if (app.extensions.length > 0) {
             this.dispatchLoadProgress('Enabling extensions…');
             await Promise.all(
@@ -429,23 +441,17 @@ class AppLoaderService {
         this.dispatchLoadProgress('Loading extensions…');
         await extensionRegistry.loadEnabledExtensions();
 
-        // Initialize new app
         if (app.initialize) {
             this.dispatchLoadProgress('Initializing…');
             logger.info(`Initializing ${app.name}...`);
             await app.initialize();
         }
 
-        this.currentApp = app;
         logger.info(`App ${app.name} loaded successfully`);
-        this.updateDocumentMetadata(app);
-        if (container) {
-            this.dispatchLoadProgress('Rendering layout…');
-            this.renderApp(container);
-        }
 
-        // Dispatch event for components to react to app changes
-        window.dispatchEvent(new CustomEvent('app-loaded', { detail: { appName: app.name } }));
+        if (!container) {
+            window.dispatchEvent(new CustomEvent('app-loaded', { detail: { appName: app.name } }));
+        }
     }
     
     /**

@@ -70,7 +70,7 @@ export class DocksCatalog extends DocksPart {
                 icon="file-arrow-down"
                 title="Checkout"
                 ?disabled=${!isActiveAndHasSelection}
-                .action=${() => this.runWgetForSelection()}
+                .action=${() => this.runActionForSelection()}
             ></docks-command>
             <docks-command icon="arrows-rotate" title="Refresh Catalog" .action=${() => this.refresh()}></docks-command>
             <docks-command icon="angles-down" slot="end" title="Expand All" .action=${() => this.setAllExpanded(true)}></docks-command>
@@ -97,8 +97,8 @@ export class DocksCatalog extends DocksPart {
         });
     }
 
-    private wgetParamsFromCatalogData(data: { url?: string; filename?: string }) {
-        if (!data?.url) return null;
+    private wgetParamsFromCatalogData(data: { url?: string; filename?: string; openInNewTab?: boolean }) {
+        if (!data?.url || data.openInNewTab) return null;
         const params: { url: string; filename?: string } = { url: data.url };
         if (typeof data.filename === "string" && data.filename.trim()) {
             params.filename = data.filename.trim();
@@ -106,10 +106,24 @@ export class DocksCatalog extends DocksPart {
         return params;
     }
 
+    private openInNewTabFromCatalogData(data: { url?: string; openInNewTab?: boolean }) {
+        if (!data?.url || !data.openInNewTab) return null;
+        return data.url;
+    }
+
+    private openCatalogUrl(url: string) {
+        window.open(url, "_blank", "noopener,noreferrer");
+    }
+
     onItemDblClicked(event: Event) {
         const item = event.currentTarget as HTMLElement & { model?: TreeNode; expanded?: boolean };
         const node = item?.model;
         if (!node) return;
+        const externalUrl = this.openInNewTabFromCatalogData(node.data);
+        if (externalUrl) {
+            this.openCatalogUrl(externalUrl);
+            return;
+        }
         const wgetParams = this.wgetParamsFromCatalogData(node.data);
         if (wgetParams) {
             void this.executeCommand("wget", wgetParams);
@@ -120,9 +134,14 @@ export class DocksCatalog extends DocksPart {
         }
     }
 
-    private runWgetForSelection() {
+    private runActionForSelection() {
         const item = activeSelectionSignal.get();
-        const wgetParams = item && this.wgetParamsFromCatalogData(item as { url?: string; filename?: string });
+        const externalUrl = item && this.openInNewTabFromCatalogData(item as { url?: string; openInNewTab?: boolean });
+        if (externalUrl) {
+            this.openCatalogUrl(externalUrl);
+            return;
+        }
+        const wgetParams = item && this.wgetParamsFromCatalogData(item as { url?: string; filename?: string; openInNewTab?: boolean });
         if (wgetParams) {
             void this.executeCommand("wget", wgetParams);
         }
@@ -137,13 +156,14 @@ export class DocksCatalog extends DocksPart {
     protected renderContextMenu() {
         const item = activePartSignal.get() instanceof DocksCatalog ? activeSelectionSignal.get() : undefined;
         const hasUrl = item && "url" in item && item.url;
+        const openExternal = item && "openInNewTab" in item && item.openInNewTab;
         return html`
             ${renderDropdownItem({
                 icon: 'file-arrow-down',
-                label: 'Checkout',
-                title: 'Checkout',
+                label: openExternal ? 'Open download' : 'Checkout',
+                title: openExternal ? 'Open download in browser' : 'Checkout',
                 disabled: !hasUrl,
-                action: () => this.runWgetForSelection(),
+                action: () => this.runActionForSelection(),
             })}
         `;
     }
@@ -165,13 +185,21 @@ export class DocksCatalog extends DocksPart {
         if (!node) {
             return html``;
         }
+        const openExternal = Boolean(
+            node.data && "openInNewTab" in node.data && node.data.openInNewTab
+        );
         return html`
             <wa-tree-item
                 @dblclick=${this.nobubble(this.onItemDblClicked)}
                 .model=${node}
                 ?expanded=${expanded}
             >
-                <span>${icon(node.icon)} ${node.label}</span>
+                <span class="catalog-tree-label">
+                    ${icon(node.icon)} ${node.label}
+                    ${openExternal
+                        ? html`<span class="catalog-external-suffix" title="Opens in browser">${icon("arrow-up-right-from-square")}</span>`
+                        : ""}
+                </span>
                 ${node.children?.map((child) => this.createTreeItems(child))}
             </wa-tree-item>
         `;
@@ -219,6 +247,17 @@ export class DocksCatalog extends DocksPart {
         .catalog-root wa-tree {
             flex: 1;
             min-height: 0;
+        }
+
+        .catalog-tree-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .catalog-external-suffix {
+            opacity: 0.65;
+            font-size: 0.85em;
         }
     `;
 }

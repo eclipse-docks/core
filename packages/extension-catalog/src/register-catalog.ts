@@ -7,6 +7,8 @@ import {
 export type CatalogResourceState = {
     url: string;
     filename?: string;
+    /** Open URL in a new browser tab instead of wget into the workspace. */
+    openInNewTab?: boolean;
 };
 
 export interface CatalogContribution extends TreeContribution {

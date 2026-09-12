@@ -1,13 +1,12 @@
 import { html } from "lit";
 import { EditorInput, editorRegistry, File } from "@eclipse-docks/core";
 
-import "./monaco-widget";
-
 editorRegistry.registerEditorInputHandler({
     editorId: "system.monaco-editor",
     label: "Code",
     icon: "file-pen",
     lazyInit: async () => {
+        await import('./monaco-widget');
         await import('./monaco-editor');
     },
     canHandle: (input: unknown) =>

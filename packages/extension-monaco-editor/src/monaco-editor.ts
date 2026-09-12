@@ -3,6 +3,7 @@ import { DocksPart } from "@eclipse-docks/core";
 import { css, html } from "lit";
 import { createRef, ref } from "lit/directives/ref.js";
 import { EditorInput, EditorContentProvider } from "@eclipse-docks/core";
+import "./monaco-widget";
 import type { DocksMonacoWidget } from "./monaco-widget";
 
 @customElement('docks-monaco-editor')

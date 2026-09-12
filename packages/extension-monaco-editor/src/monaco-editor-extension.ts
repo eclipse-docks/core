@@ -6,7 +6,6 @@ editorRegistry.registerEditorInputHandler({
     label: "Code",
     icon: "file-pen",
     lazyInit: async () => {
-        await import('./monaco-widget');
         await import('./monaco-editor');
     },
     canHandle: (input: unknown) =>

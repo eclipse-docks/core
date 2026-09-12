@@ -11,7 +11,8 @@ import {
 } from '@eclipse-docks/core/externals/lit';
 import type { SqlAdapterContribution, SqlConnectionInfo, SqlDatabase } from './sql-api';
 import { sqlExtensionManagerService } from './sql-extension-manager';
-import { DocksMonacoWidget } from '@eclipse-docks/extension-monaco-editor/widget';
+import '@eclipse-docks/extension-monaco-editor/widget';
+import type { DocksMonacoWidget } from '@eclipse-docks/extension-monaco-editor/widget';
 
 const MAX_TAB_LABEL = 28;
 

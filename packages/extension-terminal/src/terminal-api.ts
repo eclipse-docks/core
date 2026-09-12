@@ -38,6 +38,11 @@ export interface TerminalProfileContribution {
   icon?: string;
   isDefault?: boolean;
   hidden?: boolean;
+  /**
+   * When false, terminals of this profile are not saved or restored across reloads.
+   * Defaults to true.
+   */
+  persist?: boolean;
   create(options?: TerminalCreationOptions): Promise<TerminalBackend>;
 }
 

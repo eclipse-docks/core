@@ -150,6 +150,7 @@ class TerminalService implements TerminalTaskRunner {
 
     this.preferredProfileId = state.preferredProfileId;
     for (const entry of state.terminals) {
+      if (!this.isProfilePersistent(entry.profileId)) continue;
       await this.createTerminal({
         ...entry.creationOptions,
         name: entry.name,
@@ -160,6 +161,12 @@ class TerminalService implements TerminalTaskRunner {
     if (state.activeTerminalId && this.terminals.has(state.activeTerminalId)) {
       this.setActiveTerminal(state.activeTerminalId);
     }
+  }
+
+  /** Profiles default to persistent; opt out with `persist: false`. */
+  private isProfilePersistent(profileId: string): boolean {
+    const profile = this.getProfiles().find((p) => p.id === profileId);
+    return profile?.persist !== false;
   }
 
   getProfiles(): TerminalProfileContribution[] {
@@ -344,16 +351,21 @@ class TerminalService implements TerminalTaskRunner {
 
   private async persistState(): Promise<void> {
     if (!this.persistCallback) return;
-    const state: PersistedTerminalState = {
-      activeTerminalId: this.activeTerminalId,
-      preferredProfileId: this.preferredProfileId,
-      terminals: [...this.terminals.values()].map((t) => ({
+    const terminals = [...this.terminals.values()]
+      .filter((t) => this.isProfilePersistent(t.profileId))
+      .map((t) => ({
         id: t.id,
         name: t.name,
         profileId: t.profileId,
         groupId: t.groupId,
         creationOptions: t.creationOptions,
-      })),
+      }));
+    const ids = new Set(terminals.map((t) => t.id));
+    const state: PersistedTerminalState = {
+      activeTerminalId:
+        this.activeTerminalId && ids.has(this.activeTerminalId) ? this.activeTerminalId : null,
+      preferredProfileId: this.preferredProfileId,
+      terminals,
     };
     await this.persistCallback(serializeTerminalState(state));
   }

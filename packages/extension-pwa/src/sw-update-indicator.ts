@@ -259,6 +259,7 @@ export class DocksSwUpdateIndicator extends DocksElement {
     return html`
       <wa-button
         variant="brand"
+        appearance="plain"
         title="A new version is available. Click to update."
         aria-label="Update available. Click to reload with the latest version."
         @click=${this.onActivateClick}

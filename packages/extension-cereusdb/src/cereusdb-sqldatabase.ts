@@ -1,3 +1,4 @@
+import { promptDialog, toastError } from '@eclipse-docks/core';
 import type {
   SqlAdapterContribution,
   SqlConnectionInfo,
@@ -7,6 +8,9 @@ import type { CereusVariantId } from './cereusdb-variants';
 
 export type { CereusVariantId } from './cereusdb-variants';
 export { CEREUS_VARIANTS } from './cereusdb-variants';
+
+const IN_MEMORY_KEY = '';
+const DB_NAME_REGEX = /^[a-zA-Z0-9_.-]+$/;
 
 type WorkerFactory = new () => Worker;
 
@@ -51,21 +55,25 @@ type WorkerResult = {
   version?: string;
 };
 
+type PendingCall = {
+  resolve: (value: WorkerResult) => void;
+  reject: (error: Error) => void;
+};
+
+class ConnectionSlot {
+  worker: Worker | null = null;
+  connected = false;
+  msgId = 0;
+  pending = new Map<number, PendingCall>();
+}
+
 export class CereusSqlDatabase implements SqlDatabase {
   readonly engineId: string;
 
   private readonly variant: CereusVariantId;
-  private worker: Worker | null = null;
+  private readonly names = new Set<string>();
+  private readonly slots = new Map<string, ConnectionSlot>();
   private wasmUrl: string | null = null;
-  private msgId = 0;
-  private pending = new Map<
-    number,
-    {
-      resolve: (value: WorkerResult) => void;
-      reject: (error: Error) => void;
-    }
-  >();
-  private connected = false;
   private selectedConnectionId: string | null = null;
 
   constructor(engineId: string, variant: CereusVariantId) {
@@ -77,28 +85,28 @@ export class CereusSqlDatabase implements SqlDatabase {
     return this.selectedConnectionId;
   }
 
-  private async spawnWorker(): Promise<void> {
-    if (this.worker) return;
-    const WorkerCtor = await loadWorkerFactory();
-    const w = new WorkerCtor();
-    w.onmessage = (ev: MessageEvent) => {
-      const { id, ok, error, rows, version } = ev.data as {
-        id: number;
-        ok: boolean;
-        error?: string;
-        rows?: Record<string, unknown>[];
-        version?: string;
-      };
-      const p = this.pending.get(id);
-      if (!p) return;
-      this.pending.delete(id);
-      if (!ok) {
-        p.reject(new Error(error ?? 'CereusDB worker error'));
-        return;
-      }
-      p.resolve({ rows, version });
-    };
-    this.worker = w;
+  private slotKey(id: string | null): string {
+    return id ?? IN_MEMORY_KEY;
+  }
+
+  private slotFor(id: string | null): ConnectionSlot {
+    const key = this.slotKey(id);
+    let slot = this.slots.get(key);
+    if (!slot) {
+      slot = new ConnectionSlot();
+      this.slots.set(key, slot);
+    }
+    return slot;
+  }
+
+  private disposeSlot(slot: ConnectionSlot): void {
+    slot.pending.forEach(({ reject }) => {
+      reject(new Error('CereusDB worker terminated'));
+    });
+    slot.pending.clear();
+    slot.worker?.terminate();
+    slot.worker = null;
+    slot.connected = false;
   }
 
   private async resolveWasmUrl(): Promise<string> {
@@ -108,17 +116,42 @@ export class CereusSqlDatabase implements SqlDatabase {
     return this.wasmUrl;
   }
 
+  private async spawnWorker(slot: ConnectionSlot): Promise<void> {
+    if (slot.worker) return;
+    const WorkerCtor = await loadWorkerFactory();
+    const worker = new WorkerCtor();
+    worker.onmessage = (ev: MessageEvent) => {
+      const { id, ok, error, rows, version } = ev.data as {
+        id: number;
+        ok: boolean;
+        error?: string;
+        rows?: Record<string, unknown>[];
+        version?: string;
+      };
+      const pending = slot.pending.get(id);
+      if (!pending) return;
+      slot.pending.delete(id);
+      if (!ok) {
+        pending.reject(new Error(error ?? 'CereusDB worker error'));
+        return;
+      }
+      pending.resolve({ rows, version });
+    };
+    slot.worker = worker;
+  }
+
   private async rpc(
+    slot: ConnectionSlot,
     type: 'init' | 'sql' | 'version',
     sql?: string,
   ): Promise<WorkerResult> {
-    await this.spawnWorker();
+    await this.spawnWorker(slot);
     const wasmUrl = type === 'init' ? await this.resolveWasmUrl() : undefined;
     const variant = type === 'init' ? this.variant : undefined;
-    const id = ++this.msgId;
+    const id = ++slot.msgId;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.worker!.postMessage({
+      slot.pending.set(id, { resolve, reject });
+      slot.worker!.postMessage({
         id,
         type,
         sql,
@@ -129,52 +162,91 @@ export class CereusSqlDatabase implements SqlDatabase {
   }
 
   private async ensureConnected(): Promise<void> {
-    if (!this.connected) {
-      await this.selectConnection(null);
-    }
+    const slot = this.slotFor(this.selectedConnectionId);
+    if (slot.connected) return;
+    await this.selectConnection(this.selectedConnectionId);
   }
 
   async listConnections(): Promise<SqlConnectionInfo[]> {
+    const named = [...this.names].sort().map((name) => ({
+      id: name,
+      label: name,
+    }));
     return [
       {
         id: null,
         label: 'In-memory',
         isDefault: true,
       },
+      ...named,
     ];
   }
 
   async selectConnection(id: string | null): Promise<void> {
-    if (this.connected && id === this.selectedConnectionId) {
-      return;
+    if (id !== null && !this.names.has(id)) {
+      throw new Error(`Unknown CereusDB database: ${id}`);
     }
-    await this.rpc('init');
-    this.connected = true;
+    const slot = this.slotFor(id);
+    if (slot.connected && this.selectedConnectionId === id) return;
     this.selectedConnectionId = id;
+    if (slot.connected) return;
+    await this.rpc(slot, 'init');
+    slot.connected = true;
+  }
+
+  async createConnection(): Promise<SqlConnectionInfo | null> {
+    const raw = await promptDialog('New CereusDB database name', '');
+    if (raw == null) return null;
+    const name = raw.trim();
+    if (!name) {
+      toastError('Name cannot be empty');
+      return null;
+    }
+    if (!DB_NAME_REGEX.test(name)) {
+      toastError('Name may only contain letters, numbers, and . _ -');
+      return null;
+    }
+    if (this.names.has(name)) {
+      toastError(`Database "${name}" already exists`);
+      return null;
+    }
+    this.names.add(name);
+    return { id: name, label: name };
+  }
+
+  async deleteConnection(id: string): Promise<void> {
+    if (!id || !this.names.has(id)) return;
+    const slot = this.slots.get(id);
+    if (slot) this.disposeSlot(slot);
+    this.slots.delete(id);
+    this.names.delete(id);
+    if (this.selectedConnectionId === id) {
+      this.selectedConnectionId = null;
+    }
   }
 
   async runQuery(
     sql: string,
   ): Promise<{ columns: string[]; rows: unknown[][] }> {
     await this.ensureConnected();
-    const { rows = [] } = await this.rpc('sql', sql);
+    const slot = this.slotFor(this.selectedConnectionId);
+    const { rows = [] } = await this.rpc(slot, 'sql', sql);
     return rowsToMatrix(rows);
   }
 
   async readVersion(): Promise<string> {
     await this.ensureConnected();
-    const { version = '' } = await this.rpc('version');
+    const slot = this.slotFor(this.selectedConnectionId);
+    const { version = '' } = await this.rpc(slot, 'version');
     return version;
   }
 
   async close(): Promise<void> {
-    this.pending.forEach(({ reject }) => {
-      reject(new Error('CereusDB worker terminated'));
-    });
-    this.pending.clear();
-    this.worker?.terminate();
-    this.worker = null;
-    this.connected = false;
+    for (const slot of this.slots.values()) {
+      this.disposeSlot(slot);
+    }
+    this.slots.clear();
+    this.names.clear();
     this.selectedConnectionId = null;
   }
 }

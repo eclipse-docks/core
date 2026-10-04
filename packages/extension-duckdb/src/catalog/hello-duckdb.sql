@@ -7,7 +7,8 @@ SELECT 1 + 2 AS sum, 10 * 5 AS product;
 
 SELECT current_date AS today, current_timestamp AS now;
 
--- Create a small in-memory table and query it
-CREATE OR REPLACE TEMP TABLE sample (id INT, name VARCHAR);
+-- Stored in the selected database. A named connection keeps it across reloads;
+-- the In-memory connection does not. TEMP tables are dropped when the session ends.
+CREATE OR REPLACE TABLE sample (id INT, name VARCHAR);
 INSERT INTO sample VALUES (1, 'Alice'), (2, 'Bob'), (3, 'Carol');
 SELECT * FROM sample;

@@ -1,13 +1,14 @@
-import {
-  duckdbService,
-  DuckDBDatabase,
-} from './duckdb-service';
+import { promptDialog, toastError } from '@eclipse-docks/core';
 import type {
   SqlAdapterContribution,
   SqlConnectionInfo,
   SqlDatabase,
   SqlDatabaseExtensionInfo,
 } from '@eclipse-docks/extension-sqleditor';
+import {
+  duckdbService,
+  DuckDBDatabase,
+} from './duckdb-service';
 
 class DuckdbSqlDatabase implements SqlDatabase {
   readonly engineId = 'duckdb';
@@ -62,9 +63,16 @@ class DuckdbSqlDatabase implements SqlDatabase {
   }
 
   async createConnection(): Promise<SqlConnectionInfo | null> {
-    // Creation flow is handled in the generic editor via prompts specific to DuckDB today.
-    // For now, rely on editor-level name prompts and duckdbService.open(name) followed by close().
-    return null;
+    const raw = await promptDialog('New DuckDB database name', '');
+    if (raw == null) return null;
+    try {
+      const db = await duckdbService.createPersisted(raw);
+      const id = db.name ?? raw.trim();
+      return { id, label: id };
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : String(err));
+      return null;
+    }
   }
 
   async deleteConnection(id: string): Promise<void> {

@@ -22,7 +22,7 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "1.33.1-dev20.0",
+    "@duckdb/duckdb-wasm": "^1.33.1-dev65.0",
     "@eclipse-docks/core": "*",
     "@eclipse-docks/extension-catalog": "*",
     "@eclipse-docks/extension-notebook": "*",

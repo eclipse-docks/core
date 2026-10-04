@@ -152,7 +152,11 @@ export class DuckDBDatabase {
     try {
       await registerWorkspaceFilesForQuery(this.db, trimmed, this.registeredWorkspaceFiles);
       const table = await this.conn.query(trimmed);
-      return tableToPlainArrays(table);
+      const result = tableToPlainArrays(table);
+      if (this.name) {
+        await this.conn.query('CHECKPOINT');
+      }
+      return result;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error(`Query failed: ${msg}`);
@@ -197,6 +201,32 @@ export class DuckDBService {
 
   private keyFor(name: string | undefined): string {
     return name === undefined || name === '' ? IN_MEMORY_KEY : name;
+  }
+
+  /**
+   * Create a new OPFS database and flush it so it shows up in {@link listDatabases}.
+   * Returns the open database.
+   */
+  async createPersisted(name: string): Promise<DuckDBDatabase> {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new Error('Name cannot be empty');
+    }
+    if (!DB_NAME_REGEX.test(trimmed)) {
+      throw new Error('Name may only contain letters, numbers, and . _ -');
+    }
+    const existing = await this.listDatabases();
+    if (existing.includes(trimmed) || this.databases.has(trimmed)) {
+      throw new Error(`Database "${trimmed}" already exists`);
+    }
+    const db = await this.open(trimmed);
+    try {
+      await db.runQuery('CHECKPOINT');
+    } catch (err) {
+      await db.close();
+      throw err;
+    }
+    return db;
   }
 
   /**

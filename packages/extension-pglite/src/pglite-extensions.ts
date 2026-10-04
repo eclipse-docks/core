@@ -164,6 +164,12 @@ const DEFINITIONS: PgliteExtensionDefinition[] = [
     load: async () => import('@electric-sql/pglite/contrib/pg_surgery'),
   },
   {
+    id: 'pg_textsearch',
+    label: 'pg_textsearch',
+    description: 'BM25 relevance-ranked full-text search',
+    load: async () => import('@electric-sql/pglite-pg_textsearch'),
+  },
+  {
     id: 'pg_trgm',
     label: 'pg_trgm',
     description: 'Trigram-based text similarity',
@@ -194,10 +200,22 @@ const DEFINITIONS: PgliteExtensionDefinition[] = [
     load: async () => import('@electric-sql/pglite/contrib/pgcrypto'),
   },
   {
+    id: 'pgmq',
+    label: 'pgmq',
+    description: 'Lightweight message queue',
+    load: async () => import('@electric-sql/pglite-pgmq'),
+  },
+  {
     id: 'pgtap',
     label: 'pgtap',
     description: 'TAP-emitting unit tests for Postgres',
     load: async () => import('@electric-sql/pglite-pgtap'),
+  },
+  {
+    id: 'postgis',
+    label: 'PostGIS',
+    description: 'Store, index, and query geospatial data',
+    load: async () => import('@electric-sql/pglite-postgis'),
   },
   {
     id: 'seg',

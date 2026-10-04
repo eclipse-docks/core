@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-BR5YL-9f-C6JE7Lgk.js";e();var t={name:`pg_surgery`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/pg_surgery.tar-DU0pz_TF-DU0pz_TF.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as pg_surgery};

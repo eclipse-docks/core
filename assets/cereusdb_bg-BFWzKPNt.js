@@ -1,0 +1,1 @@
+var e=`/assets/cereusdb_bg-CpNyPLsX.wasm`;export{e as default};

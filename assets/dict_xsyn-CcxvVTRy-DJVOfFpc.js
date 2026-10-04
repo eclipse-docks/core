@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-BR5YL-9f-C6JE7Lgk.js";e();var t={name:`dict_xsyn`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/dict_xsyn.tar-CjD8eFQ0-CjD8eFQ0.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as dict_xsyn};

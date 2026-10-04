@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-BR5YL-9f-C6JE7Lgk.js";e();var t={name:`isn`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/isn.tar-CRIU4EEO-CRIU4EEO.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as isn};

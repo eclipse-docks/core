@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-BR5YL-9f-C6JE7Lgk.js";e();var t={name:`intarray`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/intarray.tar-BVIfG_7Z-BVIfG_7Z.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as intarray};

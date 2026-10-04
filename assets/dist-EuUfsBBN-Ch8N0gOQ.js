@@ -1,0 +1,1 @@
+var e={name:`pg_uuidv7`,setup:async(e,t)=>({emscriptenOpts:t,bundlePath:new URL(new URL(`/assets/pg_uuidv7.tar-Cp_eHZBk-Cp_eHZBk.gz`,``+import.meta.url).href,``+import.meta.url)})};export{e as pg_uuidv7};

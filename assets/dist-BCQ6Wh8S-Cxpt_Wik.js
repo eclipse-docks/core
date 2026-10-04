@@ -1,0 +1,1 @@
+var e={name:`pg_textsearch`,setup:async(e,t)=>({emscriptenOpts:t,bundlePath:new URL(new URL(`/assets/pg_textsearch.tar-DiBEZ2o9-DiBEZ2o9.gz`,``+import.meta.url).href,``+import.meta.url),sharedPreloadLibraries:[`pg_textsearch`]})};export{e as pg_textsearch};

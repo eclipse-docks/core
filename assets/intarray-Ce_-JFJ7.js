@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-QY3QWFKW--Q_mGPOy.js";e();var t={name:`intarray`,setup:async(e,t)=>({bundlePath:new URL(`/assets/intarray.tar-BVIfG_7Z.gz`,``+import.meta.url)})};export{t as intarray};

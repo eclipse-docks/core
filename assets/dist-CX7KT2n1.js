@@ -1,0 +1,1 @@
+var e={name:`vector`,setup:async(e,t)=>({emscriptenOpts:t,bundlePath:new URL(`/assets/vector.tar-DveqyHs9.gz`,``+import.meta.url)})};export{e as vector};

@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-BR5YL-9f-C6JE7Lgk.js";e();var t={name:`citext`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/citext.tar-9R6jfWSw-9R6jfWSw.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as citext};

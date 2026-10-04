@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-QY3QWFKW--Q_mGPOy.js";e();var t={name:`btree_gin`,setup:async(e,t)=>({bundlePath:new URL(`/assets/btree_gin.tar-B0oYTLwP.gz`,``+import.meta.url)})};export{t as btree_gin};

@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-BR5YL-9f-C6JE7Lgk.js";e();var t={name:`lo`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/lo.tar-Wbg4cu0O-Wbg4cu0O.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as lo};

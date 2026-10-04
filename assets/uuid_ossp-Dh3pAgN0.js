@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-QY3QWFKW--Q_mGPOy.js";e();var t={name:`uuid-ossp`,setup:async(e,t)=>({bundlePath:new URL(`/assets/uuid-ossp.tar-D0EYXo2x.gz`,``+import.meta.url)})};export{t as uuid_ossp};

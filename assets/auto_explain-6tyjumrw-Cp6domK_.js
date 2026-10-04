@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-BR5YL-9f-C6JE7Lgk.js";e();var t={name:`auto_explain`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/auto_explain.tar-DrYO8nKA-DrYO8nKA.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as auto_explain};

@@ -1,0 +1,1 @@
+var e={name:`pgmq`,setup:async(e,t)=>({emscriptenOpts:t,bundlePath:new URL(`/assets/pgmq.tar-DOMpPWFR.gz`,``+import.meta.url)})};export{e as pgmq};

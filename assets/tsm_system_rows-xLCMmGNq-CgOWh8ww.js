@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-BR5YL-9f-C6JE7Lgk.js";e();var t={name:`tsm_system_rows`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/tsm_system_rows.tar-CRJD8gLw-CRJD8gLw.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as tsm_system_rows};

@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@eclipse-docks/core": "*",
-    "@huggingface/transformers": "^3.8.0"
+    "@huggingface/transformers": "^4.3.0"
   },
   "devDependencies": {
     "typescript": "^6.0.0",

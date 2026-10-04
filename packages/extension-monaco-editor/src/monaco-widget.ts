@@ -1,15 +1,16 @@
 import * as monaco from 'monaco-editor';
-import styles from "monaco-editor/min/vs/editor/editor.main.css?raw";
+// Monaco 0.56+ rewrites package subpaths to esm/vs/*.js, so the bundled CSS is not importable by name.
+import styles from '../../../node_modules/monaco-editor/min/vs/editor/editor.main.css?raw';
 import { customElement, property } from "lit/decorators.js";
 import { LitElement, PropertyValues } from "lit";
 import { css, html } from "lit";
 import { createRef, ref } from "lit/directives/ref.js";
 
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker';
-import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker.js?worker';
-import CssWorker from 'monaco-editor/esm/vs/language/css/css.worker.js?worker';
-import HtmlWorker from 'monaco-editor/esm/vs/language/html/html.worker.js?worker';
-import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker.js?worker';
+import EditorWorker from 'monaco-editor/editor/editor.worker.js?worker';
+import JsonWorker from 'monaco-editor/language/json/json.worker.js?worker';
+import CssWorker from 'monaco-editor/language/css/css.worker.js?worker';
+import HtmlWorker from 'monaco-editor/language/html/html.worker.js?worker';
+import TsWorker from 'monaco-editor/language/typescript/ts.worker.js?worker';
 
 import { ensureContributedGrammars, watchContributedGrammars } from './monaco-grammars';
 

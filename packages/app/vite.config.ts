@@ -39,7 +39,7 @@ export default defineConfig({
       shortName: 'Docks',
       appDescription:
         'A modular, extensible web application framework for IDE-like applications.',
-      // CereusDB full worker can exceed 139 MiB in prod builds.
+      // CereusDB wasm assets are separate files, up to ~40 MiB for the full variant.
       maximumFileSizeToCacheInBytes: 200 * 1024 * 1024,
       serviceWorkerConfig: {
         navigationRoute: {

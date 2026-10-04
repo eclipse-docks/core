@@ -18,10 +18,10 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@cereusdb/full": "^0.1.2",
-    "@cereusdb/global": "^0.1.2",
-    "@cereusdb/minimal": "^0.1.2",
-    "@cereusdb/standard": "^0.1.2",
+    "@cereusdb/full": "^0.3.0",
+    "@cereusdb/global": "^0.3.0",
+    "@cereusdb/minimal": "^0.3.0",
+    "@cereusdb/standard": "^0.3.0",
     "@eclipse-docks/core": "*",
     "@eclipse-docks/extension-catalog": "*",
     "@eclipse-docks/extension-notebook": "*",

@@ -10,23 +10,28 @@ export { CEREUS_VARIANTS } from './cereusdb-variants';
 
 type WorkerFactory = new () => Worker;
 
-async function loadWorkerFactoryForVariant(
-  variant: CereusVariantId,
-): Promise<WorkerFactory> {
-  switch (variant) {
-    case 'minimal':
-      return (await import('./cereusdb-worker-minimal.ts?worker&inline')).default;
-    case 'standard':
-      return (await import('./cereusdb-worker-standard.ts?worker&inline')).default;
-    case 'full':
-      return (await import('./cereusdb-worker-full.ts?worker&inline')).default;
-    case 'global':
-      return (await import('./cereusdb-worker-global.ts?worker&inline')).default;
-    default: {
-      const neverVariant: never = variant;
-      throw new Error(`Unknown CereusDB variant: ${String(neverVariant)}`);
-    }
+let workerFactory: WorkerFactory | null = null;
+
+async function loadWorkerFactory(): Promise<WorkerFactory> {
+  if (!workerFactory) {
+    workerFactory = (await import('./cereusdb-worker.ts?worker&inline')).default;
   }
+  return workerFactory;
+}
+
+const wasmUrlLoaders: Record<CereusVariantId, () => Promise<{ default: string }>> = {
+  minimal: () => import('@cereusdb/minimal/wasm?url&no-inline'),
+  standard: () => import('@cereusdb/standard/wasm?url&no-inline'),
+  full: () => import('@cereusdb/full/wasm?url&no-inline'),
+  global: () => import('@cereusdb/global/wasm?url&no-inline'),
+};
+
+async function loadWasmUrl(variant: CereusVariantId): Promise<string> {
+  const load = wasmUrlLoaders[variant];
+  if (!load) {
+    throw new Error(`Unknown CereusDB variant: ${String(variant)}`);
+  }
+  return (await load()).default;
 }
 
 function rowsToMatrix(rows: Record<string, unknown>[]): {
@@ -51,6 +56,7 @@ export class CereusSqlDatabase implements SqlDatabase {
 
   private readonly variant: CereusVariantId;
   private worker: Worker | null = null;
+  private wasmUrl: string | null = null;
   private msgId = 0;
   private pending = new Map<
     number,
@@ -73,7 +79,7 @@ export class CereusSqlDatabase implements SqlDatabase {
 
   private async spawnWorker(): Promise<void> {
     if (this.worker) return;
-    const WorkerCtor = await loadWorkerFactoryForVariant(this.variant);
+    const WorkerCtor = await loadWorkerFactory();
     const w = new WorkerCtor();
     w.onmessage = (ev: MessageEvent) => {
       const { id, ok, error, rows, version } = ev.data as {
@@ -95,11 +101,20 @@ export class CereusSqlDatabase implements SqlDatabase {
     this.worker = w;
   }
 
+  private async resolveWasmUrl(): Promise<string> {
+    if (!this.wasmUrl) {
+      this.wasmUrl = await loadWasmUrl(this.variant);
+    }
+    return this.wasmUrl;
+  }
+
   private async rpc(
     type: 'init' | 'sql' | 'version',
     sql?: string,
   ): Promise<WorkerResult> {
     await this.spawnWorker();
+    const wasmUrl = type === 'init' ? await this.resolveWasmUrl() : undefined;
+    const variant = type === 'init' ? this.variant : undefined;
     const id = ++this.msgId;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
@@ -107,6 +122,8 @@ export class CereusSqlDatabase implements SqlDatabase {
         id,
         type,
         sql,
+        wasmUrl,
+        variant,
       });
     });
   }

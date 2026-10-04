@@ -27,7 +27,7 @@ const CEREUSDB_CATALOG: CatalogContribution = {
       contributionId: 'catalog.cereusdb.spatial',
       items: [
         {
-          label: 'Spatial predicates (GEOS)',
+          label: 'Parcel overlap (GEOS)',
           icon: 'file-code',
           state: {
             url: new URL('./catalog/spatial-predicates.sql', import.meta.url)

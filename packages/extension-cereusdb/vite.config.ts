@@ -16,19 +16,35 @@ const isExternal = (id: string): boolean => {
 };
 
 const outputPath = (id: string): string => {
-  if (isCereusDbPackage(id)) {
-    const slash = id.indexOf('/', '@cereusdb/'.length);
-    return slash === -1 ? id : id.slice(0, slash);
-  }
+  if (isCereusDbPackage(id)) return id;
   if (id.endsWith('package.json')) return '../package.json';
   return id;
 };
 
+/** Leave wasm URL imports for the app bundler. This library build inlines assets. */
+const externalizeCereusWasmUrls = () => ({
+  name: 'externalize-cereus-wasm-urls',
+  enforce: 'pre' as const,
+  resolveId(id: string) {
+    const spec = id.split('?')[0];
+    if (spec.startsWith('@cereusdb/') && spec.endsWith('/wasm')) {
+      return { id, external: true };
+    }
+    return null;
+  },
+});
+
 export default defineConfig({
   worker: {
     format: 'es',
+    rolldownOptions: {
+      output: {
+        codeSplitting: false,
+      },
+    },
   },
   plugins: [
+    externalizeCereusWasmUrls(),
     dts({
       outDir: 'dist',
       entryRoot: 'src',

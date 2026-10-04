@@ -16,7 +16,7 @@ const DEFINITIONS: PgliteExtensionDefinition[] = [
     id: 'vector',
     label: 'pgvector',
     description: 'Vector similarity search',
-    load: async () => import('@electric-sql/pglite/vector'),
+    load: async () => import('@electric-sql/pglite-pgvector'),
   },
   {
     id: 'amcheck',
@@ -28,7 +28,7 @@ const DEFINITIONS: PgliteExtensionDefinition[] = [
     id: 'age',
     label: 'Apache AGE',
     description: 'Graph database extension on top of PostgreSQL',
-    load: async () => import('@electric-sql/pglite/age'),
+    load: async () => import('@electric-sql/pglite-age'),
   },
   {
     id: 'auto_explain',
@@ -149,13 +149,13 @@ const DEFINITIONS: PgliteExtensionDefinition[] = [
     id: 'pg_hashids',
     label: 'pg_hashids',
     description: 'Hashids support for Postgres',
-    load: async () => import('@electric-sql/pglite/pg_hashids'),
+    load: async () => import('@electric-sql/pglite-pg_hashids'),
   },
   {
     id: 'pg_ivm',
     label: 'pg_ivm',
     description: 'Incremental view maintenance',
-    load: async () => import('@electric-sql/pglite/pg_ivm'),
+    load: async () => import('@electric-sql/pglite-pg_ivm'),
   },
   {
     id: 'pg_surgery',
@@ -173,7 +173,7 @@ const DEFINITIONS: PgliteExtensionDefinition[] = [
     id: 'pg_uuidv7',
     label: 'pg_uuidv7',
     description: 'UUID v7 generation',
-    load: async () => import('@electric-sql/pglite/pg_uuidv7'),
+    load: async () => import('@electric-sql/pglite-pg_uuidv7'),
   },
   {
     id: 'pg_visibility',
@@ -197,7 +197,7 @@ const DEFINITIONS: PgliteExtensionDefinition[] = [
     id: 'pgtap',
     label: 'pgtap',
     description: 'TAP-emitting unit tests for Postgres',
-    load: async () => import('@electric-sql/pglite/pgtap'),
+    load: async () => import('@electric-sql/pglite-pgtap'),
   },
   {
     id: 'seg',

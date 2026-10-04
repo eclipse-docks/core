@@ -12,6 +12,74 @@ export { CEREUS_VARIANTS } from './cereusdb-variants';
 const IN_MEMORY_KEY = '';
 const DB_NAME_REGEX = /^[a-zA-Z0-9_.-]+$/;
 
+function databasesRoot(variant: CereusVariantId): string {
+  return `cereusdb-${variant}-databases`;
+}
+
+async function opfsRoot(
+  variant: CereusVariantId,
+  create: boolean,
+): Promise<FileSystemDirectoryHandle | null> {
+  const root = await navigator.storage.getDirectory();
+  try {
+    return await root.getDirectoryHandle(databasesRoot(variant), { create });
+  } catch (err) {
+    if (!create && err instanceof DOMException && err.name === 'NotFoundError') {
+      return null;
+    }
+    throw err;
+  }
+}
+
+async function listDatabaseNames(variant: CereusVariantId): Promise<string[]> {
+  const dir = await opfsRoot(variant, false);
+  if (!dir) return [];
+  const names: string[] = [];
+  for await (const [name, handle] of dir.entries()) {
+    if (handle.kind === 'directory') names.push(name);
+  }
+  return names.sort();
+}
+
+async function databaseExists(
+  variant: CereusVariantId,
+  name: string,
+): Promise<boolean> {
+  const dir = await opfsRoot(variant, false);
+  if (!dir) return false;
+  try {
+    await dir.getDirectoryHandle(name);
+    return true;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'NotFoundError') return false;
+    throw err;
+  }
+}
+
+async function createDatabaseDir(
+  variant: CereusVariantId,
+  name: string,
+): Promise<void> {
+  const dir = await opfsRoot(variant, true);
+  if (!dir) throw new Error('OPFS is not available');
+  const dbDir = await dir.getDirectoryHandle(name, { create: true });
+  await dbDir.getDirectoryHandle(name, { create: true });
+}
+
+async function removeDatabaseDir(
+  variant: CereusVariantId,
+  name: string,
+): Promise<void> {
+  const dir = await opfsRoot(variant, false);
+  if (!dir) return;
+  try {
+    await dir.removeEntry(name, { recursive: true });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'NotFoundError') return;
+    throw err;
+  }
+}
+
 type WorkerFactory = new () => Worker;
 
 let workerFactory: WorkerFactory | null = null;
@@ -71,7 +139,6 @@ export class CereusSqlDatabase implements SqlDatabase {
   readonly engineId: string;
 
   private readonly variant: CereusVariantId;
-  private readonly names = new Set<string>();
   private readonly slots = new Map<string, ConnectionSlot>();
   private wasmUrl: string | null = null;
   private selectedConnectionId: string | null = null;
@@ -168,7 +235,7 @@ export class CereusSqlDatabase implements SqlDatabase {
   }
 
   async listConnections(): Promise<SqlConnectionInfo[]> {
-    const named = [...this.names].sort().map((name) => ({
+    const named = (await listDatabaseNames(this.variant)).map((name) => ({
       id: name,
       label: name,
     }));
@@ -183,7 +250,7 @@ export class CereusSqlDatabase implements SqlDatabase {
   }
 
   async selectConnection(id: string | null): Promise<void> {
-    if (id !== null && !this.names.has(id)) {
+    if (id !== null && !(await databaseExists(this.variant, id))) {
       throw new Error(`Unknown CereusDB database: ${id}`);
     }
     const slot = this.slotFor(id);
@@ -206,20 +273,25 @@ export class CereusSqlDatabase implements SqlDatabase {
       toastError('Name may only contain letters, numbers, and . _ -');
       return null;
     }
-    if (this.names.has(name)) {
+    if ((await listDatabaseNames(this.variant)).includes(name)) {
       toastError(`Database "${name}" already exists`);
       return null;
     }
-    this.names.add(name);
+    try {
+      await createDatabaseDir(this.variant, name);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to create database');
+      return null;
+    }
     return { id: name, label: name };
   }
 
   async deleteConnection(id: string): Promise<void> {
-    if (!id || !this.names.has(id)) return;
+    if (!id || !(await databaseExists(this.variant, id))) return;
     const slot = this.slots.get(id);
     if (slot) this.disposeSlot(slot);
     this.slots.delete(id);
-    this.names.delete(id);
+    await removeDatabaseDir(this.variant, id);
     if (this.selectedConnectionId === id) {
       this.selectedConnectionId = null;
     }
@@ -246,7 +318,6 @@ export class CereusSqlDatabase implements SqlDatabase {
       this.disposeSlot(slot);
     }
     this.slots.clear();
-    this.names.clear();
     this.selectedConnectionId = null;
   }
 }

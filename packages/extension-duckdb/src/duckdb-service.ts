@@ -13,7 +13,18 @@ const EXTENSION_NAME_REGEX = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 const DB_NAME_REGEX = /^[a-zA-Z0-9_.-]+$/;
 const WORKSPACE_PREFIX = '/workspace/';
 
-function pathFor(name: string): string {
+const LEGACY_FILE_SUFFIXES = [
+  '.duckdb',
+  '.duckdb.wal',
+  '.duckdb.wal.checkpoint',
+  '.duckdb.wal.recovery',
+] as const;
+
+function folderPathFor(name: string): string {
+  return `opfs://${OPFS_DB_DIR}/${name}/${name}.duckdb`;
+}
+
+function legacyPathFor(name: string): string {
   return `opfs://${OPFS_DB_DIR}/${name}.duckdb`;
 }
 
@@ -46,9 +57,33 @@ function tableToPlainArrays(table: { toArray?: () => unknown[] }): { columns: st
   return { columns, rows };
 }
 
-async function ensureOPFSDatabaseDir(): Promise<void> {
+async function opfsDbDir(create: boolean): Promise<FileSystemDirectoryHandle | null> {
   const root = await navigator.storage.getDirectory();
-  await root.getDirectoryHandle(OPFS_DB_DIR, { create: true });
+  try {
+    return await root.getDirectoryHandle(OPFS_DB_DIR, { create });
+  } catch (err) {
+    if (!create && err instanceof DOMException && err.name === 'NotFoundError') return null;
+    throw err;
+  }
+}
+
+async function resolveDatabasePath(name: string): Promise<string> {
+  const dir = await opfsDbDir(true);
+  if (!dir) throw new Error('OPFS is not available');
+  try {
+    await dir.getDirectoryHandle(name);
+    return folderPathFor(name);
+  } catch (err) {
+    if (!(err instanceof DOMException && err.name === 'NotFoundError')) throw err;
+  }
+  try {
+    await dir.getFileHandle(`${name}.duckdb`);
+    return legacyPathFor(name);
+  } catch (err) {
+    if (!(err instanceof DOMException && err.name === 'NotFoundError')) throw err;
+  }
+  await dir.getDirectoryHandle(name, { create: true });
+  return folderPathFor(name);
 }
 
 async function createConnection(path: string | null): Promise<{
@@ -66,7 +101,6 @@ async function createConnection(path: string | null): Promise<{
   const db = new duckdb.AsyncDuckDB(log, worker);
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
   if (path) {
-    await ensureOPFSDatabaseDir();
     await db.open({
       path,
       accessMode: duckdb.DuckDBAccessMode.READ_WRITE,
@@ -230,7 +264,7 @@ export class DuckDBService {
   }
 
   /**
-   * Open a database by name. Stored in OPFS as `duckdb-databases/<name>.duckdb`. Omit name for in-memory.
+   * Open a database by name. Stored in OPFS as `duckdb-databases/<name>/<name>.duckdb`. Omit name for in-memory.
    * Returns the same abstraction if that database is already open.
    */
   async open(name?: string): Promise<DuckDBDatabase> {
@@ -243,7 +277,7 @@ export class DuckDBService {
     }
 
     const nameOrNull = name === undefined || name === '' ? null : name;
-    const path = nameOrNull ? pathFor(nameOrNull) : null;
+    const path = nameOrNull ? await resolveDatabasePath(nameOrNull) : null;
     const { db, conn, worker } = await createConnection(path);
 
     const dbObj = new DuckDBDatabase(
@@ -259,19 +293,24 @@ export class DuckDBService {
   }
 
   /**
-   * List persisted database names (files in OPFS under duckdb-databases/, without .duckdb extension).
+   * List persisted database names. New databases are directories under duckdb-databases/.
+   * Older databases are a `<name>.duckdb` file in that directory.
    */
   async listDatabases(): Promise<string[]> {
     try {
-      const root = await navigator.storage.getDirectory();
-      const dir = await root.getDirectoryHandle(OPFS_DB_DIR, { create: false });
-      const names: string[] = [];
-      for await (const [entryName, handle] of (dir as unknown as AsyncIterable<[string, FileSystemHandle]>)) {
+      const dir = await opfsDbDir(false);
+      if (!dir) return [];
+      const names = new Set<string>();
+      for await (const [entryName, handle] of dir.entries()) {
+        if (handle.kind === 'directory') {
+          names.add(entryName);
+          continue;
+        }
         if (handle.kind === 'file' && entryName.endsWith('.duckdb')) {
-          names.push(entryName.slice(0, -'.duckdb'.length));
+          names.add(entryName.slice(0, -'.duckdb'.length));
         }
       }
-      return names.sort();
+      return [...names].sort();
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'NotFoundError') return [];
       const msg = err instanceof Error ? err.message : String(err);
@@ -293,16 +332,36 @@ export class DuckDBService {
   }
 
   private async removeOPFSDatabase(name: string): Promise<void> {
-    try {
-      const root = await navigator.storage.getDirectory();
-      const dir = await root.getDirectoryHandle(OPFS_DB_DIR, { create: false });
-      await dir.removeEntry(`${name}.duckdb`);
-      logger.info(`DuckDB removed: ${name}`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      logger.error(`Failed to delete database ${name}: ${msg}`);
-      throw new Error(`Failed to delete database: ${msg}`);
+    const dir = await opfsDbDir(false);
+    if (!dir) {
+      throw new Error(`Failed to delete database: ${name} was not found`);
     }
+    let removed = false;
+    try {
+      await dir.removeEntry(name, { recursive: true });
+      removed = true;
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === 'NotFoundError')) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.error(`Failed to delete database ${name}: ${msg}`);
+        throw new Error(`Failed to delete database: ${msg}`);
+      }
+    }
+    for (const suffix of LEGACY_FILE_SUFFIXES) {
+      try {
+        await dir.removeEntry(`${name}${suffix}`);
+        removed = true;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'NotFoundError') continue;
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.error(`Failed to delete database ${name}: ${msg}`);
+        throw new Error(`Failed to delete database: ${msg}`);
+      }
+    }
+    if (!removed) {
+      throw new Error(`Failed to delete database: ${name} was not found`);
+    }
+    logger.info(`DuckDB removed: ${name}`);
   }
 }
 

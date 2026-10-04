@@ -17,15 +17,36 @@ const isExternal = (id: string): boolean => {
   return true;
 };
 
-/** Emit portable specifiers: pglite → package name, package.json → relative path. */
+/** Keep package specifiers intact, including sibling @electric-sql/pglite-* packages. */
 const outputPath = (id: string): string => {
   if (isPgliteEntry(id)) return id;
-  if (id.includes('@electric-sql/pglite')) return PGLITE_PKG;
   if (id.endsWith('package.json')) return '../package.json';
   return id;
 };
 
+const keepPgliteAssetsExternal = () => ({
+  name: 'keep-pglite-assets-external',
+  enforce: 'pre' as const,
+  transform(code: string, id: string) {
+    if (!id.includes('@electric-sql/pglite')) return null;
+    if (!code.includes('.wasm') && !code.includes('.tar.gz') && !code.includes('.data')) return null;
+    const next = code.replace(
+      /new URL\((["'])([^"'?]+?\.(?:wasm|tar\.gz|data))\1/g,
+      (_match, quote: string, file: string) => `new URL(${quote}${file}?no-inline${quote}`,
+    );
+    return next === code ? null : { code: next, map: null };
+  },
+});
+
 export default defineConfig({
+  base: './',
+  worker: {
+    format: 'es' as const,
+    plugins: () => [keepPgliteAssetsExternal()],
+    rolldownOptions: {
+      external: (id: string) => id.startsWith('@eclipse-docks/'),
+    },
+  },
   plugins: [
     dts({
       outDir: 'dist',

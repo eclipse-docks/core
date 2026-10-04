@@ -1,52 +1,85 @@
-import type { PGlite } from '@electric-sql/pglite';
+import type { Extension, Extensions } from '@electric-sql/pglite';
 import type {
   SqlAdapterContribution,
   SqlConnectionInfo,
   SqlDatabase,
   SqlDatabaseExtensionInfo,
 } from '@eclipse-docks/extension-sqleditor';
-import {
-  appSettings,
-  toastError,
-  toastInfo,
-  promptDialog,
-} from '@eclipse-docks/core';
+import { toastError, toastInfo, promptDialog } from '@eclipse-docks/core';
 import {
   listPgliteExtensions,
   loadPgliteExtensionModule,
 } from './pglite-extensions';
 
-async function createPglite(
-  persistentId?: string,
-  extensions?: Record<string, unknown>,
-): Promise<PGlite> {
-  const { PGlite: PGliteCtor } = await import('@electric-sql/pglite');
-  const options =
-    extensions && Object.keys(extensions).length > 0 ? { extensions } : {};
-  const AnyPGlite = PGliteCtor as unknown as {
-    new (dataDirOrOptions?: unknown, optionsOrUndefined?: unknown): PGlite;
-  };
-  return persistentId
-    ? new AnyPGlite(`idb://${persistentId}`, options)
-    : new AnyPGlite(options);
-}
-const PGLITE_DB_SETTING_KEY = 'pglite.databases';
+const OPFS_ROOT = 'pglite-databases';
 const DB_NAME_REGEX = /^[a-zA-Z0-9_.-]+$/;
 
-async function getDatabaseNames(): Promise<string[]> {
-  const stored = await appSettings.get(PGLITE_DB_SETTING_KEY);
-  if (!Array.isArray(stored)) return [];
-  return stored.filter((name): name is string => typeof name === 'string').sort();
+type ActiveDatabase = {
+  query(sql: string): Promise<{ rows: unknown }>;
+  close(): Promise<void>;
+};
+
+function opfsDataDir(name: string): string {
+  return `opfs-ahp://${OPFS_ROOT}/${name}`;
 }
 
-async function saveDatabaseNames(names: string[]): Promise<void> {
-  await appSettings.set(PGLITE_DB_SETTING_KEY, [...new Set(names)].sort());
+async function opfsRoot(create: boolean): Promise<FileSystemDirectoryHandle | null> {
+  const root = await navigator.storage.getDirectory();
+  try {
+    return await root.getDirectoryHandle(OPFS_ROOT, { create });
+  } catch (err) {
+    if (!create && err instanceof DOMException && err.name === 'NotFoundError') {
+      return null;
+    }
+    throw err;
+  }
+}
+
+async function listDatabaseNames(): Promise<string[]> {
+  const dir = await opfsRoot(false);
+  if (!dir) return [];
+  const names: string[] = [];
+  for await (const [name, handle] of dir.entries()) {
+    if (handle.kind === 'directory') names.push(name);
+  }
+  return names.sort();
+}
+
+async function createDatabaseDir(name: string): Promise<void> {
+  const dir = await opfsRoot(true);
+  if (!dir) throw new Error('OPFS is not available');
+  await dir.getDirectoryHandle(name, { create: true });
+}
+
+async function removeDatabaseDir(name: string): Promise<void> {
+  const dir = await opfsRoot(false);
+  if (!dir) return;
+  await dir.removeEntry(name, { recursive: true });
+}
+
+async function createPglite(
+  persistentId: string | undefined,
+  extensions: Extensions | undefined,
+  extensionIds: string[],
+): Promise<ActiveDatabase> {
+  if (!persistentId) {
+    const { PGlite: PGliteCtor } = await import('@electric-sql/pglite');
+    return PGliteCtor.create(extensions ? { extensions } : undefined);
+  }
+  const [{ PGliteWorker }, workerModule] = await Promise.all([
+    import('@electric-sql/pglite/worker'),
+    import('./pglite-opfs-worker.ts?worker'),
+  ]);
+  return PGliteWorker.create(new workerModule.default(), {
+    dataDir: opfsDataDir(persistentId),
+    meta: { extensionIds },
+  });
 }
 
 class PgliteSqlDatabase implements SqlDatabase {
   readonly engineId = 'pglite';
 
-  private db: PGlite | null = null;
+  private db: ActiveDatabase | null = null;
   private currentId: string | null = null;
   private enabledExtensions = new Set<string>();
 
@@ -55,7 +88,7 @@ class PgliteSqlDatabase implements SqlDatabase {
   }
 
   async listConnections(): Promise<SqlConnectionInfo[]> {
-    const names = await getDatabaseNames();
+    const names = await listDatabaseNames();
     return [
       {
         id: null,
@@ -70,14 +103,24 @@ class PgliteSqlDatabase implements SqlDatabase {
   }
 
   async selectConnection(id: string | null): Promise<void> {
-    if (this.db && this.currentId === id) return;
-    if (this.db && this.db.close) {
-      await this.db.close();
-    }
-    this.db = null;
-    const extensions = await this.resolveEnabledExtensions();
-    this.db = await createPglite(id ?? undefined, extensions);
+    await this.open(id);
+  }
+
+  private async open(id: string | null): Promise<ActiveDatabase> {
+    if (this.db && this.currentId === id) return this.db;
+    if (this.db) await this.db.close();
+    const persistentId = id ?? undefined;
+    const extensions = persistentId
+      ? undefined
+      : await this.resolveEnabledExtensions();
+    const db = await createPglite(
+      persistentId,
+      extensions,
+      [...this.enabledExtensions],
+    );
+    this.db = db;
     this.currentId = id;
+    return db;
   }
 
   async readVersion(): Promise<string> {
@@ -126,12 +169,17 @@ class PgliteSqlDatabase implements SqlDatabase {
       toastError('Name may only contain letters, numbers, and . _ -');
       return null;
     }
-    const existing = await getDatabaseNames();
+    const existing = await listDatabaseNames();
     if (existing.includes(name)) {
       toastError(`Database "${name}" already exists`);
       return null;
     }
-    await saveDatabaseNames([...existing, name]);
+    try {
+      await createDatabaseDir(name);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to create database');
+      return null;
+    }
     toastInfo(`Database "${name}" created`);
     return {
       id: name,
@@ -142,13 +190,10 @@ class PgliteSqlDatabase implements SqlDatabase {
 
   async deleteConnection(id: string): Promise<void> {
     if (!id) return;
-    const names = await getDatabaseNames();
-    if (!names.includes(id)) return;
-    const next = names.filter((n) => n !== id);
-    await saveDatabaseNames(next);
     if (this.currentId === id) {
       await this.close();
     }
+    await removeDatabaseDir(id);
   }
 
   async listDbExtensions(): Promise<SqlDatabaseExtensionInfo[]> {
@@ -184,31 +229,24 @@ class PgliteSqlDatabase implements SqlDatabase {
 
   async enableDbExtension(id: string): Promise<void> {
     this.enabledExtensions.add(id);
+    const connectionId = this.currentId;
     if (this.db) {
-      await this.db.close?.();
+      await this.db.close();
       this.db = null;
     }
-    await this.selectConnection(this.currentId ?? null);
-    if (!this.db) return;
-    const db = this.db as PGlite;
+    const db = await this.open(connectionId);
     await db.query(`CREATE EXTENSION IF NOT EXISTS ${id};`);
   }
 
-  private async resolveEnabledExtensions(): Promise<
-    Record<string, unknown> | undefined
-  > {
-    if (!this.enabledExtensions.size) {
-      return undefined;
-    }
-    const entries: [string, unknown][] = await Promise.all(
-      [...this.enabledExtensions].map(
-        async (extId): Promise<[string, unknown]> => [
-          extId,
-          await loadPgliteExtensionModule(extId),
-        ],
-      ),
+  private async resolveEnabledExtensions(): Promise<Extensions | undefined> {
+    if (!this.enabledExtensions.size) return undefined;
+    const entries = await Promise.all(
+      [...this.enabledExtensions].map(async (extId) => {
+        const ext = await loadPgliteExtensionModule(extId);
+        return [extId, ext as Extension] as const;
+      }),
     );
-    const result: Record<string, unknown> = {};
+    const result: Extensions = {};
     for (const [extId, ext] of entries) {
       result[extId] = ext;
     }

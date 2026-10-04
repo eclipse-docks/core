@@ -18,7 +18,7 @@ contributionRegistry.registerContribution(TOOLBAR_MAIN, {
       "
     >
       <img
-        src="/logo.svg"
+        src="/logo-loading.svg"
         alt="Eclipse Docks"
         style="display: block; height: 28px; width: auto;"
       />

@@ -1,0 +1,1 @@
+import{_ as t,o,c as s,ae as a}from"./chunks/framework.BIONGpTb.js";const g=JSON.parse('{"title":"What is Eclipse Docks","description":"","frontmatter":{},"headers":[],"relativePath":"intro.md","filePath":"intro.md"}'),n={name:"intro.md"};function i(r,e,c,d,l,h){return o(),s("div",null,[...e[0]||(e[0]=[a("",5)])])}const m=t(n,[["render",i]]);export{g as __pageData,m as default};

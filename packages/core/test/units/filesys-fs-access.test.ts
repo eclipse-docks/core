@@ -143,6 +143,11 @@ describe('filesys/fs-access', () => {
     expect(await dir.getResource('missing.txt')).toBeNull();
     const created = await dir.getResource('nested/a.txt', { create: true });
     expect(created).toBeTruthy();
+    const children = await dir.listChildren(true);
+    expect(children.map((child) => child.getName())).toEqual(['nested']);
+    expect(children[0]).toBeInstanceOf(FileSysDirHandleResource);
+    const nestedChildren = await (children[0] as FileSysDirHandleResource).listChildren(true);
+    expect(nestedChildren.map((child) => child.getName())).toEqual(['a.txt']);
     await expect(dir.getResource('')).rejects.toThrow('No path provided');
   });
 

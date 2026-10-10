@@ -784,7 +784,7 @@ export class WorkspaceService {
     public async copyResource(
         src: Resource,
         destDir: Directory,
-        options?: { move?: boolean; newName?: string }
+        options?: { move?: boolean; newName?: string; onFile?: (targetPath: string) => void }
     ): Promise<void> {
         await this.initPromise;
         const workspace = this._currentWorkspace;
@@ -797,6 +797,7 @@ export class WorkspaceService {
         const targetBasePath = destDirPath ? `${destDirPath}/${targetName}` : targetName;
 
         const copyFileToPath = async (file: File, targetPath: string): Promise<void> => {
+            options?.onFile?.(targetPath);
             const contents = await file.getContents({ blob: true });
             const targetFile = await workspace.getResource(targetPath, { create: true }) as File | null;
             if (!targetFile) {

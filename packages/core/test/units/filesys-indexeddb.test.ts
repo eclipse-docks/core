@@ -22,6 +22,24 @@ describe('filesys/indexeddb', () => {
     expect(content).toBe('hello indexeddb');
   });
 
+  it('keeps a nested drop path as directories instead of flattening files', async () => {
+    const root = new IDBRootDirectory('Root', 'root-nested');
+    await root.getResource('proj/sub/a.txt', { create: true });
+    await root.getResource('proj/b.txt', { create: true });
+
+    const top = await root.listChildren(true);
+    expect(top.map((child) => child.getName())).toEqual(['proj']);
+    expect(top[0]).toBeInstanceOf((await import('../../src/core/filesys/common')).Directory);
+
+    const proj = top[0] as import('../../src/core/filesys/indexeddb').IDBDirectoryResource;
+    const projChildren = await proj.listChildren(true);
+    expect(projChildren.map((child) => child.getName()).sort()).toEqual(['b.txt', 'sub']);
+
+    const sub = projChildren.find((child) => child.getName() === 'sub');
+    const subChildren = await (sub as import('../../src/core/filesys/indexeddb').IDBDirectoryResource).listChildren(true);
+    expect(subChildren.map((child) => child.getName())).toEqual(['a.txt']);
+  });
+
   it('migrates legacy string content to blob on read', async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const req = indexedDB.open('eclipse-docks-workspace-idb', 1);

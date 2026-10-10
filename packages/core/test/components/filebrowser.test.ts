@@ -5,6 +5,7 @@ import { activeSelectionSignal } from '../../src/core/appstate';
 import { commandRegistry } from '../../src/core/commandregistry';
 import type { TreeNode } from '../../src/core/tree-utils';
 import type { Resource } from '../../src/core/filesys';
+import type { ProgressMonitor } from '../../src/core/taskservice';
 import {
   Directory,
   File,
@@ -75,7 +76,7 @@ class TestFile extends File {
     return '';
   }
 
-  async saveContents() {}
+  async saveContents(_contents?: unknown) {}
 
   async size() {
     return 0;
@@ -113,7 +114,7 @@ class TestDir extends Directory {
     return this.childResources;
   }
 
-  async getResource() {
+  async getResource(_path?: string, _options?: { create?: boolean }): Promise<Resource | null> {
     return null;
   }
 
@@ -479,18 +480,6 @@ describe('docks-filebrowser', () => {
     fb.remove();
   });
 
-  it('buildTargetPath joins directory path and file name', async () => {
-    const fb = await mountFileBrowser();
-    const dir = new TestDir('sub', undefined, []);
-    vi.spyOn(dir, 'getWorkspacePath').mockReturnValue('A/sub');
-    const path = (fb as unknown as { buildTargetPath: (d: Directory, n: string) => string }).buildTargetPath(
-      dir,
-      'blob.bin'
-    );
-    expect(path).toBe('A/sub/blob.bin');
-    fb.remove();
-  });
-
   it('loadNodeChildren populates lazy directory nodes', async () => {
     const fb = await mountFileBrowser();
     class LazyDir extends TestDir {
@@ -580,21 +569,130 @@ describe('docks-filebrowser', () => {
       } as unknown as DragEvent,
       targetDir
     );
-    expect(copySpy).toHaveBeenCalledWith(srcFile, targetDir, { move: true });
+    expect(copySpy).toHaveBeenCalledWith(srcFile, targetDir, { move: true, onFile: expect.any(Function) });
     expect(loadSpy).toHaveBeenCalled();
     fb.remove();
   });
+
+  type FilesDropAccess = {
+    handleFilesDrop: (
+      uploads: { relativePath: string; file: globalThis.File }[],
+      d: Directory,
+      progress: ProgressMonitor
+    ) => Promise<void>;
+  };
+  const newProgress = (): ProgressMonitor => ({ name: '', message: '', currentStep: 0, totalSteps: -1, progress: -1 });
 
   it('handleFilesDrop returns early when file list is empty', async () => {
     const fb = await mountFileBrowser();
     const target = new TestDir('t', undefined, []);
     (fb as unknown as { workspaceDir?: Directory }).workspaceDir = target;
-    await (
-      fb as unknown as {
-        handleFilesDrop: (files: globalThis.File[], d: Directory) => Promise<void>;
-      }
-    ).handleFilesDrop([], target);
+    await (fb as unknown as FilesDropAccess).handleFilesDrop([], target, newProgress());
     expect(confirmDialogMock).not.toHaveBeenCalled();
+    fb.remove();
+  });
+
+  it('collectDroppedUploads keeps nested folder paths', async () => {
+    const { collectDroppedUploads } = await import('../../src/components/filebrowser');
+    const nested = new globalThis.File(['a'], 'a.txt');
+    const sibling = new globalThis.File(['b'], 'b.txt');
+    const nestedEntry = {
+      isFile: true,
+      isDirectory: false,
+      fullPath: '/proj/sub/a.txt',
+      name: 'a.txt',
+      file: (success: (file: globalThis.File) => void) => success(nested),
+    };
+    const siblingEntry = {
+      isFile: true,
+      isDirectory: false,
+      fullPath: '/proj/b.txt',
+      name: 'b.txt',
+      file: (success: (file: globalThis.File) => void) => success(sibling),
+    };
+    const subDir = {
+      isFile: false,
+      isDirectory: true,
+      fullPath: '/proj/sub',
+      name: 'sub',
+      createReader: () => {
+        const batches = [[nestedEntry], []];
+        let index = 0;
+        return {
+          readEntries: (success: (entries: unknown[]) => void) => {
+            success(batches[index++] ?? []);
+          },
+        };
+      },
+    };
+    const batches = [[subDir], [siblingEntry], []];
+    let index = 0;
+    const rootEntry = {
+      isFile: false,
+      isDirectory: true,
+      fullPath: '/proj',
+      name: 'proj',
+      createReader: () => ({
+        readEntries: (success: (entries: unknown[]) => void) => {
+          success(batches[index++] ?? []);
+        },
+      }),
+    };
+    const foundCounts: number[] = [];
+    const uploads = await collectDroppedUploads({
+      items: [{ kind: 'file', webkitGetAsEntry: () => rootEntry }],
+      files: [nested, sibling],
+    } as unknown as DataTransfer, (count) => foundCounts.push(count));
+
+    expect(foundCounts).toEqual([1, 2]);
+    expect(uploads.map((upload) => upload.relativePath)).toEqual(['proj/sub/a.txt', 'proj/b.txt']);
+    expect(uploads.map((upload) => upload.file)).toEqual([nested, sibling]);
+  });
+
+  it('collectDroppedUploads falls back to webkitRelativePath', async () => {
+    const { collectDroppedUploads } = await import('../../src/components/filebrowser');
+    const file = new globalThis.File(['a'], 'a.txt');
+    Object.defineProperty(file, 'webkitRelativePath', { value: 'proj/sub/a.txt' });
+    const uploads = await collectDroppedUploads({
+      items: [{ kind: 'file', webkitGetAsEntry: () => null }],
+      files: [file],
+    } as unknown as DataTransfer);
+
+    expect(uploads.map((upload) => upload.relativePath)).toEqual(['proj/sub/a.txt']);
+  });
+
+  it('handleFilesDrop stores a dropped file under its relative path', async () => {
+    const fb = await mountFileBrowser();
+    const created: string[] = [];
+    const saved: unknown[] = [];
+    class RecordingDir extends TestDir {
+      async getResource(path?: string, options?: { create?: boolean }) {
+        if (!path || !options?.create) return null;
+        created.push(path);
+        const resource = new TestFile('a.txt', this, path);
+        resource.saveContents = async (contents: unknown) => {
+          saved.push(contents);
+        };
+        return resource;
+      }
+    }
+    const workspace = new RecordingDir('Root', undefined, []);
+    (fb as unknown as { workspaceDir?: Directory }).workspaceDir = workspace;
+    const loadSpy = vi.spyOn(fb, 'loadWorkspace').mockResolvedValue(undefined);
+    const blob = new globalThis.File(['a'], 'a.txt');
+
+    const progress = newProgress();
+
+    await (fb as unknown as FilesDropAccess).handleFilesDrop(
+      [{ relativePath: 'proj/sub/a.txt', file: blob }],
+      workspace,
+      progress
+    );
+
+    expect(progress).toMatchObject({ currentStep: 1, totalSteps: 1, message: 'proj/sub/a.txt' });
+    expect(created).toEqual(['proj/sub/a.txt']);
+    expect(saved).toEqual([blob]);
+    expect(loadSpy).toHaveBeenCalledWith(workspace);
     fb.remove();
   });
 

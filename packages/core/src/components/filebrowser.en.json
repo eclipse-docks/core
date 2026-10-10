@@ -10,5 +10,10 @@
   "DROP_FILES_HERE": "📁 Drop files here",
   "OPEN_WITH": "Open with...",
   "FOLDER_LOAD_FAILED": "Failed to load folder: {detail}",
-  "FOLDER_UNAVAILABLE": "This workspace folder is unavailable: {detail}"
+  "FOLDER_UNAVAILABLE": "This workspace folder is unavailable: {detail}",
+  "UNKNOWN_BACKEND": "unknown",
+  "DND_CROSS_CONNECTION_CONFIRM": "Copy {count} item(s) from \"{srcBackend}\" to \"{destBackend}\"?",
+  "DROP_UPLOAD_TASK": "Uploading dropped files",
+  "DROP_SCANNING": "Scanning... {count} file(s) found",
+  "DROP_COPY_TASK": "Copying dropped items"
 }

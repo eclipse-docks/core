@@ -10,5 +10,10 @@
   "DROP_FILES_HERE": "📁 Dateien hier ablegen",
   "OPEN_WITH": "Öffnen mit...",
   "FOLDER_LOAD_FAILED": "Ordner konnte nicht geladen werden: {detail}",
-  "FOLDER_UNAVAILABLE": "Dieser Arbeitsbereichsordner ist nicht verfügbar: {detail}"
+  "FOLDER_UNAVAILABLE": "Dieser Arbeitsbereichsordner ist nicht verfügbar: {detail}",
+  "UNKNOWN_BACKEND": "unbekannt",
+  "DND_CROSS_CONNECTION_CONFIRM": "{count} Element(e) von \"{srcBackend}\" nach \"{destBackend}\" kopieren?",
+  "DROP_UPLOAD_TASK": "Abgelegte Dateien werden hochgeladen",
+  "DROP_SCANNING": "Wird durchsucht... {count} Datei(en) gefunden",
+  "DROP_COPY_TASK": "Abgelegte Elemente werden kopiert"
 }

@@ -25,6 +25,7 @@ import { icon } from '../core/icon-utils';
 import { renderDropdownItem, renderDropdownSubmenu } from '../core/dropdown-item';
 import { i18n } from '../core/i18n';
 import { createLogger } from '../core/logger';
+import { taskService, type ProgressMonitor } from '../core/taskservice';
 
 const logger = createLogger('DocksFileBrowser');
 const t = await i18n(import.meta.glob('./filebrowser*.json'));
@@ -33,6 +34,94 @@ const WORKSPACE_CHANGED_DEBOUNCE_MS = 250;
 
 /** `wa-tree-item` exposes `.model` for the bound {@link TreeNode} (not in generated element types). */
 type WaTreeItemElement = HTMLElement & { model?: TreeNode };
+
+type DroppedUpload = {
+    relativePath: string;
+    file: globalThis.File;
+};
+
+function readFileEntry(entry: FileSystemFileEntry): Promise<globalThis.File> {
+    return new Promise((resolve, reject) => entry.file(resolve, reject));
+}
+
+/** `readEntries` returns at most 100 entries and must be called until an empty batch. */
+function readAllDirectoryEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
+    return new Promise((resolve, reject) => {
+        const all: FileSystemEntry[] = [];
+        const readBatch = () => {
+            reader.readEntries(batch => {
+                if (batch.length === 0) {
+                    resolve(all);
+                    return;
+                }
+                all.push(...batch);
+                readBatch();
+            }, reject);
+        };
+        readBatch();
+    });
+}
+
+type DroppedFileFound = (count: number) => void;
+
+async function appendDroppedEntry(
+    entry: FileSystemEntry,
+    uploads: DroppedUpload[],
+    onFileFound?: DroppedFileFound,
+    parentPath = ''
+): Promise<void> {
+    const relativePath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+
+    if (entry.isFile) {
+        try {
+            uploads.push({ relativePath, file: await readFileEntry(entry as FileSystemFileEntry) });
+            onFileFound?.(uploads.length);
+        } catch (error) {
+            logger.error(`Failed to read dropped file "${relativePath}":`, error);
+        }
+        return;
+    }
+
+    if (!entry.isDirectory) return;
+
+    let children: FileSystemEntry[];
+    try {
+        children = await readAllDirectoryEntries((entry as FileSystemDirectoryEntry).createReader());
+    } catch (error) {
+        logger.error(`Failed to read dropped folder "${relativePath}":`, error);
+        return;
+    }
+
+    for (const child of children) {
+        await appendDroppedEntry(child, uploads, onFileFound, relativePath);
+    }
+}
+
+/**
+ * Folder structure is only exposed through `webkitGetAsEntry()`; `dataTransfer.files` lists a dropped
+ * folder as a single unreadable file. Entries must be captured before the first `await`, because the
+ * drag data store becomes inaccessible once the drop handler yields.
+ */
+export async function collectDroppedUploads(
+    dataTransfer: DataTransfer,
+    onFileFound?: DroppedFileFound
+): Promise<DroppedUpload[]> {
+    const entries = Array.from(dataTransfer.items ?? [])
+        .filter(item => item.kind === 'file')
+        .map(item => item.webkitGetAsEntry?.() ?? null)
+        .filter((entry): entry is FileSystemEntry => entry !== null);
+    const files = Array.from(dataTransfer.files ?? []);
+
+    if (entries.length === 0) {
+        return files.map(file => ({ relativePath: file.webkitRelativePath || file.name, file }));
+    }
+
+    const uploads: DroppedUpload[] = [];
+    for (const entry of entries) {
+        await appendDroppedEntry(entry, uploads, onFileFound);
+    }
+    return uploads;
+}
 
 @customElement('docks-filebrowser')
 export class DocksFileBrowser extends DocksPart {
@@ -648,15 +737,19 @@ export class DocksFileBrowser extends DocksPart {
             const types = e.dataTransfer.types;
 
             if (types.includes('Files')) {
-                const files = Array.from(e.dataTransfer.files);
-                if (files.length === 0) return;
-                await this.handleFilesDrop(files, targetDir);
+                const dataTransfer = e.dataTransfer;
+                await taskService.runAsync(t.DROP_UPLOAD_TASK, async progress => {
+                    const uploads = await collectDroppedUploads(dataTransfer, count => {
+                        progress.message = t.DROP_SCANNING({ count: String(count) });
+                    });
+                    if (uploads.length === 0) return;
+                    await this.handleFilesDrop(uploads, targetDir, progress);
+                });
                 return;
             }
 
             if (types.includes('application/x-workspace-file')) {
                 await this.handleWorkspaceDrop(e, targetDir);
-                return;
             }
         };
 
@@ -767,16 +860,19 @@ export class DocksFileBrowser extends DocksPart {
             }
         }
 
-        for (const { path, resource } of sources) {
-            try {
-                const move = await moveWithinSameBackend(resource);
-                await workspaceService.copyResource(resource, targetDir, { move });
-                processed++;
-            } catch (error) {
-                logger.error(`Failed to handle workspace drop for "${path}":`, error);
-                failed++;
+        await taskService.runAsync(t.DROP_COPY_TASK, async progress => {
+            const onFile = (targetPath: string) => { progress.message = targetPath; };
+            for (const { path, resource } of sources) {
+                try {
+                    const move = await moveWithinSameBackend(resource);
+                    await workspaceService.copyResource(resource, targetDir, { move, onFile });
+                    processed++;
+                } catch (error) {
+                    logger.error(`Failed to handle workspace drop for "${path}":`, error);
+                    failed++;
+                }
             }
-        }
+        });
 
         logger.info(
             `Workspace drop completed: ${processed}/${sources.length} items ${failed > 0 ? `, ${failed} failed` : ''}`
@@ -785,27 +881,28 @@ export class DocksFileBrowser extends DocksPart {
         await this.loadWorkspace(this.workspaceDir, true);
     }
 
-    private async handleFilesDrop(files: globalThis.File[], targetDir: Directory) {
-        const total = files.length;
+    private async handleFilesDrop(uploads: DroppedUpload[], targetDir: Directory, progress: ProgressMonitor) {
+        const total = uploads.length;
         let processed = 0;
         let failed = 0;
         let skipped = 0;
 
-            for (const file of files) {
+        progress.totalSteps = total;
+        for (const [index, { relativePath, file }] of uploads.entries()) {
+            progress.currentStep = index + 1;
+            progress.message = relativePath;
             try {
-                const targetPath = this.buildTargetPath(targetDir, file.name);
-
-                const existingFile = await this.workspaceDir!.getResource(targetPath);
+                const existingFile = await targetDir.getResource(relativePath);
                 if (existingFile) {
-                    const overwrite = await confirmDialog(t.FILE_EXISTS_OVERWRITE({ fileName: file.name }));
+                    const overwrite = await confirmDialog(t.FILE_EXISTS_OVERWRITE({ fileName: relativePath }));
                     if (!overwrite) {
                         skipped++;
                         continue;
                     }
                 }
 
-                const workspaceFile = await this.workspaceDir!.getResource(
-                    targetPath,
+                const workspaceFile = await targetDir.getResource(
+                    relativePath,
                     { create: true }
                 ) as File;
 
@@ -813,7 +910,7 @@ export class DocksFileBrowser extends DocksPart {
 
                 processed++;
             } catch (error) {
-                logger.error(`Failed to upload ${file.name}:`, error);
+                logger.error(`Failed to upload ${relativePath}:`, error);
                 failed++;
             }
         }
@@ -821,11 +918,6 @@ export class DocksFileBrowser extends DocksPart {
         logger.info(`Uploaded ${processed}/${total} files${skipped > 0 ? `, ${skipped} skipped` : ''}${failed > 0 ? `, ${failed} failed` : ''}`);
 
         await this.loadWorkspace(this.workspaceDir);
-    }
-
-    private buildTargetPath(targetDir: Directory, fileName: string): string {
-        const dirPath = targetDir.getWorkspacePath();
-        return dirPath ? `${dirPath}/${fileName}` : fileName;
     }
 
     protected renderContent() {

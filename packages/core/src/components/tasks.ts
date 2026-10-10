@@ -19,6 +19,19 @@ contributionRegistry.registerContribution(TOOLBAR_BOTTOM_CENTER, {
 // Singleton dialog container for progress dialog
 let progressDialogContainer: HTMLElement | null = null;
 
+/** Percentage (0-100) of a task, or `undefined` when its progress is indefinite. */
+function taskPercent(task: ProgressMonitor): number | undefined {
+    if (task.progress >= 0) return task.progress;
+    if (task.totalSteps > 0) return Math.round((task.currentStep / task.totalSteps) * 100);
+    return undefined;
+}
+
+function renderProgressBar(task: ProgressMonitor | undefined, label = '') {
+    const percent = task && taskPercent(task);
+    if (percent === undefined) return html`<wa-progress-bar indeterminate></wa-progress-bar>`;
+    return html`<wa-progress-bar value="${percent}">${label}</wa-progress-bar>`;
+}
+
 function getProgressDialogContainer(): HTMLElement {
     if (!progressDialogContainer) {
         progressDialogContainer = document.createElement('div');
@@ -153,14 +166,8 @@ function updateProgressDialog(forceOpen = false) {
             
             <div class="progress-dialog-content">
                 ${tasks.map((taskProgress: ProgressMonitor) => {
-                    const hasProgress = taskProgress.progress >= 0 || taskProgress.totalSteps > 0
-                    const progress = taskProgress.progress >= 0
-                        ? taskProgress.progress
-                        : (taskProgress.totalSteps > 0 
-                            ? Math.round((taskProgress.currentStep / taskProgress.totalSteps) * 100)
-                            : 0)
-                    
                     const showSteps = taskProgress.progress < 0 && taskProgress.totalSteps > 0
+                    const steps = showSteps ? `${taskProgress.currentStep}/${taskProgress.totalSteps} - ` : ''
                     
                     return html`
                         <div class="tasitem">
@@ -174,13 +181,7 @@ function updateProgressDialog(forceOpen = false) {
                                 </div>
                             </div>
                             <div class="tasprogress">
-                                ${hasProgress ? html`
-                                    <wa-progress-bar value="${progress}">
-                                        ${showSteps ? `${taskProgress.currentStep}/${taskProgress.totalSteps} - ` : ''}${progress}%
-                                    </wa-progress-bar>
-                                ` : html`
-                                    <wa-progress-bar indeterminate></wa-progress-bar>
-                                `}
+                                ${renderProgressBar(taskProgress, `${steps}${taskPercent(taskProgress)}%`)}
                             </div>
                         </div>
                     `
@@ -264,7 +265,7 @@ export class DocksTasks extends DocksElement {
                     label="${t.ACTIVE_TASKS}"
                 ></wa-spinner>
                 <wa-badge appearance="outlined" variant="neutral" pill>${taskCount}</wa-badge>
-                <div class="tasbar-wrap"><wa-progress-bar indeterminate></wa-progress-bar></div>
+                <div class="tasbar-wrap">${renderProgressBar(taskCount === 1 ? tasks[0] : undefined)}</div>
             </div>
         `;
     }

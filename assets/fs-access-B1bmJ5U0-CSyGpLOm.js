@@ -1,0 +1,1 @@
+import{i as e}from"./fs-access-CrktZo-_-BSFAAzMi.js";export{e as FileSysDirHandleResource};

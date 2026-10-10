@@ -37,7 +37,7 @@
     "docs:build": "npm run docs:api && cd docs && npm install && npm run build",
     "docs:dev": "cd docs && npm install && npm run dev",
     "release:checks": "npm run type-check && npm run test && npm run test:e2e",
-    "release": "npm run release:checks && docks release"
+    "release": "docks release"
   },
   "devDependencies": {
     "@eclipse-docks/cli": "*",

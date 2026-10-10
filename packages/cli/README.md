@@ -12,6 +12,7 @@ npx @eclipse-docks/cli release v1.2.3                # explicit version
 npx @eclipse-docks/cli release --since v1.2.0        # notes from commits since that tag
 npx @eclipse-docks/cli release --dry-run             # print what would be tagged
 npx @eclipse-docks/cli release --no-push             # create the tag locally without pushing
+npx @eclipse-docks/cli release --skip-tests          # skip the project's release:checks script
 ```
 
 ## `release`
@@ -26,6 +27,10 @@ downstream apps usually trigger it on `v*` tag push; this monorepo waits for a g
 If CI fails after the tag was pushed, that workflow deletes the orphan remote tag so
 GitHub Release history has no gaps. Remove the local tag before retrying:
 `git tag -d vX.Y.Z`.
+
+If the project's `package.json` defines a `release:checks` script (e.g. type check and
+tests), it runs before the version is tagged, and a failure aborts the release. Pass
+`--skip-tests` to skip it, e.g. `npm run release -- --skip-tests`.
 
 The last version is the most recent `vX.Y.Z` tag reachable from `HEAD` (via
 `git describe`), not the highest semver tag in the repository. That drives the

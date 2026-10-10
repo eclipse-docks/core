@@ -1,8 +1,11 @@
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 
 /** CLI arg / release tag name: exact `vX.Y.Z`. */
 const VERSION_RE = /^v\d+\.\d+\.\d+$/;
+const CHECKS_SCRIPT = 'release:checks';
 
 function git(args, cwd) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -18,11 +21,11 @@ function gitOrNull(args, cwd) {
 }
 
 function usage() {
-  return 'Usage: docks release [major|minor|patch|vX.Y.Z] [-m "release notes"] [--since vX.Y.Z] [--dry-run] [--no-push]';
+  return 'Usage: docks release [major|minor|patch|vX.Y.Z] [-m "release notes"] [--since vX.Y.Z] [--dry-run] [--no-push] [--skip-tests]';
 }
 
 function parseArgs(argv) {
-  const opts = { bump: 'patch', version: '', since: '', notes: '', dryRun: false, push: true };
+  const opts = { bump: 'patch', version: '', since: '', notes: '', dryRun: false, push: true, skipTests: false };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -44,12 +47,45 @@ function parseArgs(argv) {
       opts.push = true;
     } else if (arg === '--no-push') {
       opts.push = false;
+    } else if (arg === '--skip-tests') {
+      opts.skipTests = true;
     } else {
       throw new Error(`Unknown argument: ${arg}\n${usage()}`);
     }
   }
 
   return opts;
+}
+
+function hasChecksScript(cwd) {
+  try {
+    const pkg = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8'));
+    return Boolean(pkg.scripts?.[CHECKS_SCRIPT]);
+  } catch {
+    return false;
+  }
+}
+
+function runChecks(cwd, { skip, dryRun }) {
+  if (!hasChecksScript(cwd)) return;
+  if (skip) {
+    console.log(`Skipping npm run ${CHECKS_SCRIPT} (--skip-tests).`);
+    return;
+  }
+  if (dryRun) {
+    console.log(`[dry run] would run npm run ${CHECKS_SCRIPT}`);
+    return;
+  }
+
+  console.log(`Running npm run ${CHECKS_SCRIPT}...`);
+  const result = spawnSync('npm', ['run', CHECKS_SCRIPT], {
+    cwd,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+  if (result.status !== 0) {
+    throw new Error(`npm run ${CHECKS_SCRIPT} failed; fix it or rerun with --skip-tests.`);
+  }
 }
 
 function findLastVersion(cwd) {
@@ -177,6 +213,8 @@ export async function release(argv, cwd = process.cwd()) {
   if (!opts.dryRun && git(['status', '--porcelain'], cwd) !== '') {
     throw new Error('Working tree is not clean. Commit or stash your changes first.');
   }
+
+  runChecks(cwd, { skip: opts.skipTests, dryRun: opts.dryRun });
 
   const last = findLastVersion(cwd);
   let version = opts.version;

@@ -1,0 +1,1 @@
+import{J as e}from"./canvas-bridge-core.js-CIMrG4cY.js";export{e as FileSysDirHandleResource};

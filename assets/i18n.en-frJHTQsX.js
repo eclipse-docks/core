@@ -1,0 +1,1 @@
+var e=`Canvas`,t=`Open .canvas.js files and canvases registered by extensions`,n={EXT_CANVAS_NAME:e,EXT_CANVAS_DESC:t};export{t as EXT_CANVAS_DESC,e as EXT_CANVAS_NAME,n as default};

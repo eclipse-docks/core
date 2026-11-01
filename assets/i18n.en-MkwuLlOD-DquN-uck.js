@@ -1,0 +1,1 @@
+var e=`AI System`,t=`AI assistants, chat, and tool execution`,n={EXT_COGNITIVE_NAME:e,EXT_COGNITIVE_DESC:t};export{t as EXT_COGNITIVE_DESC,e as EXT_COGNITIVE_NAME,n as default};

@@ -7,7 +7,8 @@ extensionRegistry.registerExtension({
   id: pkg.name,
   name: t.EXT_HOWTO_NAME,
   description: t.EXT_HOWTO_DESC,
-  loader: () => import("./howto-extension"),
-  icon: "list-check",
+  loader: () => import('./howto-extension'),
+  icon: 'list-check',
   experimental: true,
+  dependencies: ['@eclipse-docks/extension-ai-system'],
 });

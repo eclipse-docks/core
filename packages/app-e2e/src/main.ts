@@ -1,6 +1,6 @@
 /**
  * E2E harness contributions are registered in initialize() so they run after extensions load.
- * That keeps auxiliary tab order [aiview, …e2e tabs] without a second import of ai-system-extension
+ * That keeps auxiliary tab order [cognitiveview, …e2e tabs] without a second import of the AI extension
  * (eager import + enableAsync caused duplicate custom element registration in preview builds).
  */
 import {
@@ -35,7 +35,7 @@ function registerE2eHarnessContributions(): void {
         label: 'E2E Coupled',
         icon: 'link',
         closable: false,
-        coupledEditors: ['system.ai-config-editor'],
+        coupledEditors: ['system.cognitive-ai-settings-editor'],
         component: (id: string) => html`<e2e-coupled-panel id="${id}"></e2e-coupled-panel>`,
     });
 
@@ -44,7 +44,7 @@ function registerE2eHarnessContributions(): void {
         label: 'E2E Decoy',
         icon: 'link',
         closable: false,
-        coupledEditors: ['system.ai-config-editor-FAKE'],
+        coupledEditors: ['system.cognitive-ai-settings-editor-FAKE'],
         component: (id: string) => html`<e2e-coupled-panel id="${id}"></e2e-coupled-panel>`,
     });
 

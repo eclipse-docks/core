@@ -7,8 +7,8 @@ extensionRegistry.registerExtension({
   id: pkg.name,
   name: t.EXT_WEBLLM_NAME,
   description: t.EXT_WEBLLM_DESC,
-  loader: () => import("./webllmservice"),
-  icon: "robot",
+  loader: () => import('./webllmservice'),
+  icon: 'robot',
   experimental: true,
-
+  dependencies: ['@eclipse-docks/extension-ai-system'],
 });

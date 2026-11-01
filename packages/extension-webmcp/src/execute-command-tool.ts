@@ -1,5 +1,5 @@
 import { commandRegistry, createLogger, type Command } from "@eclipse-docks/core";
-import { sanitizeFunctionName } from "@eclipse-docks/extension-ai-system/api";
+import { sanitizeFunctionName } from "./command-tool-schema";
 
 const logger = createLogger("WebMCP");
 

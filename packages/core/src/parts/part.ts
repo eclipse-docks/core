@@ -320,6 +320,9 @@ export abstract class DocksPart extends DocksContainer {
 
         .part-toolbar {
             min-height: 0;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
         }
     `;
 

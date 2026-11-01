@@ -3,8 +3,6 @@
   "version": "0.0.0",
   "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,19 +13,25 @@
       "import": "./dist/api.js"
     }
   },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "vite build"
-  },
   "dependencies": {
-    "@eclipse-docks/core": "*"
+    "@eclipse-docks/core": "*",
+    "@opencode-ai/models": "^0.0.122"
   },
   "devDependencies": {
     "typescript": "^6.0.0",
     "vite": "^8.0.0",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.1.4"
+  },
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "repository": {
     "type": "git",

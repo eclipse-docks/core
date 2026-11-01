@@ -257,17 +257,37 @@ export class DocksToolbar extends DocksElement {
         :host {
             display: flex;
             flex-direction: row;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
             --wa-form-control-padding-inline: var(--wa-space-2xs);
         }
 
         :host([orientation="vertical"]) {
             flex-direction: column;
+            min-height: 0;
+            max-height: 100%;
         }
 
         .toolbar-items {
             display: flex;
             flex: 1;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
             gap: var(--wa-space-2xs);
+        }
+
+        /* Part-provided labels that should yield space to action buttons. */
+        .toolbar-title {
+            flex: 1 1 0;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 0 0.25rem;
         }
     `
 }

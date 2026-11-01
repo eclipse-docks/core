@@ -15,13 +15,13 @@
   },
   "dependencies": {
     "@eclipse-docks/core": "*",
-    "@eclipse-docks/extension-ai-system": "*",
     "@eclipse-docks/extension-in-browser-ml": "*",
     "@langchain/core": "^1.0.0",
     "@langchain/textsplitters": "^1.0.0",
     "pdfjs-dist": "^4.0.0",
     "rxdb": "^17.1.0",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "@eclipse-docks/extension-ai-system": "*"
   },
   "devDependencies": {
     "typescript": "^6.0.0",

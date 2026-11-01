@@ -75,8 +75,18 @@ describe('commands files branch flow', () => {
     showDirectoryPickerMock.mockRejectedValue(new Error('denied'));
     await import('../../src/commands/files');
     const cmd = harness.getRegistered('load_workspace');
-    await cmd.handler?.execute({});
+    await expect(cmd.handler?.execute({})).rejects.toThrow('denied');
     expect(toastErrorMock).toHaveBeenCalledWith('denied');
+  });
+
+  it('load_workspace cancel skips toast and rethrows', async () => {
+    const abort = new Error('The user aborted a request.');
+    abort.name = 'AbortError';
+    showDirectoryPickerMock.mockRejectedValue(abort);
+    await import('../../src/commands/files');
+    const cmd = harness.getRegistered('load_workspace');
+    await expect(cmd.handler?.execute({})).rejects.toThrow(/abort/i);
+    expect(toastErrorMock).not.toHaveBeenCalled();
   });
 
   it('load_workspace connects selected directory handle', async () => {

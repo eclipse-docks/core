@@ -10,5 +10,5 @@ extensionRegistry.registerExtension({
   loader: () => import("./rag-system-extension"),
   icon: "database",
   experimental: true,
-  dependencies: ["@eclipse-docks/extension-ai-system", "@eclipse-docks/extension-in-browser-ml"],
+  dependencies: ['@eclipse-docks/extension-ai-system', '@eclipse-docks/extension-in-browser-ml'],
 });

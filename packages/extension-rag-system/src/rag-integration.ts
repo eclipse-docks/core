@@ -6,25 +6,21 @@ import { rootContext } from '@eclipse-docks/core';
 import { SEARCH_CONFIG } from './utils/constants';
 import { RAGResultFormatter } from './services/rag-result-formatter';
 import { SnippetExtractor } from './utils/snippet-extractor';
-import { aiService } from '@eclipse-docks/extension-ai-system/api';
+import { cognitiveRuntime, type SystemPromptEnhancer } from '@eclipse-docks/extension-ai-system/api';
 import { commandRegistry, registerAll } from '@eclipse-docks/core';
-import type { ExecutionContext } from '@eclipse-docks/core';
-import type { PromptEnhancer, ToolDefinition } from '@eclipse-docks/extension-ai-system/api';
 import { createLogger } from '@eclipse-docks/core';
 
 const logger = createLogger('RAGIntegration');
 const resultFormatter = new RAGResultFormatter(new SnippetExtractor());
 
-export const ragPromptEnhancer: PromptEnhancer = {
-    priority: 10,
-    async enhance(prompt: string, context: ExecutionContext): Promise<string> {
-        try {
-            const stats = await documentIndexService.getStats();
-            if (stats.totalDocuments === 0) {
-                return prompt;
-            }
+export const ragPromptEnhancer: SystemPromptEnhancer = async (prompt) => {
+    try {
+        const stats = await documentIndexService.getStats();
+        if (stats.totalDocuments === 0) {
+            return prompt;
+        }
 
-            const instruction = `IMPORTANT: When a user mentions a specific file name or path:
+        const instruction = `IMPORTANT: When a user mentions a specific file name or path:
 1. ALWAYS first check if the file is indexed using rag.checindexed with the file path
 2. If indexed: Use rag.search-documents with filePath parameter to get relevant content from the indexed document
 3. If not indexed: Read the file directly using file commands (cat_file, ls, etc.)
@@ -33,11 +29,10 @@ NEVER use filePath or fileName parameters in rag.search-documents without first 
 
 For general searches (not specific files), use rag.search-documents with just the query parameter to search across all indexed documents. This is more efficient than reading files one by one.`;
 
-            return `${prompt}\n\n${instruction}`;
-        } catch (error) {
-            logger.warn(`RAG enhancement failed: ${error}`);
-            return prompt;
-        }
+        return `${prompt}\n\n${instruction}`;
+    } catch (error) {
+        logger.warn(`RAG enhancement failed: ${error}`);
+        return prompt;
     }
 };
 
@@ -202,15 +197,9 @@ export function registerRAGCommands() {
 export function integrateRAGWithAI() {
     try {
         registerRAGCommands();
-        
-        const promptBuilder = (aiService as any).promptBuilder;
-        if (promptBuilder && typeof promptBuilder.addEnhancer === 'function') {
-            promptBuilder.addEnhancer(ragPromptEnhancer);
-            logger.info('RAG prompt enhancer and commands registered - AI will be instructed to use RAG before reading files');
-        } else {
-            logger.warn('AI service prompt builder not available yet, will retry');
-            setTimeout(() => integrateRAGWithAI(), 1000);
-        }
+        cognitiveRuntime.start();
+        cognitiveRuntime.addSystemPromptEnhancer(ragPromptEnhancer);
+        logger.info('RAG prompt enhancer and commands registered');
     } catch (error) {
         logger.warn(`Failed to integrate RAG with AI: ${error}`);
     }

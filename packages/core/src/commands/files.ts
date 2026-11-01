@@ -159,14 +159,20 @@ registerAll({
     },
     handler: {
         execute: async _context => {
-            // @ts-ignore
-            await window.showDirectoryPicker({
-                mode: "readwrite"
-            }).then((dirHandle: FileSystemDirectoryHandle) => {
-                return workspaceService.connectWorkspace(dirHandle);
-            }).catch((err: Error) => {
-                toastError(err.message)
-            });
+            try {
+                // @ts-ignore
+                const dirHandle = await window.showDirectoryPicker({
+                    mode: "readwrite"
+                }) as FileSystemDirectoryHandle;
+                await workspaceService.connectWorkspace(dirHandle);
+            } catch (err: any) {
+                const cancelled =
+                    err?.name === 'AbortError' ||
+                    /abort|cancel/i.test(String(err?.message ?? err));
+                if (!cancelled) toastError(err?.message ?? String(err));
+                // Re-throw so tool callers see a failed/cancelled result instead of success.
+                throw err instanceof Error ? err : new Error(String(err));
+            }
         }
     },
     contribution: {

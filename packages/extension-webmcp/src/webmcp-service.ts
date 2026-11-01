@@ -5,8 +5,8 @@ import {
   unsubscribe,
   TOPIC_COMMAND_REGISTERED,
 } from "@eclipse-docks/core";
-import { ToolRegistry, type ToolDefinition } from "@eclipse-docks/extension-ai-system/api";
 import type { Command } from "@eclipse-docks/core";
+import { commandToToolSchema } from "./command-tool-schema";
 import { executeCommandTool } from "./execute-command-tool";
 import { getModelContext } from "./get-model-context";
 import { sanitizeWebMcpToolName } from "./sanitize-tool-name";
@@ -32,15 +32,14 @@ function resolveCommandText(value: unknown, fallback: string): string {
   return text.trim() || fallback;
 }
 
-function toolDescription(command: Command, toolDef: ToolDefinition): string {
+function toolDescription(command: Command, description: string): string {
   return resolveCommandText(
-    toolDef.function.description ?? command.description ?? command.name ?? command.id,
+    description || command.description || command.name || command.id,
     command.id,
   );
 }
 
 export class WebMCPService {
-  private readonly toolRegistry = new ToolRegistry();
   private readonly registrationControllers = new Map<string, AbortController>();
   private readonly registeredIds = new Set<string>();
   private readonly registeredToolNames = new Set<string>();
@@ -86,9 +85,10 @@ export class WebMCPService {
     this.pendingRegistrations.clear();
   }
 
-  private toolDefToInputSchema(
-    params: ToolDefinition["function"]["parameters"]
-  ): Record<string, unknown> {
+  private toolDefToInputSchema(params: {
+    properties?: Record<string, unknown>;
+    required?: string[];
+  }): Record<string, unknown> {
     return {
       type: "object",
       properties: params.properties ?? {},
@@ -133,8 +133,7 @@ export class WebMCPService {
 
     this.pendingRegistrations.add(command.id);
 
-    const schemaContext = commandRegistry.createExecutionContext?.() ?? {};
-    const toolDef = this.toolRegistry.commandToTool(command, schemaContext) as ToolDefinition;
+    const toolDef = commandToToolSchema(command);
     const commandId = command.id;
 
     const registrationController = new AbortController();
@@ -144,8 +143,8 @@ export class WebMCPService {
         {
           name: toolName,
           title: resolveCommandText(command.name, command.id),
-          description: toolDescription(command, toolDef),
-          inputSchema: this.toolDefToInputSchema(toolDef.function.parameters),
+          description: toolDescription(command, toolDef.description),
+          inputSchema: this.toolDefToInputSchema(toolDef.parameters),
           annotations: {
             readOnlyHint: this.isReadOnlyCommand(command),
           },

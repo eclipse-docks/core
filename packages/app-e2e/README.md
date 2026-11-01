@@ -24,13 +24,13 @@ Minimal Docks shell for Playwright only (not the public demo app in `packages/ap
 Entry is [src/main.ts](./src/main.ts): `registerApp` plus auxiliary/toolbar contributions as specs require.
 
 - **Extensions:** list them in `AppDefinition.extensions` (e.g. `@eclipse-docks/extension-ai-system`, `@eclipse-docks/extension-monaco-editor` for workspace file editing in E2E).
-- **Harness vs preview build:** Do not import `ai-system-extension` directly in [src/main.ts](./src/main.ts) while also listing `@eclipse-docks/extension-ai-system` in `AppDefinition.extensions` — the bundler can load that module twice (different chunks), and Lit `@customElement` registration throws (“already been used”). E2E auxiliary contributions are registered in **`initialize()`** so they run **after** extensions load, preserving tab order **`[aiview, …e2e tabs]`** without a duplicate import.
+- **Harness vs preview build:** Do not import the AI extension module directly in [src/main.ts](./src/main.ts) while also listing `@eclipse-docks/extension-ai-system` in `AppDefinition.extensions` — the bundler can load that module twice (different chunks), and Lit `@customElement` registration throws (“already been used”). E2E auxiliary contributions are registered in **`initialize()`** so they run **after** extensions load, preserving tab order **`[cognitiveview, …e2e tabs]`** without a duplicate import.
 - **Side-effect imports:** [vite.config.ts](./vite.config.ts) uses `resolveDepVersionsPlugin()` (automatic `extension-*` / `@scope/extension-*` side-effect imports are on by default).
 
 ### `coupledEditors` example
 
 - [e2e/coupled-editors.spec.ts](./e2e/coupled-editors.spec.ts) — select AI Assistant, open AI Config, assert `wa-tab-group`’s `active` and panels.
-- **Two contributions:** real tab (`e2e-coupled-ai-config` + `system.ai-config-editor`) and decoy (`e2e-decoy-coupled-ai-config` + `system.ai-config-editor-FAKE`). One test checks the match; the other checks the decoy never activates when the real editor is active.
+- **Two contributions:** real tab (`e2e-coupled-ai-config` + `system.cognitive-ai-settings-editor`) and decoy (`e2e-decoy-coupled-ai-config` + `system.cognitive-ai-settings-editor-FAKE`). One test checks the match; the other checks the decoy never activates when the real editor is active.
 
 ## HTTP preview
 
@@ -78,9 +78,8 @@ This is the flow you described: prove **browser storage** round-trips through th
 
 ### `@eclipse-docks/extension-ai-system` (already in the harness)
 
-- [ ] **`docks-aiview`** — AI Assistant tab smoke (input present / send disabled-or-enabled as designed).
-- [ ] **Token usage** — `docks-token-usage` in bottom toolbar contribution ([`ai-system-extension.ts`](../../packages/extension-ai-system/src/ai-system-extension.ts)).
-- [ ] **`open_ai_config` / command** — same user outcome as toolbar button; optional duplicate if command palette exists later.
+- [ ] **`docks-cognitive-view`** — AI chat tab smoke (input present / send disabled-or-enabled as designed).
+- [ ] **`open_cognitive_ai_settings` / gear → Settings…** — opens `docks-cognitive-settings-editor`.
 
 ### Opt-in extensions (match [packages/app](../../packages/app) when relevant)
 

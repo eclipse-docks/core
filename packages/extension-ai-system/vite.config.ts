@@ -32,9 +32,7 @@ export default defineConfig({
     },
     rolldownOptions: {
       external: isExternal,
-      output: {
-        format: 'es',
-      },
+      output: { format: 'es' },
     },
     outDir: 'dist',
     sourcemap: true,

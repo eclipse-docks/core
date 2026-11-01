@@ -161,7 +161,7 @@ function generateSummary(cwd, since) {
   }
   const range = sinceCommit ? `${sinceCommit}..HEAD` : 'HEAD';
 
-  const log = gitOrNull(['log', range, '--no-merges', '--pretty=%s'], cwd) ?? '';
+  const log = gitOrNull(['log', range, '--reverse', '--no-merges', '--pretty=%s'], cwd) ?? '';
   const buckets = { features: [], fixes: [], docs: [], chores: [] };
 
   for (const subject of log.split('\n')) {

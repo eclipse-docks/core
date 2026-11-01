@@ -629,12 +629,14 @@ export class WorkspaceService {
     }
 
     private async persistFolders(): Promise<void> {
-        const toPersist = this.folders.length > 0
-            ? { folders: this.folders.map(f => ({ type: f.type, data: f.data })) }
+        // Ephemeral backends (in-memory) stay connected for the page lifetime only.
+        const durable = this.folders.filter((f) => f.type !== 'in-memory');
+        const toPersist = durable.length > 0
+            ? { folders: durable.map(f => ({ type: f.type, data: f.data })) }
             : null;
         await persistenceService.persistObject(LEGACY_WORKSPACE_KEY, toPersist);
         await persistenceService.persistObject("workspace", null);
-        logger.debug(`Persisted ${this.folders.length} folder(s)`);
+        logger.debug(`Persisted ${durable.length} folder(s) (${this.folders.length} connected)`);
     }
 
     async getFolders(): Promise<Array<{ name: string; type: string }>> {
@@ -707,6 +709,14 @@ export class WorkspaceService {
             throw new Error('No workspace contribution can handle this input');
         }
         const name = (input?.name as string) ?? contribution.type;
+        // Singleton backends (in-memory, OPFS): at most one mounted folder of that type.
+        if (contribution.type === 'in-memory' || contribution.type === 'opfs') {
+            const existing = this.folders.find((f) => f.type === contribution.type);
+            if (existing) {
+                logger.debug(`Workspace already has ${contribution.type}; reusing`);
+                return this.buildComposite()!;
+            }
+        }
         logger.debug(`Connecting workspace: ${contribution.type}, ${name}`);
         const directory = await contribution.connect(input);
         const data = contribution.persist ? await contribution.persist(directory) : input;

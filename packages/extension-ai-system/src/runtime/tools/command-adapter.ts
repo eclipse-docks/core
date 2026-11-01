@@ -2,18 +2,33 @@ import { commandRegistry } from '@eclipse-docks/core';
 import type { ToolBroker } from './broker';
 import type { SpecialistRole } from '../types';
 
-const SKIP = new Set(['open_cognitive_ai_settings', 'open_ai_config']);
-/** Built-in tools that must survive command refresh (not command-backed). */
-const KEEP_TOOLS = new Set([
-  'workspace_list',
-  'workspace_read',
-  'workspace_write',
-  'attachment_list',
-  'attachment_read',
+/** Commands that must never be exposed as LLM tools (pickers, storage boots, settings). */
+const SKIP = new Set([
+  'open_cognitive_ai_settings',
+  'open_ai_config',
+  'load_workspace',
+  'connect_opfs',
+  'connect_indexeddb',
+  'disconnect_workspace',
+  'disconnect_folder',
+  'open_editor',
+  'list_extensions',
+  'enable_extension',
+  'disable_extension',
 ]);
+
+const SKIP_PREFIXES = ['connect_', 'disconnect_', 'install_', 'uninstall_'];
+
+/** Built-in tools that must survive command refresh (not command-backed). */
+const KEEP_TOOLS = new Set(['workspace_list', 'workspace_read', 'workspace_write']);
 
 function sanitizeName(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+}
+
+function shouldSkipCommand(id: string): boolean {
+  if (SKIP.has(id)) return true;
+  return SKIP_PREFIXES.some((prefix) => id.startsWith(prefix));
 }
 
 /** Registers Docks commands as first-class LLM tools (tool name = command id). */
@@ -27,11 +42,17 @@ export function refreshCommandTools(broker: ToolBroker, role: SpecialistRole): v
     id: string;
     name: string;
     description: string;
-    parameters?: Array<{ name: string; description: string; type?: string; required: boolean; allowedValues?: string[] }>;
+    parameters?: Array<{
+      name: string;
+      description: string;
+      type?: string;
+      required: boolean;
+      allowedValues?: string[];
+    }>;
   }>;
 
   for (const command of entries) {
-    if (!command?.id || SKIP.has(command.id)) continue;
+    if (!command?.id || shouldSkipCommand(command.id)) continue;
     if (!command.description) continue;
     if ((role === 'plan' || role === 'explore') && /delete|write|save|rm|mv/i.test(command.id)) continue;
 

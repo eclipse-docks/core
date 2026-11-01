@@ -3,8 +3,31 @@ export { appLoaderService } from '../core/apploader';
 export { commandRegistry, CommandStack, registerAll, CommandRegistry, TOPIC_COMMAND_REGISTERED } from '../core/commandregistry';
 export { contributionRegistry, TOPIC_CONTRIBUTEIONS_CHANGED } from '../core/contributionregistry';
 export { extensionRegistry } from '../core/extensionregistry';
-export { workspaceService, File, StringFile, Directory, FileContentType, WorkspaceService, TOPIC_WORKSPACE_CHANGED, TOPIC_WORKSPACE_CONNECTED, CompositeDirectory, FileSysDirHandleResource } from '../core/filesys';
-export type { FileContentsOptions, GetResourceOptions } from '../core/filesys';
+export {
+    workspaceService,
+    File,
+    StringFile,
+    Directory,
+    FileContentType,
+    WorkspaceService,
+    TOPIC_WORKSPACE_CHANGED,
+    TOPIC_WORKSPACE_CONNECTED,
+    CompositeDirectory,
+    FileSysDirHandleResource,
+    IN_MEMORY_ROOT_NAME,
+    IN_MEMORY_CONTRIBUTION_TYPE,
+    MemoryRootDirectory,
+    MemoryMountDirectory,
+    getInMemoryRoot,
+    setInMemoryMountProjection,
+    getInMemoryMountProjection,
+} from '../core/filesys';
+export type {
+    FileContentsOptions,
+    GetResourceOptions,
+    MemoryLiveContents,
+    InMemoryMountProjection,
+} from '../core/filesys';
 export { editorRegistry, type EditorInput } from '../core/editorregistry';
 export { 
     activePartSignal,

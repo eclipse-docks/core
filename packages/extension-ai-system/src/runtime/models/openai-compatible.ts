@@ -1,3 +1,4 @@
+import { isAbortError } from '../abort';
 import { detectEffortCapability } from './effort-support';
 import type { ModelProvider, ProviderChatMessage, StreamChunk, StreamParams } from './types';
 
@@ -146,6 +147,10 @@ export class OpenAICompatibleProvider implements ModelProvider {
         signal: params.signal,
       });
     } catch (err) {
+      if (params.signal?.aborted || isAbortError(err)) {
+        yield { type: 'done' };
+        return;
+      }
       yield { type: 'error', error: err instanceof Error ? err.message : String(err) };
       return;
     }
@@ -161,7 +166,18 @@ export class OpenAICompatibleProvider implements ModelProvider {
     const toolAcc = new Map<number, { id: string; name: string; arguments: string }>();
 
     while (true) {
-      const { done, value } = await reader.read();
+      let done: boolean;
+      let value: Uint8Array | undefined;
+      try {
+        ({ done, value } = await reader.read());
+      } catch (err) {
+        if (params.signal?.aborted || isAbortError(err)) {
+          yield { type: 'done' };
+          return;
+        }
+        yield { type: 'error', error: err instanceof Error ? err.message : String(err) };
+        return;
+      }
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');

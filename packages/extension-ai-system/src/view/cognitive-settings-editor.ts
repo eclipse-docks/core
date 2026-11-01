@@ -17,12 +17,12 @@ import {
 import type { ProviderConfig, ProvidersSettings, RemoteModelInfo, ToolApprovalMode } from '../runtime';
 
 const APPROVAL_OPTIONS: Array<{ value: ToolApprovalMode; label: string; hint: string }> = [
-  { value: 'manual', label: 'Manual', hint: 'Confirm every tool before it runs' },
   {
     value: 'auto_safe',
     label: 'Auto-approve non-critical',
     hint: 'The agent classifies each tool as safe or critical; only critical ones ask for approval',
   },
+  { value: 'manual', label: 'Manual', hint: 'Confirm every tool before it runs' },
   { value: 'auto_all', label: 'Approve all', hint: 'Run every tool without asking' },
 ];
 
@@ -240,23 +240,6 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     }
   }
 
-  protected renderToolbar() {
-    return html`
-      <wa-button size="s" appearance="plain" title="Add provider" @click=${() => this.addProvider()}>
-        <wa-icon name="plus" label="Add provider"></wa-icon>
-      </wa-button>
-      <wa-button
-        size="s"
-        variant="brand"
-        ?disabled=${!this.isDirty()}
-        @click=${() => void this.save()}
-      >
-        <wa-icon slot="start" name="floppy-disk"></wa-icon>
-        Save
-      </wa-button>
-    `;
-  }
-
   protected renderContent() {
     const rows = this.settings.providers;
     return html`
@@ -264,40 +247,8 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
         <section class="section">
           <header class="header">
             <div>
-              <h2>Tool approvals</h2>
-              <p class="hint">How the agent handles tool confirmation — same options as GitHub Copilot.</p>
-            </div>
-          </header>
-          <wa-radio-group
-            name="approval-mode"
-            label="Approval mode"
-            orientation="vertical"
-            .value=${this.approvalMode}
-            @change=${(e: Event) => {
-              const value = (e.target as HTMLInputElement).value;
-              if (value === 'manual' || value === 'auto_safe' || value === 'auto_all') {
-                this.setApprovalMode(value);
-              }
-            }}
-          >
-            ${APPROVAL_OPTIONS.map(
-              (option) => html`
-                <wa-radio value=${option.value}>
-                  <span class="approval-option">
-                    <span class="approval-label">${option.label}</span>
-                    <span class="approval-hint">${option.hint}</span>
-                  </span>
-                </wa-radio>
-              `,
-            )}
-          </wa-radio-group>
-        </section>
-
-        <section class="section">
-          <header class="header">
-            <div>
               <h2>AI Providers</h2>
-              <p class="hint">OpenAI-compatible endpoints. Edit cells in place, then Save.</p>
+              <p class="hint">OpenAI-compatible endpoints. Edit cells in place, then save from the toolbar.</p>
             </div>
             <wa-button size="s" variant="brand" appearance="filled" @click=${() => this.addProvider()}>
               <wa-icon slot="start" name="plus"></wa-icon>
@@ -333,6 +284,38 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
             Enter an API key to load available models. Catalog ids become
             <code>providerId/modelId</code> for Auto routing.
           </wa-callout>
+        </section>
+
+        <section class="section">
+          <header class="header">
+            <div>
+              <h2>Tool approvals</h2>
+              <p class="hint">How the agent handles tool confirmation — same options as GitHub Copilot.</p>
+            </div>
+          </header>
+          <wa-radio-group
+            name="approval-mode"
+            label="Approval mode"
+            orientation="vertical"
+            .value=${this.approvalMode}
+            @change=${(e: Event) => {
+              const value = (e.target as HTMLInputElement).value;
+              if (value === 'manual' || value === 'auto_safe' || value === 'auto_all') {
+                this.setApprovalMode(value);
+              }
+            }}
+          >
+            ${APPROVAL_OPTIONS.map(
+              (option) => html`
+                <wa-radio value=${option.value}>
+                  <span class="approval-option">
+                    <span class="approval-label">${option.label}</span>
+                    <span class="approval-hint">${option.hint}</span>
+                  </span>
+                </wa-radio>
+              `,
+            )}
+          </wa-radio-group>
         </section>
       </div>
     `;

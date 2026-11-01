@@ -63,6 +63,7 @@ describe('context usage', () => {
           createdAt: 2,
         },
       ],
+      attachments: [],
       buffers: emptyBuffers(),
       specialistMode: 'build',
       createdAt: 1,

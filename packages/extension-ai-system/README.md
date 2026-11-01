@@ -6,9 +6,9 @@ Cognitive chat runtime for Eclipse Docks: sessions, model routing, tool broker w
 
 The **harness** (prompt → specialist loop → tools → approvals → streaming UI) is the working product path.
 
-Composer supports **attachments** (paperclip / drag-drop, up to 8). Payloads (text or image data URLs) are stored on the **session**, not inlined into chat history. The user turn only publishes a lightweight reference; the model calls `attachment_list` / `attachment_read` when it needs contents (images are presented for vision only on read). This keeps baseline token use low.
+Composer supports **attachments** (paperclip / drag-drop / Ctrl+V, up to 8). Payloads live on the **session**. The shared in-memory root is domain-agnostic: callers register **live file callbacks** that resolve payloads on read (no copies). AI places refs under `in-memory/<sessionId>/…` and optionally projects the mount to the active session folder. The root is not mounted by default. Image data-URL files are presented for vision on read.
 
-Supported: text files (≤~100k chars stored) and visual media (jpeg/png/gif/webp/svg/ico/bmp/avif/tiff, ≤4MB). SVG keeps source text for `attachment_read` plus a preview data URL. Audio/video rejected.
+Supported: text files (≤~100k chars stored) and visual media (jpeg/png/gif/webp/svg/ico/bmp/avif/tiff, ≤4MB). SVG keeps source text plus a preview data URL. Audio/video rejected. Storage bootstrap commands (`connect_opfs`, `load_workspace`, …) are not exposed as LLM tools.
 
 **ICOM Core** (`runtime/core`) and **ACT-R memory** (`runtime/memory` + session buffers) are wired into each turn but do not yet drive model policy, tool policy, or prompt content in a meaningful way. Treat them as scaffolding until the todos below land.
 

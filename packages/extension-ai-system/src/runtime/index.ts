@@ -10,4 +10,6 @@ export * from './specialists';
 export * from './compact/compaction';
 export * from './context/usage';
 export * from './attachments';
+export * from './attachment-paths';
+export * from './session-workspace';
 export * from './cognitive-runtime';

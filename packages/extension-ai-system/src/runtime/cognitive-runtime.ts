@@ -1,6 +1,7 @@
 import { persistenceService } from '@eclipse-docks/core';
 import type {
   ChatMessage,
+  EffortLevel,
   MessagePart,
   ModelPolicy,
   PermissionAction,
@@ -25,14 +26,16 @@ import {
   parseModelIds,
 } from './models';
 import type { ModelCatalogEntry, ModelProvider, ProvidersSettings, RouteRequest } from './models';
-import {
-  ToolBroker,
-  registerAttachmentTools,
-  registerWorkspaceTools,
-  refreshCommandTools,
-} from './tools';
+import { ToolBroker, registerWorkspaceTools, refreshCommandTools } from './tools';
 import type { PermissionHandler } from './tools';
 import { SessionRuntime } from './session';
+import {
+  attachmentUri,
+  projectInMemoryMountToFolder,
+  removeAttachmentFromWorkspace,
+  removeSessionWorkspaceFolder,
+  syncAttachmentsToWorkspace,
+} from './session-workspace';
 import { runSpecialistLoop, systemPromptFor } from './specialists';
 import type { SystemPromptEnhancer } from './specialists';
 import { summarizeDroppedHistory } from './compact/compaction';
@@ -67,12 +70,6 @@ export class CognitiveRuntime {
     this.started = true;
     this.applyProvidersSettings(defaultProvidersSettings(), { persist: false, emit: false });
     registerWorkspaceTools(this.tools);
-    registerAttachmentTools(this.tools, (sessionId, attachmentId) => {
-      const list = this.sessions.get(sessionId)?.attachments ?? [];
-      if (!attachmentId) return list;
-      const found = list.find((a) => a.id === attachmentId);
-      return found ? [found] : [];
-    });
     this.tools.setApprovalMode(this.approvalMode);
     this.tools.setPermissionHandler(async (req) => this.requestPermission(req));
     this.ready = this.hydrateAll();
@@ -141,7 +138,10 @@ export class CognitiveRuntime {
   }
 
   setModelPolicy(policy: ModelPolicy): void {
-    this.policy = policy;
+    const next = normalizeModelPolicy(policy) ?? this.policy;
+    if (sameModelPolicy(this.policy, next)) return;
+    this.policy = next;
+    void this.persist();
   }
 
   getModelPolicy(): ModelPolicy {
@@ -210,35 +210,51 @@ export class CognitiveRuntime {
     return this.sessions.createSession().id;
   }
 
-  /** Store attachment payloads on the session (not inlined into history until prompt). */
-  addAttachments(
+  /** Store attachment payloads on the session and mirror them into in-memory/<sessionId>/. */
+  async addAttachments(
     sessionId: string | undefined,
     attachments: PromptAttachment[],
-  ): SessionAttachment[] {
+  ): Promise<SessionAttachment[]> {
     const id = this.ensureSessionId(sessionId);
     const session = this.sessions.get(id);
     if (!session || !attachments.length) return [];
 
     const room = Math.max(0, MAX_ATTACHMENTS - (session.attachments?.length ?? 0));
-    const accepted = attachments.slice(0, room).map((attachment) => toSessionAttachment(attachment));
+    const accepted = attachments.slice(0, room).map((attachment) => {
+      const stored = toSessionAttachment(attachment);
+      return { ...stored, path: attachmentUri(id, stored) };
+    });
     if (!accepted.length) return [];
 
     this.sessions.update(id, {
       attachments: [...(session.attachments ?? []), ...accepted],
     });
     this.commitSessions();
+    await this.mirrorAttachments(id, accepted).catch(() => undefined);
     return accepted;
   }
 
-  /** Remove an attachment payload from the session store. */
+  /** Remove an attachment payload from the session store and in-memory workspace. */
   removeAttachment(sessionId: string, attachmentId: string): boolean {
     const session = this.sessions.get(sessionId);
     if (!session) return false;
+    const removed = (session.attachments ?? []).find((a) => a.id === attachmentId);
     const next = (session.attachments ?? []).filter((a) => a.id !== attachmentId);
     if (next.length === (session.attachments?.length ?? 0)) return false;
     this.sessions.update(sessionId, { attachments: next });
     this.commitSessions();
+    if (removed) void removeAttachmentFromWorkspace(sessionId, removed);
     return true;
+  }
+
+  /** Drop a session and its in-memory attachment folder. */
+  removeSession(sessionId: string): boolean {
+    const ok = this.sessions.remove(sessionId);
+    if (ok) {
+      void removeSessionWorkspaceFolder(sessionId);
+      this.commitSessions();
+    }
+    return ok;
   }
 
   /**
@@ -303,13 +319,15 @@ export class CognitiveRuntime {
 
     const text = input.text.trim();
     const messageId = `msg-${Date.now()}-u`;
-    const fresh = (input.attachments ?? []).slice(0, MAX_ATTACHMENTS).map((attachment) =>
-      toSessionAttachment(attachment, { messageId }),
-    );
+    const fresh = (input.attachments ?? []).slice(0, MAX_ATTACHMENTS).map((attachment) => {
+      const stored = toSessionAttachment(attachment, { messageId });
+      return { ...stored, path: attachmentUri(session.id, stored) };
+    });
     if (fresh.length) {
       this.sessions.update(session.id, {
         attachments: [...(this.sessions.get(session.id)?.attachments ?? []), ...fresh],
       });
+      await this.mirrorAttachments(session.id, fresh);
     }
 
     const existingIds = (input.attachmentIds ?? []).filter(Boolean);
@@ -326,9 +344,16 @@ export class CognitiveRuntime {
       throw new Error('Prompt requires text or at least one attachment');
     }
 
+    // Ensure already-stored attachments are present in the in-memory workspace.
+    if (published.length) {
+      await this.mirrorAttachments(session.id, published).catch(() => undefined);
+    }
+
     const parts: MessagePart[] = [];
     if (text) parts.push({ type: 'text', text });
-    for (const item of published) parts.push(toFileRefPart(item));
+    for (const item of published) {
+      parts.push(toFileRefPart({ ...item, path: item.path || attachmentUri(session.id, item) }));
+    }
 
     const promptSummary = summarizePrompt(
       text,
@@ -425,7 +450,8 @@ export class CognitiveRuntime {
       activation: 0.7,
     });
 
-    if ((this.sessions.get(session.id)?.history.length ?? 0) > AUTO_COMPACT_AFTER) {
+    const aborted = Boolean(input.signal?.aborted);
+    if (!aborted && (this.sessions.get(session.id)?.history.length ?? 0) > AUTO_COMPACT_AFTER) {
       await this.compactSession(session.id, COMPACT_KEEP_COUNT, input.signal);
     }
 
@@ -494,10 +520,19 @@ export class CognitiveRuntime {
   }
 
   private emitSessions(): void {
+    const focusedId = this.sessions.focused()?.id ?? null;
+    projectInMemoryMountToFolder(focusedId);
     this.events.publish(TOPIC.sessionChanged, {
       sessions: this.sessions.list(),
-      focusedId: this.sessions.focused()?.id ?? null,
+      focusedId,
     });
+  }
+
+  /** Live in-memory file refs that resolve payloads from the session store. */
+  private mirrorAttachments(sessionId: string, attachments: SessionAttachment[]): Promise<void> {
+    return syncAttachmentsToWorkspace(sessionId, attachments, (attachmentId) =>
+      this.sessions.get(sessionId)?.attachments?.find((a) => a.id === attachmentId),
+    );
   }
 
   private async hydrateAll(): Promise<void> {
@@ -509,6 +544,17 @@ export class CognitiveRuntime {
     if (!this.sessions.list().length) this.sessions.createSession({ title: 'Chat' });
     const mostRecent = this.sessions.list()[0];
     if (mostRecent) this.sessions.focus(mostRecent.id);
+    for (const session of this.sessions.list()) {
+      const list = session.attachments ?? [];
+      if (!list.length) continue;
+      const stamped = list.map((a) =>
+        a.path ? a : { ...a, path: attachmentUri(session.id, a) },
+      );
+      if (stamped.some((a, i) => a.path !== list[i]?.path)) {
+        this.sessions.update(session.id, { attachments: stamped });
+      }
+      await this.mirrorAttachments(session.id, stamped).catch(() => undefined);
+    }
     this.emitSessions();
   }
 
@@ -537,6 +583,7 @@ export class CognitiveRuntime {
             sessions?: ReturnType<SessionRuntime['snapshot']>;
             memory?: ReturnType<CognitiveMemory['snapshot']>;
             approvalMode?: ToolApprovalMode;
+            modelPolicy?: ModelPolicy;
           }
         | null;
       if (!saved) return;
@@ -546,6 +593,8 @@ export class CognitiveRuntime {
         this.approvalMode = saved.approvalMode;
         this.tools.setApprovalMode(saved.approvalMode);
       }
+      const policy = normalizeModelPolicy(saved.modelPolicy);
+      if (policy) this.policy = policy;
     } catch {
       // first run / unavailable persistence
     }
@@ -557,6 +606,7 @@ export class CognitiveRuntime {
         sessions: this.sessions.snapshot(),
         memory: this.memory.snapshot(),
         approvalMode: this.approvalMode,
+        modelPolicy: this.policy,
       });
     } catch {
       // ignore persistence failures in constrained environments
@@ -566,6 +616,48 @@ export class CognitiveRuntime {
 
 function isToolApprovalMode(value: unknown): value is ToolApprovalMode {
   return value === 'manual' || value === 'auto_safe' || value === 'auto_all';
+}
+
+function isOptimizeFor(value: unknown): value is 'cost' | 'balance' | 'intelligence' {
+  return value === 'cost' || value === 'balance' || value === 'intelligence';
+}
+
+function isEffortOrAuto(value: unknown): value is EffortLevel | 'auto' {
+  return (
+    value === 'auto' ||
+    value === 'none' ||
+    value === 'minimal' ||
+    value === 'low' ||
+    value === 'medium' ||
+    value === 'high' ||
+    value === 'xhigh' ||
+    value === 'max'
+  );
+}
+
+function normalizeModelPolicy(value: unknown): ModelPolicy | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  if (raw.mode === 'auto' && isOptimizeFor(raw.optimizeFor)) {
+    return { mode: 'auto', optimizeFor: raw.optimizeFor };
+  }
+  if (raw.mode === 'manual' && typeof raw.model === 'string' && raw.model.trim()) {
+    return {
+      mode: 'manual',
+      model: raw.model.trim(),
+      ...(isEffortOrAuto(raw.effort) ? { effort: raw.effort } : {}),
+    };
+  }
+  return null;
+}
+
+function sameModelPolicy(a: ModelPolicy, b: ModelPolicy): boolean {
+  if (a.mode !== b.mode) return false;
+  if (a.mode === 'auto' && b.mode === 'auto') return a.optimizeFor === b.optimizeFor;
+  if (a.mode === 'manual' && b.mode === 'manual') {
+    return a.model === b.model && (a.effort ?? 'auto') === (b.effort ?? 'auto');
+  }
+  return false;
 }
 
 function externalCatalogEntry(id: string, providerId: string): ModelCatalogEntry {

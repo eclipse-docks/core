@@ -66,10 +66,18 @@ registerAll({
                 }
 
                 const children = await targetDir.listChildren(true);
-                const result: Array<{ path: string; size: number | null }> = [];
+                const result: Array<{ path: string; kind: 'file' | 'directory'; size: number | null }> = [];
                 for (const child of children) {
+                    if (child instanceof Directory) {
+                        result.push({ path: child.getWorkspacePath(), kind: 'directory', size: null });
+                        continue;
+                    }
                     if (!(child instanceof File)) continue;
-                    result.push({ path: child.getWorkspacePath(), size: await child.size() });
+                    result.push({
+                        path: child.getWorkspacePath(),
+                        kind: 'file',
+                        size: await child.size(),
+                    });
                 }
                 return result;
             } catch (err: any) {

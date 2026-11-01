@@ -23,17 +23,18 @@ describe('attachments', () => {
     expect(stored.kind).toBe('text');
     expect(stored.text).toContain('export const x');
 
-    const ref = toFileRefPart(stored);
-    expect(ref).toEqual({
-      type: 'file',
-      id: stored.id,
-      name: 'main.ts',
-      path: 'src/main.ts',
-      mime: undefined,
-      kind: 'text',
-      byteLength: undefined,
-    });
-    expect(formatAttachmentRefForModel(ref)).toContain(`id=${stored.id}`);
+    const withPath = {
+      ...stored,
+      path: `in-memory://sess-1/${stored.id}-main.ts`,
+    };
+    const ref = toFileRefPart(withPath);
+    expect(ref.type).toBe('file');
+    expect(ref.id).toBe(stored.id);
+    expect(ref.name).toBe('main.ts');
+    expect(ref.path).toBe(withPath.path);
+    expect(ref.kind).toBe('text');
+    expect(formatAttachmentRefForModel(ref)).toContain(withPath.path);
+    expect(formatAttachmentRefForModel(ref)).toContain('workspace_read');
     expect(formatAttachmentRefForModel(ref)).not.toContain('export const');
   });
 
@@ -52,15 +53,15 @@ describe('attachments', () => {
       kind: 'text',
       text: 'const a = 1;',
     });
+    const withPath = { ...stored, path: `in-memory://sess-1/${stored.id}-a.ts` };
     const content = userContentFromParts([
       { type: 'text', text: 'Please review' },
-      toFileRefPart(stored),
+      toFileRefPart(withPath),
     ]);
     expect(typeof content).toBe('string');
     expect(content as string).toContain('Please review');
-    expect(content as string).toContain(`id=${stored.id}`);
-    expect(content as string).toContain('attachment_read');
-    expect(content as string).toContain(`id="${stored.id}"`);
+    expect(content as string).toContain(withPath.path);
+    expect(content as string).toContain('workspace_read');
     expect(content as string).not.toContain('const a = 1;');
   });
 

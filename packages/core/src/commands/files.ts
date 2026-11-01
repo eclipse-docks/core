@@ -237,6 +237,29 @@ registerAll({
 
 registerAll({
     command: {
+        "id": "connect_memory",
+        "name": "In-Memory",
+        "description": "Mount the shared in-memory workspace root (ephemeral, not persisted)",
+        "parameters": []
+    },
+    handler: {
+        execute: async () => {
+            try {
+                await workspaceService.connectFolder({ memory: true });
+            } catch (err: any) {
+                toastError(err.message);
+            }
+        }
+    },
+    contribution: {
+        target: "filebrowser.connections",
+        label: "In-Memory",
+        icon: "memory"
+    }
+})
+
+registerAll({
+    command: {
         "id": "refresh_resource",
         "name": "Refresh resource",
         "description": "Refreshes the connected folder of the selected resource, or the whole workspace if nothing is selected",

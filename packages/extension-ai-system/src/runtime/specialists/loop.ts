@@ -1,6 +1,7 @@
 import type { ChatMessage, MessagePart, SpecialistRole } from '../types';
 import type { ModelProvider, ProviderChatMessage, ResolvedModel, ToolDefinition } from '../models/types';
 import type { ToolBroker } from '../tools/broker';
+import { isAborted } from '../abort';
 import {
   IMAGE_PRESENT_KEY,
   stripAttachmentToolOutput,
@@ -103,8 +104,22 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
     input.compactionSummary,
   );
   let success = true;
+  let cancelled = false;
+
+  const markCancelled = () => {
+    if (cancelled) return;
+    cancelled = true;
+    success = false;
+    if (!parts.some((p) => p.type === 'text')) {
+      emit({ type: 'text', text: 'Cancelled.' });
+    }
+  };
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
+    if (isAborted(input.signal)) {
+      markCancelled();
+      break;
+    }
     input.refreshTools?.();
     const tools: ToolDefinition[] = input.broker.listDefinitions(input.role);
     let pendingTools: Array<{ id: string; name: string; arguments: string }> = [];
@@ -117,6 +132,7 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
       providerOptions: input.resolved.providerOptions,
       signal: input.signal,
     })) {
+      if (isAborted(input.signal)) break;
       if (chunk.type === 'error') {
         emit({ type: 'text', text: `Error: ${chunk.error}` });
         success = false;
@@ -140,11 +156,15 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
       }
     }
 
+    if (isAborted(input.signal)) {
+      markCancelled();
+      break;
+    }
+
     if (!pendingTools.length) {
       if (assistantText && !parts.some((p) => p.type === 'text')) emit({ type: 'text', text: assistantText });
       break;
     }
-
     messages.push({
       role: 'assistant',
       content: assistantText,
@@ -169,7 +189,15 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
           })
         : null;
 
+    // Collect vision payloads and append AFTER every tool result, so we never
+    // interrupt the required assistant(tool_calls) → tool → tool sequence.
+    const pendingImages: Array<{ id: string; name: string; dataUrl: string }> = [];
+
     for (const tool of pendingTools) {
+      if (isAborted(input.signal)) {
+        markCancelled();
+        break;
+      }
       let args: Record<string, unknown> = {};
       try {
         args = tool.arguments ? JSON.parse(tool.arguments) : {};
@@ -216,27 +244,45 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
           presentImage
             ? {
                 ...((safeOutput as object) ?? {}),
-                note: 'Image bytes follow in the next user message for vision inspection.',
+                note: 'Image bytes follow after all tool results for vision inspection.',
               }
             : safeOutput,
         ),
       });
       if (presentImage) {
-        const dataUrl = String((rawOutput as Record<string, unknown>).dataUrl);
-        const name = String((rawOutput as Record<string, unknown>).name ?? 'image');
-        const id = String((rawOutput as Record<string, unknown>).id ?? '');
-        messages.push({
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Attachment image for inspection: id=${id} name="${name}"`,
-            },
-            { type: 'image_url', image_url: { url: dataUrl } },
-          ],
+        pendingImages.push({
+          id: String((rawOutput as Record<string, unknown>).id ?? ''),
+          name: String((rawOutput as Record<string, unknown>).name ?? 'image'),
+          dataUrl: String((rawOutput as Record<string, unknown>).dataUrl),
         });
       }
       if (!result.ok) success = false;
+    }
+
+    if (cancelled || isAborted(input.signal)) {
+      markCancelled();
+      break;
+    }
+
+    if (pendingImages.length) {
+      messages.push({
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text:
+              pendingImages.length === 1
+                ? `Attachment image for inspection: id=${pendingImages[0]!.id} name="${pendingImages[0]!.name}"`
+                : `Attachment images for inspection:\n${pendingImages
+                    .map((img) => `- id=${img.id} name="${img.name}"`)
+                    .join('\n')}`,
+          },
+          ...pendingImages.map((img) => ({
+            type: 'image_url' as const,
+            image_url: { url: img.dataUrl },
+          })),
+        ],
+      });
     }
   }
 

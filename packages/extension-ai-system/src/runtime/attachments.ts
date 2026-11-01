@@ -1,7 +1,8 @@
 import type { MessagePart, PromptAttachment, SessionAttachment } from './types';
 import type { ProviderContent } from './models/types';
+import { toWorkspaceToolPath } from './attachment-paths';
 
-/** Soft cap per attached text file when stored / returned by attachment_read. */
+/** Soft cap per attached text file when stored / returned via workspace_read. */
 export const MAX_ATTACHMENT_CHARS = 100_000;
 
 /** Soft cap for visual media attachments (bytes). */
@@ -10,7 +11,7 @@ export const MAX_IMAGE_BYTES = 4_000_000;
 /** Max files accepted on a single user turn. */
 export const MAX_ATTACHMENTS = 8;
 
-/** Default max characters returned by attachment_read for text. */
+/** Default max characters returned when reading text attachments. */
 export const DEFAULT_READ_CHARS = 40_000;
 
 type MediaMode = 'raster' | 'svg';
@@ -18,7 +19,7 @@ type MediaMode = 'raster' | 'svg';
 interface MediaType {
   mime: string;
   mode: MediaMode;
-  /** Prefer presenting bytes to vision models on attachment_read. */
+  /** Prefer presenting bytes to vision models on workspace_read. */
   vision: boolean;
 }
 
@@ -175,7 +176,7 @@ export function toSessionAttachment(
   };
 }
 
-/** Lightweight history/UI reference — no payload. */
+/** Lightweight history/UI reference — no payload (path is an in-memory workspace path/URI). */
 export function toFileRefPart(stored: SessionAttachment): Extract<MessagePart, { type: 'file' }> {
   return {
     type: 'file',
@@ -190,15 +191,16 @@ export function toFileRefPart(stored: SessionAttachment): Extract<MessagePart, {
 
 /** One-line catalog entry published into the user turn for the model. */
 export function formatAttachmentRefForModel(part: Extract<MessagePart, { type: 'file' }>): string {
-  const label = part.path?.trim() || part.name;
+  const display = part.path || part.name;
+  const toolPath = toWorkspaceToolPath(display);
   const kind = part.kind ?? 'file';
   const bytes = part.byteLength != null ? ` bytes=${part.byteLength}` : '';
-  return `[Attachment published: id=${part.id} name="${label}" kind=${kind}${part.mime ? ` mime=${part.mime}` : ''}${bytes}] → use attachment_read with id="${part.id}"`;
+  return `[Attachment published: ${display} kind=${kind}${part.mime ? ` mime=${part.mime}` : ''}${bytes}] → workspace_read path="${toolPath}"`;
 }
 
 /**
  * Build provider user content from history parts.
- * File parts are references only — payloads stay in the session store.
+ * File parts are references only — payloads live under the in-memory workspace root.
  */
 export function userContentFromParts(parts: MessagePart[]): ProviderContent {
   const texts: string[] = [];
@@ -210,7 +212,7 @@ export function userContentFromParts(parts: MessagePart[]): ProviderContent {
   const body = [...texts, ...refs].join('\n').trim();
   if (!refs.length) return body;
   const hint =
-    'Attachments live in this session store only. Call attachment_read (or attachment_list) before answering about them. Do not use canvas/workspace/editor commands to locate attachments.';
+    'Session attachments are files under the in-memory workspace root. List with workspace_list, read with workspace_read. Do not connect storage backends to find them.';
   return [body, hint].filter(Boolean).join('\n');
 }
 

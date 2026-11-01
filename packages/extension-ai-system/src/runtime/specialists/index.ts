@@ -15,10 +15,21 @@ export function systemPromptFor(
 ): string {
   const base =
     'You are a specialist in the Eclipse Docks AI runtime. Prefer tools for file and command actions. Be concise.';
+  const replyRule =
+    'After tools finish, write a short human-friendly final reply (what you did and the outcome). Do not paste tool arguments, stdout, JSON, or command logs — those already appear in the UI details panel.';
   const attachmentRule = opts.hasAttachments
-    ? 'This turn publishes session attachments. To inspect them, call attachment_read with the attachment id from the user message (attachment_list if you need ids). Do not open canvases, editors, workspaces, or unrelated commands to find attachment contents — they are not workspace files.'
-    : 'When the user publishes attachments, use attachment_list / attachment_read to inspect them — do not assume their contents are already in the transcript.';
-  const preamble = `${base} ${attachmentRule}`;
+    ? [
+        'This turn publishes session attachments under the shared in-memory root (in-memory/<sessionId>/… or in-memory://<sessionId>/…).',
+        'Read them with workspace_read / workspace_list — in-memory paths work without mounting that root into the workspace tree.',
+        'Do not call load_workspace / connect_opfs / connect_indexeddb to find attachments.',
+        'Canvas from a screenshot: workspace_read the attachment path → canvas.help → workspace_write a .canvas.js (into a durable workspace folder) → canvas.open / canvas.apply_source.',
+        'Qualify durable writes as <root>/<file> using a root from workspace_list (e.g. tests/demo.canvas.js); bare filenames are auto-rooted when a single durable folder is connected, otherwise a folder picker appears.',
+        'If no durable workspace folder is connected for writing canvases, say so and stop.',
+      ].join(' ')
+    : 'Session attachments live under the shared in-memory root and are readable via workspace_read / workspace_list.';
+  const pathRule =
+    'Workspace paths use a connected root prefix from workspace_list (never write bare names at the composite root unless a single durable folder can auto-qualify them).';
+  const preamble = `${base} ${replyRule} ${attachmentRule} ${pathRule}`;
   switch (role) {
     case 'plan':
       return `${preamble}\nMode: PLAN (read-only). Analyze and propose a plan for: ${goal}`;

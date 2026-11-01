@@ -34,6 +34,11 @@ import type {
   SessionAttachment,
   ToolApprovalMode,
 } from '../runtime';
+import {
+  INITIAL_BUSY_STATUS,
+  busyStatusRotateMs,
+  nextBusyStatus,
+} from './busy-status';
 
 interface PermissionRequest {
   requestId: string;
@@ -508,10 +513,37 @@ export class DocksCognitiveView extends DocksPart {
       color: var(--wa-color-text-quiet);
       margin-bottom: var(--wa-space-2xs);
     }
+
+    .tool-row {
+      display: flex;
+      align-items: center;
+      gap: var(--wa-space-2xs);
+      flex-wrap: wrap;
+    }
+
+    .tool-row .tool-heading {
+      margin-bottom: 0;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .tool-detail-body {
+      max-height: min(70vh, 36rem);
+      overflow: auto;
+    }
+
+    .tool-detail-body pre {
+      margin: 0;
+      font-family: var(--wa-font-family-code, var(--wa-font-mono));
+      font-size: var(--wa-font-size-xs);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
   `;
 
-  @query('wa-textarea') private textarea?: HTMLTextAreaElement & { value: string };
+  @query('wa-textarea') private textarea?: HTMLElement & { value: string; shadowRoot: ShadowRoot | null };
   @query('#attach-file-input') private fileInput?: HTMLInputElement;
+  private composerPasteBound = false;
 
   @state() private sessions: CognitiveSession[] = [];
   @state() private focusedId: string | null = null;
@@ -520,7 +552,9 @@ export class DocksCognitiveView extends DocksPart {
   @state() private pendingAttachmentIds: string[] = [];
   @state() private dragOver = false;
   @state() private previewAttachmentId: string | null = null;
+  @state() private toolDetail: Extract<MessagePart, { type: 'tool' }> | null = null;
   @state() private busy = false;
+  @state() private busyStatus = INITIAL_BUSY_STATUS;
   @state() private pendingPermission: PermissionRequest | null = null;
   @state() private policyMode: 'auto' | 'manual' = 'auto';
   @state() private optimizeFor: 'cost' | 'balance' | 'intelligence' = 'balance';
@@ -533,6 +567,26 @@ export class DocksCognitiveView extends DocksPart {
   @state() private historyQuery = '';
   private unsubs: Array<() => void> = [];
   private scrollDebounceTimer?: ReturnType<typeof setTimeout>;
+  private busyStatusTimer?: ReturnType<typeof setTimeout>;
+  private promptController: AbortController | null = null;
+  private nativePasteHandler = (e: Event) => void this.onComposerPaste(e as ClipboardEvent);
+  private cancelKeyHandler = (e: KeyboardEvent) => {
+    if (!this.busy || e.key !== 'Escape') return;
+    e.preventDefault();
+    this.cancelTurn();
+  };
+
+  protected updated(): void {
+    this.bindComposerPaste();
+  }
+
+  private bindComposerPaste(): void {
+    if (this.composerPasteBound) return;
+    const native = this.textarea?.shadowRoot?.querySelector('textarea');
+    if (!native) return;
+    native.addEventListener('paste', this.nativePasteHandler);
+    this.composerPasteBound = true;
+  }
 
   protected doBeforeUI(): void {
     cognitiveRuntime.start();
@@ -541,8 +595,7 @@ export class DocksCognitiveView extends DocksPart {
     this.approvalMode = cognitiveRuntime.getApprovalMode();
     void cognitiveRuntime.whenReady().then(() => {
       this.syncSessions();
-      this.syncModels();
-      this.approvalMode = cognitiveRuntime.getApprovalMode();
+      this.restoreRoutingFromRuntime();
       this.scheduleScrollToBottom();
     });
     this.unsubs.push(
@@ -550,7 +603,7 @@ export class DocksCognitiveView extends DocksPart {
         this.syncSessions();
         this.scheduleScrollToBottom();
       }),
-      cognitiveRuntime.events.subscribe(TOPIC.providersChanged, () => this.syncModels()),
+      cognitiveRuntime.events.subscribe(TOPIC.providersChanged, () => this.onProvidersChanged()),
       cognitiveRuntime.events.subscribe(TOPIC.approvalModeChanged, (mode) => {
         this.approvalMode = mode as ToolApprovalMode;
       }),
@@ -575,8 +628,35 @@ export class DocksCognitiveView extends DocksPart {
   protected doClose(): void {
     if (this.scrollDebounceTimer) clearTimeout(this.scrollDebounceTimer);
     this.scrollDebounceTimer = undefined;
+    this.cancelTurn();
+    this.stopBusyStatus();
+    const native = this.textarea?.shadowRoot?.querySelector('textarea');
+    native?.removeEventListener('paste', this.nativePasteHandler);
+    this.composerPasteBound = false;
     for (const u of this.unsubs) u();
     this.unsubs = [];
+  }
+
+  private startBusyStatus(): void {
+    this.stopBusyStatus();
+    this.busyStatus = INITIAL_BUSY_STATUS;
+    void this.setComposerText(this.busyStatus);
+    window.addEventListener('keydown', this.cancelKeyHandler);
+    const schedule = () => {
+      this.busyStatusTimer = setTimeout(() => {
+        this.busyStatus = nextBusyStatus(this.busyStatus);
+        void this.setComposerText(this.busyStatus);
+        schedule();
+      }, busyStatusRotateMs());
+    };
+    schedule();
+  }
+
+  private stopBusyStatus(): void {
+    if (this.busyStatusTimer) clearTimeout(this.busyStatusTimer);
+    this.busyStatusTimer = undefined;
+    this.busyStatus = INITIAL_BUSY_STATUS;
+    window.removeEventListener('keydown', this.cancelKeyHandler);
   }
 
   private syncSessions(): void {
@@ -616,13 +696,12 @@ export class DocksCognitiveView extends DocksPart {
   private deleteSession(sessionId: string): void {
     if (this.sessions.length <= 1) {
       cognitiveRuntime.sessions.createSession({ title: 'Chat' });
-      cognitiveRuntime.sessions.remove(sessionId);
+      cognitiveRuntime.removeSession(sessionId);
     } else {
-      cognitiveRuntime.sessions.remove(sessionId);
+      cognitiveRuntime.removeSession(sessionId);
     }
     this.streamingParts = [];
     this.syncSessions();
-    cognitiveRuntime.commitSessions();
   }
 
   private openSession(sessionId: string): void {
@@ -673,6 +752,33 @@ export class DocksCognitiveView extends DocksPart {
     }
   }
 
+  /** Mirror persisted runtime policy into the gear menu after hydrate. */
+  private restoreRoutingFromRuntime(): void {
+    this.syncModels();
+    const policy = cognitiveRuntime.getModelPolicy();
+    if (policy.mode === 'auto') {
+      this.policyMode = 'auto';
+      this.optimizeFor = policy.optimizeFor;
+    } else {
+      this.policyMode = 'manual';
+      this.manualModel = policy.model;
+      this.manualEffort = policy.effort ?? 'auto';
+      if (!this.manualModel || !this.modelIds.includes(this.manualModel)) {
+        this.manualModel = this.modelIds[0] ?? cognitiveRuntime.defaultModelId();
+        this.applyPolicy();
+      }
+    }
+    this.approvalMode = cognitiveRuntime.getApprovalMode();
+  }
+
+  private onProvidersChanged(): void {
+    this.syncModels();
+    if (this.policyMode !== 'manual') return;
+    if (this.manualModel && this.modelIds.includes(this.manualModel)) return;
+    this.manualModel = this.modelIds[0] ?? cognitiveRuntime.defaultModelId();
+    this.applyPolicy();
+  }
+
   private effortChoices(): Array<EffortLevel | 'auto'> {
     const cap = detectEffortCapability(this.manualModel || cognitiveRuntime.defaultModelId());
     if (!cap.supported) return ['auto', 'none'];
@@ -717,6 +823,7 @@ export class DocksCognitiveView extends DocksPart {
       if (optimize === 'cost' || optimize === 'balance' || optimize === 'intelligence') {
         this.policyMode = 'auto';
         this.optimizeFor = optimize;
+        this.applyPolicy();
       }
       return;
     }
@@ -725,6 +832,7 @@ export class DocksCognitiveView extends DocksPart {
       if (!model) return;
       this.policyMode = 'manual';
       this.manualModel = model;
+      this.applyPolicy();
     }
   }
 
@@ -740,12 +848,16 @@ export class DocksCognitiveView extends DocksPart {
     cognitiveRuntime.setModelPolicy(policy);
   }
 
-  private async clearComposer(): Promise<void> {
-    this.draft = '';
-    this.pendingAttachmentIds = [];
+  private async setComposerText(value: string): Promise<void> {
+    this.draft = value;
     await this.updateComplete;
-    if (this.textarea) this.textarea.value = '';
+    if (this.textarea) this.textarea.value = value;
+  }
+
+  private async clearComposer(): Promise<void> {
+    this.pendingAttachmentIds = [];
     if (this.fileInput) this.fileInput.value = '';
+    await this.setComposerText('');
   }
 
   private sessionAttachments(): SessionAttachment[] {
@@ -801,7 +913,7 @@ export class DocksCognitiveView extends DocksPart {
       accepted.push(result.attachment);
     }
 
-    const stored = cognitiveRuntime.addAttachments(sessionId, accepted);
+    const stored = await cognitiveRuntime.addAttachments(sessionId, accepted);
     if (stored.length) {
       this.pendingAttachmentIds = [
         ...this.pendingAttachmentIds,
@@ -837,22 +949,49 @@ export class DocksCognitiveView extends DocksPart {
     if (e.dataTransfer?.files?.length) await this.addFiles(e.dataTransfer.files);
   }
 
+  /** Attach clipboard files/images (e.g. Ctrl+V screenshot) when focused in the prompt. */
+  private async onComposerPaste(e: ClipboardEvent): Promise<void> {
+    if (this.busy) {
+      e.preventDefault();
+      return;
+    }
+    const files = filesFromClipboard(e.clipboardData);
+    if (!files.length) return;
+    e.preventDefault();
+    await this.addFiles(files);
+  }
+
+  private cancelTurn(): void {
+    if (!this.busy && !this.promptController) return;
+    this.promptController?.abort();
+    if (this.pendingPermission) this.resolvePermission('deny');
+  }
+
   private async send(): Promise<void> {
     const text = this.draft.trim();
     const attachmentIds = [...this.pendingAttachmentIds];
     if ((!text && !attachmentIds.length) || this.busy) return;
     this.applyPolicy();
-    await this.clearComposer();
+    this.pendingAttachmentIds = [];
+    if (this.fileInput) this.fileInput.value = '';
+    const controller = new AbortController();
+    this.promptController = controller;
     this.busy = true;
     this.streamingParts = [];
+    this.startBusyStatus();
     try {
       await cognitiveRuntime.prompt({
         sessionId: this.focusedId ?? undefined,
         text,
         attachmentIds,
+        signal: controller.signal,
       });
     } finally {
+      if (this.promptController === controller) this.promptController = null;
+      this.stopBusyStatus();
       this.busy = false;
+      this.streamingParts = [];
+      await this.clearComposer();
       this.syncSessions();
       this.scheduleScrollToBottom();
       this.textarea?.focus();
@@ -964,6 +1103,38 @@ export class DocksCognitiveView extends DocksPart {
             Remove
           </wa-button>
           <wa-button variant="brand" @click=${() => this.closeAttachmentPreview()}>Close</wa-button>
+        </div>
+      </wa-dialog>
+    `;
+  }
+
+  private openToolDetail(part: Extract<MessagePart, { type: 'tool' }>): void {
+    this.toolDetail = part;
+  }
+
+  private closeToolDetail(): void {
+    this.toolDetail = null;
+  }
+
+  private renderToolDetailDialog() {
+    const tool = this.toolDetail;
+    if (!tool) return nothing;
+    const label = `${tool.name} · ${tool.status}${tool.durationMs != null ? ` · ${tool.durationMs}ms` : ''}`;
+    const body = JSON.stringify({ args: tool.args ?? {}, result: tool.result ?? null }, null, 2);
+    return html`
+      <wa-dialog
+        label=${label}
+        open
+        light-dismiss
+        with-footer
+        style="--width: min(44rem, 96vw)"
+        @wa-after-hide=${() => this.closeToolDetail()}
+      >
+        <div class="tool-detail-body">
+          <pre>${body}</pre>
+        </div>
+        <div slot="footer">
+          <wa-button variant="brand" @click=${() => this.closeToolDetail()}>Close</wa-button>
         </div>
       </wa-dialog>
     `;
@@ -1113,16 +1284,27 @@ export class DocksCognitiveView extends DocksPart {
           <div class="composer">
             <div class="composer-row">
               <wa-textarea
-                placeholder="Enter your message here..."
+                placeholder=${this.busy ? this.busyStatus : 'Enter your message here…'}
                 size="s"
                 resize="auto"
                 rows="1"
-                .value=${this.draft}
+                .value=${this.busy ? this.busyStatus : this.draft}
                 ?disabled=${this.busy}
+                ?readonly=${this.busy}
                 @input=${(e: Event) => {
+                  if (this.busy) return;
                   this.draft = (e.target as HTMLTextAreaElement).value;
                 }}
                 @keydown=${(e: KeyboardEvent) => {
+                  if (this.busy) {
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      this.cancelTurn();
+                      return;
+                    }
+                    e.preventDefault();
+                    return;
+                  }
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     void this.send();
@@ -1130,6 +1312,19 @@ export class DocksCognitiveView extends DocksPart {
                 }}
               ></wa-textarea>
               <div class="composer-actions">
+                ${this.busy
+                  ? html`
+                      <wa-button
+                        size="s"
+                        appearance="plain"
+                        variant="danger"
+                        title="Stop (Esc)"
+                        @click=${() => this.cancelTurn()}
+                      >
+                        <wa-icon name="stop" label="Stop"></wa-icon>
+                      </wa-button>
+                    `
+                  : nothing}
                 ${this.renderAttachmentDropdown()}
                 ${this.renderContextDropdown()}
               </div>
@@ -1137,6 +1332,7 @@ export class DocksCognitiveView extends DocksPart {
           </div>
         </div>
         ${this.renderAttachmentDialog()}
+        ${this.renderToolDetailDialog()}
       </div>
     `;
   }
@@ -1288,6 +1484,7 @@ export class DocksCognitiveView extends DocksPart {
     }
     if (value.startsWith('effort:')) {
       this.manualEffort = (value.slice(7) as EffortLevel | 'auto') || 'auto';
+      this.applyPolicy();
       return;
     }
     this.onRouterSelect(value);
@@ -1329,7 +1526,7 @@ export class DocksCognitiveView extends DocksPart {
             <wa-dropdown-item
               value=${option.value}
               type="checkbox"
-              ?checked=${option.value === selected}
+              .checked=${option.value === selected}
             >
               ${option.label}
             </wa-dropdown-item>
@@ -1344,7 +1541,7 @@ export class DocksCognitiveView extends DocksPart {
                 <wa-dropdown-item
                   value=${`model:${id}`}
                   type="checkbox"
-                  ?checked=${selected === `model:${id}`}
+                  .checked=${selected === `model:${id}`}
                 >
                   ${id}
                 </wa-dropdown-item>
@@ -1361,7 +1558,7 @@ export class DocksCognitiveView extends DocksPart {
                   <wa-dropdown-item
                     value=${`effort:${level}`}
                     type="checkbox"
-                    ?checked=${this.manualEffort === level}
+                    .checked=${this.manualEffort === level}
                   >
                     ${level}
                   </wa-dropdown-item>
@@ -1377,7 +1574,7 @@ export class DocksCognitiveView extends DocksPart {
             <wa-dropdown-item
               value=${`approval:${option.value}`}
               type="checkbox"
-              ?checked=${this.approvalMode === option.value}
+              .checked=${this.approvalMode === option.value}
             >
               ${option.label}
             </wa-dropdown-item>
@@ -1439,11 +1636,14 @@ export class DocksCognitiveView extends DocksPart {
   }
 
   private renderAssistantMessage(message: ChatMessage, opts: { streaming?: boolean } = {}) {
-    const textParts = message.parts.filter((p) => p.type === 'text');
-    const techParts = message.parts.filter((p) => p.type !== 'text');
+    const { summaryText, techParts } = splitAssistantPresentation(message.parts);
     const open =
       opts.streaming === true ||
       techParts.some((p) => (p.type === 'reasoning' || p.type === 'tool') && p.status === 'streaming');
+
+    const summaryBubble = summaryText.length
+      ? summaryText.map((p) => this.renderTextPart(p))
+      : html`<div class="bubble">${technicalSummary(techParts)}</div>`;
 
     const summary = html`
       <div slot="summary" class="msg-summary">
@@ -1451,13 +1651,11 @@ export class DocksCognitiveView extends DocksPart {
           ? html`
               <div class="streaming-meta">
                 <wa-spinner style="font-size: 0.85rem"></wa-spinner>
-                <span>streaming…</span>
+                <span>${this.busy ? this.busyStatus : 'streaming…'}</span>
               </div>
             `
           : nothing}
-        ${textParts.length
-          ? textParts.map((p) => this.renderTextPart(p))
-          : html`<div class="bubble">${technicalSummary(techParts)}</div>`}
+        ${summaryBubble}
       </div>
     `;
 
@@ -1468,11 +1666,11 @@ export class DocksCognitiveView extends DocksPart {
             ? html`
                 <div class="streaming-meta">
                   <wa-spinner style="font-size: 0.85rem"></wa-spinner>
-                  <span>streaming…</span>
+                  <span>${this.busy ? this.busyStatus : 'streaming…'}</span>
                 </div>
               `
             : nothing}
-          ${textParts.map((p) => this.renderTextPart(p))}
+          ${summaryBubble}
           ${message.id !== 'streaming' ? this.renderMessageMeta(message) : nothing}
         </div>
       `;
@@ -1522,10 +1720,22 @@ export class DocksCognitiveView extends DocksPart {
     }
     if (part.type === 'tool') {
       const heading = `${part.name} · ${part.status}${part.durationMs != null ? ` · ${part.durationMs}ms` : ''}`;
+      const hasDetail = part.args != null || part.result != null || part.status === 'error';
       return html`
-        <div>
+        <div class="tool-row">
           <div class="tool-heading">${heading}</div>
-          <pre class="args">${JSON.stringify({ args: part.args, result: part.result }, null, 2)}</pre>
+          ${hasDetail
+            ? html`
+                <wa-button
+                  size="s"
+                  appearance="plain"
+                  variant="neutral"
+                  @click=${() => this.openToolDetail(part)}
+                >
+                  Details
+                </wa-button>
+              `
+            : nothing}
         </div>
       `;
     }
@@ -1537,8 +1747,8 @@ export class DocksCognitiveView extends DocksPart {
 }
 
 const APPROVAL_OPTIONS: Array<{ value: ToolApprovalMode; label: string }> = [
-  { value: 'manual', label: 'Manual' },
   { value: 'auto_safe', label: 'Auto-approve non-critical' },
+  { value: 'manual', label: 'Manual' },
   { value: 'auto_all', label: 'Approve all' },
 ];
 
@@ -1546,22 +1756,54 @@ function capitalize(value: string): string {
   return value ? value[0]!.toUpperCase() + value.slice(1) : value;
 }
 
+/**
+ * Prefer text after the last tool/reasoning as the visible reply.
+ * Interim narration stays out of the bubble — tool details cover the execution trail.
+ */
+function splitAssistantPresentation(parts: MessagePart[]): {
+  summaryText: Array<Extract<MessagePart, { type: 'text' }>>;
+  techParts: MessagePart[];
+} {
+  const techParts = parts.filter((p) => p.type !== 'text');
+  let lastTechIndex = -1;
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i]!.type !== 'text') lastTechIndex = i;
+  }
+
+  if (lastTechIndex < 0) {
+    return {
+      summaryText: parts.filter((p): p is Extract<MessagePart, { type: 'text' }> => p.type === 'text'),
+      techParts,
+    };
+  }
+
+  const afterTools = parts
+    .slice(lastTechIndex + 1)
+    .filter((p): p is Extract<MessagePart, { type: 'text' }> => p.type === 'text')
+    .filter((p) => p.text.trim());
+
+  if (afterTools.length) {
+    return { summaryText: afterTools, techParts };
+  }
+
+  // Tools ran but no trailing reply yet (streaming) — keep the bubble light.
+  return { summaryText: [], techParts };
+}
+
 function technicalSummary(parts: MessagePart[]): string {
   const tools = parts.filter((p): p is Extract<MessagePart, { type: 'tool' }> => p.type === 'tool');
-  const reasoning = parts.some((p) => p.type === 'reasoning');
-  const steps = parts.filter((p): p is Extract<MessagePart, { type: 'step' }> => p.type === 'step');
-
-  const bits: string[] = [];
-  if (tools.length) {
-    bits.push(
-      tools
-        .map((t) => `${t.name} · ${t.status}${t.durationMs != null ? ` · ${t.durationMs}ms` : ''}`)
-        .join(', '),
-    );
+  const done = tools.filter((t) => t.status === 'done').length;
+  const errors = tools.filter((t) => t.status === 'error').length;
+  if (!tools.length) {
+    if (parts.some((p) => p.type === 'reasoning')) return 'Thinking…';
+    return 'Details';
   }
-  if (reasoning) bits.push('Thinking');
-  if (steps.length) bits.push(`${steps.length} step${steps.length === 1 ? '' : 's'}`);
-  return bits.join(' · ') || 'Details';
+  if (errors && done) return `Finished with ${errors} issue${errors === 1 ? '' : 's'} (${done} ok).`;
+  if (errors) return `Couldn't complete ${errors} step${errors === 1 ? '' : 's'}.`;
+  if (tools.some((t) => t.status === 'running' || t.status === 'preparing')) {
+    return 'Working…';
+  }
+  return done === 1 ? 'Done.' : `Done · ${done} steps.`;
 }
 
 function startOfDay(ts: number): number {
@@ -1627,6 +1869,43 @@ function formatMessageTime(ts: number): string {
 function shortModelLabel(modelRef: string): string {
   const slash = modelRef.indexOf('/');
   return slash === -1 ? modelRef : modelRef.slice(slash + 1);
+}
+
+function filesFromClipboard(data: DataTransfer | null): File[] {
+  if (!data) return [];
+
+  const fromFiles = [...(data.files ?? [])].filter((f) => f && f.size > 0);
+  if (fromFiles.length) return fromFiles;
+
+  const fromItems: File[] = [];
+  for (const item of data.items ?? []) {
+    if (item.kind !== 'file') continue;
+    const file = item.getAsFile();
+    if (!file || file.size <= 0) continue;
+    fromItems.push(nameClipboardFile(file, item.type));
+  }
+  return fromItems;
+}
+
+function nameClipboardFile(file: File, mimeHint?: string): File {
+  const mime = (file.type || mimeHint || 'application/octet-stream').toLowerCase();
+  if (file.name && file.name !== 'image.png' && file.name !== 'blob') return file;
+  const ext =
+    mime === 'image/jpeg' || mime === 'image/jpg'
+      ? 'jpg'
+      : mime === 'image/png'
+        ? 'png'
+        : mime === 'image/gif'
+          ? 'gif'
+          : mime === 'image/webp'
+            ? 'webp'
+            : mime === 'image/svg+xml'
+              ? 'svg'
+              : mime.startsWith('image/')
+                ? 'png'
+                : 'bin';
+  const name = `clipboard-${Date.now()}.${ext}`;
+  return new File([file], name, { type: mime || file.type, lastModified: file.lastModified });
 }
 
 function mergePart(parts: MessagePart[], part: MessagePart): MessagePart[] {

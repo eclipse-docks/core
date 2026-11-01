@@ -10,6 +10,24 @@ vi.mock('@eclipse-docks/core', () => ({
         description: 'Show canvas help',
         parameters: [],
       },
+      connect_opfs: {
+        id: 'connect_opfs',
+        name: 'OPFS',
+        description: 'Connect OPFS workspace',
+        parameters: [],
+      },
+      load_workspace: {
+        id: 'load_workspace',
+        name: 'Local Folder',
+        description: 'Pick a folder',
+        parameters: [],
+      },
+      format_document: {
+        id: 'format_document',
+        name: 'Format',
+        description: 'Format the document',
+        parameters: [],
+      },
     }),
     execute: vi.fn(),
   },
@@ -23,28 +41,12 @@ describe('refreshCommandTools', () => {
     vi.clearAllMocks();
   });
 
-  it('keeps attachment tools registered across command refresh', () => {
+  it('keeps workspace tools and skips storage bootstrap commands', () => {
     const broker = new ToolBroker();
     broker.register(
       {
-        name: 'attachment_list',
-        description: 'list',
-        parameters: { type: 'object', properties: {} },
-      },
-      async (call) => ({ id: call.id, name: call.name, ok: true, output: [] }),
-    );
-    broker.register(
-      {
-        name: 'attachment_read',
-        description: 'read',
-        parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
-      },
-      async (call) => ({ id: call.id, name: call.name, ok: true, output: {} }),
-    );
-    broker.register(
-      {
         name: 'workspace_read',
-        description: 'read workspace',
+        description: 'read',
         parameters: { type: 'object', properties: {} },
       },
       async (call) => ({ id: call.id, name: call.name, ok: true, output: '' }),
@@ -53,9 +55,10 @@ describe('refreshCommandTools', () => {
     refreshCommandTools(broker, 'build');
 
     const names = broker.listDefinitions('build').map((d) => d.name);
-    expect(names).toContain('attachment_list');
-    expect(names).toContain('attachment_read');
     expect(names).toContain('workspace_read');
     expect(names).toContain('canvas_help');
+    expect(names).toContain('format_document');
+    expect(names).not.toContain('connect_opfs');
+    expect(names).not.toContain('load_workspace');
   });
 });

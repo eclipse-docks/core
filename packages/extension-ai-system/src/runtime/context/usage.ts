@@ -30,7 +30,7 @@ export function estimateTokens(text: string): number {
 export function estimatePartTokens(part: MessagePart): number {
   if (part.type === 'text' || part.type === 'reasoning') return estimateTokens(part.text);
   if (part.type === 'file') {
-    // History only stores a reference; payloads stay in the session until attachment_read.
+    // History only stores a reference; payloads live under in-memory/<sessionId>/.
     return estimateTokens(part.name) + estimateTokens(part.id) + 8;
   }
   if (part.type === 'tool') {

@@ -169,6 +169,15 @@ class ContributionRegistry {
         }
         return this.contributions.get(target)!;
     }
+
+    unregisterContribution(target: string, name: string): void {
+        const slot = this.contributions.get(target);
+        if (!slot) return;
+        const next = slot.filter(contribution => contribution.name !== name);
+        if (next.length === slot.length) return;
+        this.contributions.set(target, next);
+        publish(TOPIC_CONTRIBUTEIONS_CHANGED, { target, contributions: this.getContributions(target) } as ContributionChangeEvent);
+    }
 }
 
 export const contributionRegistry = new ContributionRegistry()

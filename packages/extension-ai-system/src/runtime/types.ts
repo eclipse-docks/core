@@ -64,6 +64,18 @@ export type SessionStatus = 'idle' | 'running' | 'waiting_approval' | 'compact';
 
 export type MessagePart =
   | { type: 'text'; text: string }
+  | {
+      type: 'file';
+      /** Session attachment id (payload lives on `CognitiveSession.attachments`). */
+      id: string;
+      /** Display name (usually the basename). */
+      name: string;
+      /** Workspace- or filesystem-relative path when known. */
+      path?: string;
+      mime?: string;
+      kind?: 'text' | 'image';
+      byteLength?: number;
+    }
   | { type: 'reasoning'; text: string; status: 'streaming' | 'done' }
   | {
       type: 'tool';
@@ -81,6 +93,33 @@ export type MessagePart =
       status: 'pending' | 'running' | 'done' | 'error';
       children?: MessagePart[];
     };
+
+/** Attachment supplied with a user prompt before it is published into the session store. */
+export interface PromptAttachment {
+  name: string;
+  path?: string;
+  mime?: string;
+  kind?: 'text' | 'image';
+  text?: string;
+  dataUrl?: string;
+  byteLength?: number;
+  truncated?: boolean;
+}
+
+/** Full attachment payload stored on the session (not inlined into model history). */
+export interface SessionAttachment {
+  id: string;
+  name: string;
+  path?: string;
+  mime?: string;
+  kind: 'text' | 'image';
+  text?: string;
+  dataUrl?: string;
+  byteLength?: number;
+  truncated?: boolean;
+  createdAt: number;
+  messageId?: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -108,6 +147,8 @@ export interface CognitiveSession {
   title: string;
   status: SessionStatus;
   history: ChatMessage[];
+  /** Attachment payloads referenced by `file` message parts. */
+  attachments: SessionAttachment[];
   buffers: BufferMap;
   specialistMode: SpecialistRole;
   parentSessionId?: string;

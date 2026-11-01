@@ -6,6 +6,10 @@ Cognitive chat runtime for Eclipse Docks: sessions, model routing, tool broker w
 
 The **harness** (prompt → specialist loop → tools → approvals → streaming UI) is the working product path.
 
+Composer supports **attachments** (paperclip / drag-drop, up to 8). Payloads (text or image data URLs) are stored on the **session**, not inlined into chat history. The user turn only publishes a lightweight reference; the model calls `attachment_list` / `attachment_read` when it needs contents (images are presented for vision only on read). This keeps baseline token use low.
+
+Supported: text files (≤~100k chars stored) and visual media (jpeg/png/gif/webp/svg/ico/bmp/avif/tiff, ≤4MB). SVG keeps source text for `attachment_read` plus a preview data URL. Audio/video rejected.
+
 **ICOM Core** (`runtime/core`) and **ACT-R memory** (`runtime/memory` + session buffers) are wired into each turn but do not yet drive model policy, tool policy, or prompt content in a meaningful way. Treat them as scaffolding until the todos below land.
 
 See also `docs/internal/icom-agentic-runtime.md` for the layer map.

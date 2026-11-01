@@ -19,9 +19,16 @@ export interface ProviderToolCall {
   arguments: string;
 }
 
+/** OpenAI-style multimodal content (text + image_url). */
+export type ProviderContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'auto' | 'low' | 'high' } };
+
+export type ProviderContent = string | ProviderContentPart[];
+
 export interface ProviderChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string;
+  content: ProviderContent;
   toolCallId?: string;
   name?: string;
   toolCalls?: ProviderToolCall[];

@@ -9,4 +9,5 @@ export * from './session';
 export * from './specialists';
 export * from './compact/compaction';
 export * from './context/usage';
+export * from './attachments';
 export * from './cognitive-runtime';

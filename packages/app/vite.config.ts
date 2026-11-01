@@ -65,6 +65,14 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
       },
+      output: {
+        manualChunks(id: string) {
+          const normalized = id.replaceAll('\\', '/');
+          if (!/\/extension-canvas\/(?:src|dist)\/bridges\//.test(normalized)) return undefined;
+          const file = normalized.split('/').pop()?.replace(/\.ts$/, '') ?? 'bridge';
+          return `canvas-bridge-${file}`;
+        },
+      },
     },
   },
 });

@@ -1,11 +1,15 @@
 import { persistenceService } from '@eclipse-docks/core';
 import type {
   ChatMessage,
+  MessagePart,
   ModelPolicy,
   PermissionAction,
+  PromptAttachment,
+  SessionAttachment,
   SpecialistRole,
   ToolApprovalMode,
 } from './types';
+import { MAX_ATTACHMENTS, toFileRefPart, toSessionAttachment } from './attachments';
 import { createCoreState, coreTick, defaultNeeds } from './core';
 import { CognitiveMemory } from './memory';
 import {
@@ -21,7 +25,12 @@ import {
   parseModelIds,
 } from './models';
 import type { ModelCatalogEntry, ModelProvider, ProvidersSettings, RouteRequest } from './models';
-import { ToolBroker, registerWorkspaceTools, refreshCommandTools } from './tools';
+import {
+  ToolBroker,
+  registerAttachmentTools,
+  registerWorkspaceTools,
+  refreshCommandTools,
+} from './tools';
 import type { PermissionHandler } from './tools';
 import { SessionRuntime } from './session';
 import { runSpecialistLoop, systemPromptFor } from './specialists';
@@ -58,6 +67,12 @@ export class CognitiveRuntime {
     this.started = true;
     this.applyProvidersSettings(defaultProvidersSettings(), { persist: false, emit: false });
     registerWorkspaceTools(this.tools);
+    registerAttachmentTools(this.tools, (sessionId, attachmentId) => {
+      const list = this.sessions.get(sessionId)?.attachments ?? [];
+      if (!attachmentId) return list;
+      const found = list.find((a) => a.id === attachmentId);
+      return found ? [found] : [];
+    });
     this.tools.setApprovalMode(this.approvalMode);
     this.tools.setPermissionHandler(async (req) => this.requestPermission(req));
     this.ready = this.hydrateAll();
@@ -183,6 +198,49 @@ export class CognitiveRuntime {
     void this.persist();
   }
 
+  /** Ensure a focused session exists and return its id. */
+  ensureSessionId(sessionId?: string): string {
+    this.start();
+    if (sessionId && this.sessions.get(sessionId)) {
+      this.sessions.focus(sessionId);
+      return sessionId;
+    }
+    const focused = this.sessions.focused();
+    if (focused) return focused.id;
+    return this.sessions.createSession().id;
+  }
+
+  /** Store attachment payloads on the session (not inlined into history until prompt). */
+  addAttachments(
+    sessionId: string | undefined,
+    attachments: PromptAttachment[],
+  ): SessionAttachment[] {
+    const id = this.ensureSessionId(sessionId);
+    const session = this.sessions.get(id);
+    if (!session || !attachments.length) return [];
+
+    const room = Math.max(0, MAX_ATTACHMENTS - (session.attachments?.length ?? 0));
+    const accepted = attachments.slice(0, room).map((attachment) => toSessionAttachment(attachment));
+    if (!accepted.length) return [];
+
+    this.sessions.update(id, {
+      attachments: [...(session.attachments ?? []), ...accepted],
+    });
+    this.commitSessions();
+    return accepted;
+  }
+
+  /** Remove an attachment payload from the session store. */
+  removeAttachment(sessionId: string, attachmentId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+    const next = (session.attachments ?? []).filter((a) => a.id !== attachmentId);
+    if (next.length === (session.attachments?.length ?? 0)) return false;
+    this.sessions.update(sessionId, { attachments: next });
+    this.commitSessions();
+    return true;
+  }
+
   /**
    * Compact a session: drop older turns, store a summary (LLM when possible),
    * and persist. The summary is injected into later model calls.
@@ -230,6 +288,10 @@ export class CognitiveRuntime {
   async prompt(input: {
     sessionId?: string;
     text: string;
+    /** New payloads to store on the session and publish as refs in this turn. */
+    attachments?: PromptAttachment[];
+    /** Already-stored session attachment ids to publish as refs in this turn. */
+    attachmentIds?: string[];
     role?: SpecialistRole;
     signal?: AbortSignal;
   }): Promise<ChatMessage> {
@@ -239,25 +301,59 @@ export class CognitiveRuntime {
       (input.sessionId ? this.sessions.get(input.sessionId) : this.sessions.focused()) ??
       this.sessions.createSession();
 
+    const text = input.text.trim();
+    const messageId = `msg-${Date.now()}-u`;
+    const fresh = (input.attachments ?? []).slice(0, MAX_ATTACHMENTS).map((attachment) =>
+      toSessionAttachment(attachment, { messageId }),
+    );
+    if (fresh.length) {
+      this.sessions.update(session.id, {
+        attachments: [...(this.sessions.get(session.id)?.attachments ?? []), ...fresh],
+      });
+    }
+
+    const existingIds = (input.attachmentIds ?? []).filter(Boolean);
+    const stored = this.sessions.get(session.id)?.attachments ?? [];
+    const byId = new Map(stored.map((a) => [a.id, a]));
+    const published: SessionAttachment[] = [];
+    for (const item of fresh) published.push(item);
+    for (const id of existingIds) {
+      const found = byId.get(id);
+      if (found && !published.some((p) => p.id === found.id)) published.push(found);
+    }
+
+    if (!text && !published.length) {
+      throw new Error('Prompt requires text or at least one attachment');
+    }
+
+    const parts: MessagePart[] = [];
+    if (text) parts.push({ type: 'text', text });
+    for (const item of published) parts.push(toFileRefPart(item));
+
+    const promptSummary = summarizePrompt(
+      text,
+      published.map((a) => ({ name: a.name, kind: a.kind })),
+    );
+
     const userMessage: ChatMessage = {
-      id: `msg-${Date.now()}-u`,
+      id: messageId,
       role: 'user',
-      parts: [{ type: 'text', text: input.text }],
+      parts,
       createdAt: Date.now(),
     };
     this.sessions.addMessage(session.id, userMessage);
     if (isDefaultChatTitle(session.title)) {
-      this.sessions.update(session.id, { title: titleFromPrompt(input.text) });
+      this.sessions.update(session.id, { title: titleFromPrompt(promptSummary) });
     }
 
     const contextChunk = this.memory.upsert({
       type: 'context',
-      slots: { kind: 'user', summary: input.text },
+      slots: { kind: 'user', summary: promptSummary },
       scope: 'session',
       sessionId: session.id,
       activation: 0.8,
     });
-    const retrieved = this.memory.retrieveForContext(input.text.split(/\s+/).slice(0, 12));
+    const retrieved = this.memory.retrieveForContext(promptSummary.split(/\s+/).slice(0, 12));
     const buffers = {
       ...session.buffers,
       retrieval: retrieved[0] ?? contextChunk,
@@ -277,7 +373,7 @@ export class CognitiveRuntime {
 
     const routeReq: RouteRequest = {
       role,
-      complexity: Math.min(1, input.text.length / 800),
+      complexity: Math.min(1, text.length / 800),
       requireTools: true,
     };
     const resolved = this.models.resolve(routeReq, this.policy);
@@ -297,8 +393,10 @@ export class CognitiveRuntime {
       return err;
     }
 
-    const goal = tick.intent?.summary ?? input.text;
-    let systemPrompt = systemPromptFor(role, goal);
+    const goal = tick.intent?.summary ?? promptSummary;
+    const hasAttachments =
+      published.length > 0 || (this.sessions.get(session.id)?.attachments?.length ?? 0) > 0;
+    let systemPrompt = systemPromptFor(role, goal, { hasAttachments });
     for (const enhance of this.promptEnhancers) {
       systemPrompt = await enhance(systemPrompt, { role, goal, sessionId: session.id });
     }
@@ -311,6 +409,7 @@ export class CognitiveRuntime {
       resolved,
       provider,
       broker: this.tools,
+      refreshTools: () => refreshCommandTools(this.tools, role),
       sessionId: session.id,
       signal: input.signal,
       onPart: (part) => this.events.publish(TOPIC.messagePart, { sessionId: session.id, part }),
@@ -490,4 +589,11 @@ function titleFromPrompt(text: string): string {
   const trimmed = text.trim().replace(/\s+/g, ' ');
   if (!trimmed) return 'Chat';
   return trimmed.length <= 42 ? trimmed : `${trimmed.slice(0, 42).trimEnd()}…`;
+}
+
+function summarizePrompt(text: string, attachments: PromptAttachment[]): string {
+  if (text) return text;
+  if (!attachments.length) return '';
+  if (attachments.length === 1) return `Attached ${attachments[0]!.name}`;
+  return `Attached ${attachments.map((a) => a.name).join(', ')}`;
 }

@@ -44,6 +44,7 @@ appLoaderService.registerApp(
       '@eclipse-docks/extension-terminal',
       '@eclipse-docks/extension-notebook',
       '@eclipse-docks/extension-python-runtime',
+      '@eclipse-docks/extension-canvas',
       '@eclipse-docks/extension-catalog',
       '@eclipse-docks/extension-md-editor',
       '@eclipse-docks/extension-plain-editor',

@@ -29,6 +29,11 @@ export function formatMessageForCompaction(msg: ChatMessage, maxChars = 280): st
 
 function formatPart(part: MessagePart): string {
   if (part.type === 'text') return part.text;
+  if (part.type === 'file') {
+    const label = part.path || part.name;
+    const kind = part.kind === 'image' ? 'image' : 'file';
+    return `${kind} ${label} (${part.id})`;
+  }
   if (part.type === 'reasoning') return `(thinking) ${part.text}`;
   if (part.type === 'tool') {
     const status = part.status === 'error' ? 'error' : part.status === 'done' ? 'ok' : part.status;

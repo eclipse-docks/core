@@ -3,7 +3,14 @@ import type { ToolBroker } from './broker';
 import type { SpecialistRole } from '../types';
 
 const SKIP = new Set(['open_cognitive_ai_settings', 'open_ai_config']);
-const BUILTIN_TOOLS = new Set(['workspace_list', 'workspace_read', 'workspace_write']);
+/** Built-in tools that must survive command refresh (not command-backed). */
+const KEEP_TOOLS = new Set([
+  'workspace_list',
+  'workspace_read',
+  'workspace_write',
+  'attachment_list',
+  'attachment_read',
+]);
 
 function sanitizeName(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
@@ -12,10 +19,10 @@ function sanitizeName(id: string): string {
 /** Registers Docks commands as first-class LLM tools (tool name = command id). */
 export function refreshCommandTools(broker: ToolBroker, role: SpecialistRole): void {
   for (const def of broker.listDefinitions('build')) {
-    if (!BUILTIN_TOOLS.has(def.name)) broker.unregister(def.name);
+    if (!KEEP_TOOLS.has(def.name)) broker.unregister(def.name);
   }
 
-  const commands = commandRegistry.listCommands();
+  const commands = commandRegistry.listCommands(commandRegistry.createExecutionContext());
   const entries = Object.values(commands) as Array<{
     id: string;
     name: string;
@@ -29,7 +36,7 @@ export function refreshCommandTools(broker: ToolBroker, role: SpecialistRole): v
     if ((role === 'plan' || role === 'explore') && /delete|write|save|rm|mv/i.test(command.id)) continue;
 
     const toolName = sanitizeName(command.id);
-    if (BUILTIN_TOOLS.has(toolName)) continue;
+    if (KEEP_TOOLS.has(toolName)) continue;
 
     const properties: Record<string, unknown> = {};
     const required: string[] = [];

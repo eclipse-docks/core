@@ -1,6 +1,12 @@
 import { detectEffortCapability } from './effort-support';
 import type { ModelProvider, ProviderChatMessage, StreamChunk, StreamParams } from './types';
 
+function wireContent(content: ProviderChatMessage['content']): unknown {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) return content;
+  return content ?? '';
+}
+
 /** Map internal messages to OpenAI chat/completions wire shape. */
 export function toOpenAIMessages(messages: ProviderChatMessage[]): Record<string, unknown>[] {
   return messages.map((m) => {
@@ -8,7 +14,7 @@ export function toOpenAIMessages(messages: ProviderChatMessage[]): Record<string
       return {
         role: 'tool',
         tool_call_id: m.toolCallId,
-        content: m.content || '',
+        content: typeof m.content === 'string' ? m.content || '' : '',
         ...(m.name ? { name: m.name } : {}),
       };
     }
@@ -16,7 +22,7 @@ export function toOpenAIMessages(messages: ProviderChatMessage[]): Record<string
       return {
         role: 'assistant',
         // Some providers reject null here — always send a string.
-        content: m.content ?? '',
+        content: typeof m.content === 'string' ? m.content : '',
         tool_calls: m.toolCalls.map((tc) => ({
           id: tc.id,
           type: 'function',
@@ -24,7 +30,7 @@ export function toOpenAIMessages(messages: ProviderChatMessage[]): Record<string
         })),
       };
     }
-    return { role: m.role, content: m.content ?? '' };
+    return { role: m.role, content: wireContent(m.content) };
   });
 }
 

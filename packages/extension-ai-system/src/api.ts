@@ -14,6 +14,8 @@ export {
   OpenAICompatibleProvider,
   type ChatMessage,
   type MessagePart,
+  type PromptAttachment,
+  type SessionAttachment,
   type CognitiveSession,
   type Checkpoint,
   type ModelPolicy,

@@ -1,6 +1,11 @@
 import type { ChatMessage, MessagePart, SpecialistRole } from '../types';
 import type { ModelProvider, ProviderChatMessage, ResolvedModel, ToolDefinition } from '../models/types';
 import type { ToolBroker } from '../tools/broker';
+import {
+  IMAGE_PRESENT_KEY,
+  stripAttachmentToolOutput,
+  userContentFromParts,
+} from '../attachments';
 import { compactionContextMessage } from '../compact/compaction';
 import { classifyToolRisks } from './classify-risk';
 
@@ -17,6 +22,8 @@ export interface SpecialistLoopInput {
   broker: ToolBroker;
   sessionId: string;
   signal?: AbortSignal;
+  /** Rebuild the broker's command tools before each model call. */
+  refreshTools?: () => void;
   onPart?: (part: MessagePart) => void;
 }
 
@@ -42,9 +49,16 @@ export function historyToProviderMessages(
     messages.push({ role: 'system', content: compactionContextMessage(compactionSummary) });
   }
   for (const msg of history) {
-    if (msg.role === 'user' || msg.role === 'system') {
+    if (msg.role === 'user') {
+      const content = userContentFromParts(msg.parts);
+      const empty =
+        typeof content === 'string' ? !content.trim() : !content.length;
+      if (!empty) messages.push({ role: 'user', content });
+      continue;
+    }
+    if (msg.role === 'system') {
       const text = textFromParts(msg.parts);
-      if (text) messages.push({ role: msg.role === 'system' ? 'system' : 'user', content: text });
+      if (text) messages.push({ role: 'system', content: text });
       continue;
     }
 
@@ -83,7 +97,6 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
     input.onPart?.(part);
   };
 
-  const tools: ToolDefinition[] = input.broker.listDefinitions(input.role);
   const messages = historyToProviderMessages(
     input.systemPrompt,
     input.history,
@@ -92,6 +105,8 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
   let success = true;
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
+    input.refreshTools?.();
+    const tools: ToolDefinition[] = input.broker.listDefinitions(input.role);
     let pendingTools: Array<{ id: string; name: string; arguments: string }> = [];
     let assistantText = '';
 
@@ -176,12 +191,20 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
         input.role,
         { risk: risks?.get(tool.id) },
       );
+      const rawOutput = result.ok ? result.output : { error: result.error };
+      const presentImage =
+        result.ok &&
+        rawOutput &&
+        typeof rawOutput === 'object' &&
+        (rawOutput as Record<string, unknown>)[IMAGE_PRESENT_KEY] === true &&
+        typeof (rawOutput as Record<string, unknown>).dataUrl === 'string';
+      const safeOutput = result.ok ? stripAttachmentToolOutput(rawOutput) : rawOutput;
       emit({
         type: 'tool',
         id: tool.id,
         name: tool.name,
         args,
-        result: result.ok ? result.output : result.error,
+        result: safeOutput,
         status: result.ok ? 'done' : 'error',
         durationMs: Date.now() - started,
       });
@@ -189,8 +212,30 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
         role: 'tool',
         toolCallId: tool.id,
         name: tool.name,
-        content: JSON.stringify(result.ok ? result.output : { error: result.error }),
+        content: JSON.stringify(
+          presentImage
+            ? {
+                ...((safeOutput as object) ?? {}),
+                note: 'Image bytes follow in the next user message for vision inspection.',
+              }
+            : safeOutput,
+        ),
       });
+      if (presentImage) {
+        const dataUrl = String((rawOutput as Record<string, unknown>).dataUrl);
+        const name = String((rawOutput as Record<string, unknown>).name ?? 'image');
+        const id = String((rawOutput as Record<string, unknown>).id ?? '');
+        messages.push({
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Attachment image for inspection: id=${id} name="${name}"`,
+            },
+            { type: 'image_url', image_url: { url: dataUrl } },
+          ],
+        });
+      }
       if (!result.ok) success = false;
     }
   }

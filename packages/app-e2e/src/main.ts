@@ -77,6 +77,7 @@ appLoaderService.registerApp(
         description: 'A slim Docks shell for browser tests and story clips — not the full demo app.',
         extensions: [
             '@eclipse-docks/extension-ai-system',
+            '@eclipse-docks/extension-canvas',
             '@eclipse-docks/extension-monaco-editor',
             '@eclipse-docks/extension-plain-editor',
             '@eclipse-docks/extension-python-runtime',

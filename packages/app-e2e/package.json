@@ -18,7 +18,8 @@
     "@eclipse-docks/extension-notebook": "*",
     "@eclipse-docks/extension-plain-editor": "*",
     "@eclipse-docks/extension-python-runtime": "*",
-    "@eclipse-docks/extension-ai-system": "*"
+    "@eclipse-docks/extension-ai-system": "*",
+    "@eclipse-docks/extension-canvas": "*"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

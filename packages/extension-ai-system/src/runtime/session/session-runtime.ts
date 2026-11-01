@@ -34,6 +34,7 @@ export class SessionRuntime {
       title: input.title ?? 'New session',
       status: 'idle',
       history: [],
+      attachments: [],
       buffers: emptyBuffers(),
       specialistMode: input.specialistMode ?? 'build',
       parentSessionId: input.parentSessionId,
@@ -194,6 +195,7 @@ export class SessionRuntime {
     return {
       sessions: this.list().map((s) => ({
         ...s,
+        attachments: [...(s.attachments ?? [])],
         history: s.history.map((m) => ({ ...m, parts: [...m.parts] })),
         buffers: cloneBuffers(s.buffers),
       })),
@@ -207,6 +209,7 @@ export class SessionRuntime {
     for (const session of data.sessions) {
       this.sessions.set(session.id, {
         ...session,
+        attachments: [...(session.attachments ?? [])],
         buffers: cloneBuffers(session.buffers),
         history: [...session.history],
       });

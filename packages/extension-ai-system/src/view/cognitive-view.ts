@@ -8,8 +8,10 @@ import {
   state,
   type TemplateResult,
 } from '@eclipse-docks/core/externals/lit';
-import { DocksPart } from '@eclipse-docks/core';
+import { DocksPart, toastError } from '@eclipse-docks/core';
 import {
+  ATTACHMENT_FILE_ACCEPT,
+  MAX_ATTACHMENTS,
   OPEN_AI_SETTINGS_COMMAND,
   TOPIC,
   cognitiveRuntime,
@@ -18,6 +20,7 @@ import {
   formatBucketDetail,
   formatContextPercent,
   formatTokenCount,
+  readPromptAttachmentFromFile,
 } from '../runtime';
 import type {
   ChatMessage,
@@ -27,6 +30,8 @@ import type {
   MessagePart,
   ModelPolicy,
   PermissionAction,
+  PromptAttachment,
+  SessionAttachment,
   ToolApprovalMode,
 } from '../runtime';
 
@@ -288,6 +293,14 @@ export class DocksCognitiveView extends DocksPart {
 
     .composer {
       display: flex;
+      flex-direction: column;
+      gap: var(--wa-space-2xs);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .composer-row {
+      display: flex;
       gap: var(--wa-space-s);
       align-items: flex-end;
     }
@@ -302,6 +315,131 @@ export class DocksCognitiveView extends DocksPart {
       align-items: center;
       gap: var(--wa-space-2xs);
       flex-shrink: 0;
+    }
+
+    .composer-shell.drag-over {
+      outline: 2px dashed var(--wa-color-brand-border-normal);
+      outline-offset: -2px;
+      background: color-mix(in srgb, var(--wa-color-brand-fill-quiet) 35%, transparent);
+    }
+
+    wa-dropdown.attach-menu::part(menu) {
+      min-width: 18rem;
+      max-width: min(24rem, 92vw);
+      padding: var(--wa-space-2xs);
+    }
+
+    .attach-panel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--wa-space-2xs);
+      max-height: min(22rem, 50vh);
+    }
+
+    .attach-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--wa-space-2xs);
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .attach-row {
+      display: flex;
+      align-items: center;
+      gap: var(--wa-space-2xs);
+      min-width: 0;
+    }
+
+    .attach-preview-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--wa-space-s);
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+      padding: var(--wa-space-2xs);
+      border: none;
+      border-radius: var(--wa-border-radius-s);
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: start;
+      cursor: pointer;
+    }
+
+    .attach-preview-btn:hover {
+      background: var(--wa-color-neutral-fill-quiet);
+    }
+
+    .attach-thumb,
+    .msg-file-thumb {
+      width: 2.5rem;
+      height: 2.5rem;
+      object-fit: cover;
+      border-radius: var(--wa-border-radius-s);
+      border: var(--wa-border-width-s) solid var(--wa-color-border-normal);
+      flex-shrink: 0;
+    }
+
+    .attach-file-icon {
+      display: grid;
+      place-items: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: var(--wa-border-radius-s);
+      border: var(--wa-border-width-s) solid var(--wa-color-border-normal);
+      color: var(--wa-color-text-quiet);
+      flex-shrink: 0;
+    }
+
+    .attach-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: var(--wa-font-size-s);
+    }
+
+    .attach-empty {
+      color: var(--wa-color-text-quiet);
+      font-size: var(--wa-font-size-xs);
+      padding: var(--wa-space-s);
+    }
+
+    .msg-file-thumb {
+      width: 4.5rem;
+      height: 4.5rem;
+    }
+
+    .attach-dialog-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--wa-space-s);
+      max-height: min(70vh, 40rem);
+      overflow: auto;
+    }
+
+    .attach-dialog-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: var(--wa-border-radius-m);
+    }
+
+    .attach-dialog-text {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: var(--wa-font-family-code, ui-monospace, monospace);
+      font-size: var(--wa-font-size-s);
+    }
+
+    .msg-files {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--wa-space-2xs);
+      margin-bottom: var(--wa-space-2xs);
     }
 
     .approval-actions {
@@ -373,10 +511,15 @@ export class DocksCognitiveView extends DocksPart {
   `;
 
   @query('wa-textarea') private textarea?: HTMLTextAreaElement & { value: string };
+  @query('#attach-file-input') private fileInput?: HTMLInputElement;
 
   @state() private sessions: CognitiveSession[] = [];
   @state() private focusedId: string | null = null;
   @state() private draft = '';
+  /** Session attachment ids to publish with the next user turn. */
+  @state() private pendingAttachmentIds: string[] = [];
+  @state() private dragOver = false;
+  @state() private previewAttachmentId: string | null = null;
   @state() private busy = false;
   @state() private pendingPermission: PermissionRequest | null = null;
   @state() private policyMode: 'auto' | 'manual' = 'auto';
@@ -508,7 +651,17 @@ export class DocksCognitiveView extends DocksPart {
     return sorted.filter((s) => {
       if (s.title.toLowerCase().includes(q)) return true;
       return s.history.some((m) =>
-        m.parts.some((p) => p.type === 'text' && p.text.toLowerCase().includes(q)),
+        m.parts.some((p) => {
+          if (p.type === 'text') return p.text.toLowerCase().includes(q);
+          if (p.type === 'file') {
+            return (
+              p.name.toLowerCase().includes(q) ||
+              p.id.toLowerCase().includes(q) ||
+              (p.path?.toLowerCase().includes(q) ?? false)
+            );
+          }
+          return false;
+        }),
       );
     });
   }
@@ -589,25 +742,231 @@ export class DocksCognitiveView extends DocksPart {
 
   private async clearComposer(): Promise<void> {
     this.draft = '';
+    this.pendingAttachmentIds = [];
     await this.updateComplete;
     if (this.textarea) this.textarea.value = '';
+    if (this.fileInput) this.fileInput.value = '';
+  }
+
+  private sessionAttachments(): SessionAttachment[] {
+    return this.focusedSession()?.attachments ?? [];
+  }
+
+  private previewAttachment(): SessionAttachment | undefined {
+    if (!this.previewAttachmentId) return undefined;
+    return this.sessionAttachments().find((a) => a.id === this.previewAttachmentId);
+  }
+
+  private openAttachmentPreview(attachmentId: string): void {
+    this.previewAttachmentId = attachmentId;
+  }
+
+  private closeAttachmentPreview(): void {
+    this.previewAttachmentId = null;
+  }
+
+  private removeSessionAttachment(attachmentId: string): void {
+    const sessionId = this.focusedId ?? cognitiveRuntime.ensureSessionId();
+    cognitiveRuntime.removeAttachment(sessionId, attachmentId);
+    this.pendingAttachmentIds = this.pendingAttachmentIds.filter((id) => id !== attachmentId);
+    if (this.previewAttachmentId === attachmentId) this.previewAttachmentId = null;
+    this.syncSessions();
+  }
+
+  private async addFiles(fileList: FileList | File[]): Promise<void> {
+    const files = [...fileList];
+    if (!files.length) return;
+
+    const sessionId = cognitiveRuntime.ensureSessionId(this.focusedId ?? undefined);
+    this.focusedId = sessionId;
+    const existing = this.sessionAttachments();
+    const accepted: PromptAttachment[] = [];
+
+    for (const file of files) {
+      if (existing.length + accepted.length >= MAX_ATTACHMENTS) {
+        toastError(`At most ${MAX_ATTACHMENTS} files per session`);
+        break;
+      }
+      if (
+        existing.some((a) => a.name === file.name && a.byteLength === file.size) ||
+        accepted.some((a) => a.name === file.name && a.byteLength === file.size)
+      ) {
+        continue;
+      }
+      const result = await readPromptAttachmentFromFile(file);
+      if (!result.ok) {
+        toastError(result.error);
+        continue;
+      }
+      accepted.push(result.attachment);
+    }
+
+    const stored = cognitiveRuntime.addAttachments(sessionId, accepted);
+    if (stored.length) {
+      this.pendingAttachmentIds = [
+        ...this.pendingAttachmentIds,
+        ...stored.map((a) => a.id).filter((id) => !this.pendingAttachmentIds.includes(id)),
+      ];
+    }
+    this.syncSessions();
+  }
+
+  private openFilePicker(): void {
+    this.fileInput?.click();
+  }
+
+  private async onFileInputChange(e: Event): Promise<void> {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.length) await this.addFiles(input.files);
+    input.value = '';
+  }
+
+  private onComposerDragOver(e: DragEvent): void {
+    if (!e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    this.dragOver = true;
+  }
+
+  private onComposerDragLeave(e: DragEvent): void {
+    if (e.currentTarget === e.target) this.dragOver = false;
+  }
+
+  private async onComposerDrop(e: DragEvent): Promise<void> {
+    e.preventDefault();
+    this.dragOver = false;
+    if (e.dataTransfer?.files?.length) await this.addFiles(e.dataTransfer.files);
   }
 
   private async send(): Promise<void> {
     const text = this.draft.trim();
-    if (!text || this.busy) return;
+    const attachmentIds = [...this.pendingAttachmentIds];
+    if ((!text && !attachmentIds.length) || this.busy) return;
     this.applyPolicy();
     await this.clearComposer();
     this.busy = true;
     this.streamingParts = [];
     try {
-      await cognitiveRuntime.prompt({ sessionId: this.focusedId ?? undefined, text });
+      await cognitiveRuntime.prompt({
+        sessionId: this.focusedId ?? undefined,
+        text,
+        attachmentIds,
+      });
     } finally {
       this.busy = false;
       this.syncSessions();
       this.scheduleScrollToBottom();
       this.textarea?.focus();
     }
+  }
+
+  private renderAttachmentDropdown() {
+    const attachments = this.sessionAttachments();
+    const count = attachments.length;
+    return html`
+      <wa-dropdown class="attach-menu" size="s" placement="top-end" distance="4">
+        <wa-button
+          slot="trigger"
+          size="s"
+          appearance="plain"
+          title=${count ? `${count} attachment${count === 1 ? '' : 's'}` : 'Attachments'}
+          ?disabled=${this.busy}
+        >
+          <wa-icon name="paperclip" label="Attachments"></wa-icon>
+          ${count > 0 ? html`<wa-badge pill>${count}</wa-badge>` : nothing}
+        </wa-button>
+        <div
+          class="attach-panel"
+          @click=${(e: Event) => e.stopPropagation()}
+          @keydown=${(e: Event) => e.stopPropagation()}
+        >
+          ${count
+            ? html`
+                <div class="attach-list">
+                  ${attachments.map(
+                    (file) => html`
+                      <div class="attach-row">
+                        <button
+                          type="button"
+                          class="attach-preview-btn"
+                          title="Open ${file.name}"
+                          @click=${() => this.openAttachmentPreview(file.id)}
+                        >
+                          ${file.kind === 'image' && file.dataUrl
+                            ? html`<img
+                                class="attach-thumb"
+                                src=${file.dataUrl}
+                                alt=${file.name}
+                              />`
+                            : html`
+                                <span class="attach-file-icon">
+                                  <wa-icon name="file" label=""></wa-icon>
+                                </span>
+                              `}
+                          <span class="attach-name">${file.name}</span>
+                        </button>
+                        <wa-button
+                          size="s"
+                          appearance="plain"
+                          title="Remove from session"
+                          ?disabled=${this.busy}
+                          @click=${() => this.removeSessionAttachment(file.id)}
+                        >
+                          <wa-icon name="xmark" label="Remove"></wa-icon>
+                        </wa-button>
+                      </div>
+                    `,
+                  )}
+                </div>
+              `
+            : html`<div class="attach-empty">No attachments in this session</div>`}
+          <wa-button
+            size="s"
+            appearance="outlined"
+            ?disabled=${this.busy || count >= MAX_ATTACHMENTS}
+            @click=${() => this.openFilePicker()}
+          >
+            <wa-icon slot="start" name="plus"></wa-icon>
+            Add files…
+          </wa-button>
+        </div>
+      </wa-dropdown>
+    `;
+  }
+
+  private renderAttachmentDialog() {
+    const preview = this.previewAttachment();
+    if (!preview) return nothing;
+    return html`
+      <wa-dialog
+        label=${preview.name}
+        open
+        light-dismiss
+        with-footer
+        style="--width: min(40rem, 94vw)"
+        @wa-after-hide=${() => this.closeAttachmentPreview()}
+      >
+        <div class="attach-dialog-body">
+          ${preview.kind === 'image' && preview.dataUrl
+            ? html`<img class="attach-dialog-image" src=${preview.dataUrl} alt=${preview.name} />`
+            : nothing}
+          ${preview.text
+            ? html`<pre class="attach-dialog-text">${preview.text}</pre>`
+            : preview.kind === 'image' && preview.dataUrl
+              ? nothing
+              : html`<pre class="attach-dialog-text"></pre>`}
+        </div>
+        <div slot="footer">
+          <wa-button
+            variant="danger"
+            appearance="outlined"
+            @click=${() => this.removeSessionAttachment(preview.id)}
+          >
+            Remove
+          </wa-button>
+          <wa-button variant="brand" @click=${() => this.closeAttachmentPreview()}>Close</wa-button>
+        </div>
+      </wa-dialog>
+    `;
   }
 
   private resolvePermission(action: PermissionAction): void {
@@ -737,40 +1096,47 @@ export class DocksCognitiveView extends DocksPart {
           </div>
         </wa-scroller>
 
-        <div class="composer-shell">
+        <div
+          class="composer-shell ${this.dragOver ? 'drag-over' : ''}"
+          @dragover=${(e: DragEvent) => this.onComposerDragOver(e)}
+          @dragleave=${(e: DragEvent) => this.onComposerDragLeave(e)}
+          @drop=${(e: DragEvent) => void this.onComposerDrop(e)}
+        >
+          <input
+            id="attach-file-input"
+            type="file"
+            multiple
+            accept=${ATTACHMENT_FILE_ACCEPT}
+            hidden
+            @change=${(e: Event) => void this.onFileInputChange(e)}
+          />
           <div class="composer">
-            <wa-textarea
-              placeholder="Message the cognitive agent…"
-              size="s"
-              resize="auto"
-              rows="1"
-              .value=${this.draft}
-              ?disabled=${this.busy}
-              @input=${(e: Event) => {
-                this.draft = (e.target as HTMLTextAreaElement).value;
-              }}
-              @keydown=${(e: KeyboardEvent) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  void this.send();
-                }
-              }}
-            ></wa-textarea>
-            <div class="composer-actions">
-              <wa-button
-                variant="brand"
+            <div class="composer-row">
+              <wa-textarea
+                placeholder="Enter your message here..."
                 size="s"
+                resize="auto"
+                rows="1"
+                .value=${this.draft}
                 ?disabled=${this.busy}
-                ?loading=${this.busy}
-                title="Send"
-                @click=${() => void this.send()}
-              >
-                <wa-icon name="paper-plane" label="Send"></wa-icon>
-              </wa-button>
-              ${this.renderContextDropdown()}
+                @input=${(e: Event) => {
+                  this.draft = (e.target as HTMLTextAreaElement).value;
+                }}
+                @keydown=${(e: KeyboardEvent) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    void this.send();
+                  }
+                }}
+              ></wa-textarea>
+              <div class="composer-actions">
+                ${this.renderAttachmentDropdown()}
+                ${this.renderContextDropdown()}
+              </div>
             </div>
           </div>
         </div>
+        ${this.renderAttachmentDialog()}
       </div>
     `;
   }
@@ -1027,11 +1393,44 @@ export class DocksCognitiveView extends DocksPart {
     `;
   }
 
+  private resolveAttachmentDataUrl(fileId: string): string | undefined {
+    return this.focusedSession()?.attachments?.find((a) => a.id === fileId)?.dataUrl;
+  }
+
   private renderMessage(message: ChatMessage) {
     if (message.role === 'user') {
+      const files = message.parts.filter((p): p is Extract<MessagePart, { type: 'file' }> => p.type === 'file');
+      const texts = message.parts.filter((p) => p.type === 'text');
       return html`
         <div class="msg user">
-          ${message.parts.map((p) => this.renderTextPart(p))}
+          ${files.length
+            ? html`
+                <div class="msg-files">
+                  ${files.map((file) => {
+                    const dataUrl =
+                      file.kind === 'image' ? this.resolveAttachmentDataUrl(file.id) : undefined;
+                    return dataUrl
+                      ? html`<img
+                          class="msg-file-thumb"
+                          src=${dataUrl}
+                          alt=${file.name}
+                          title=${`${file.name} (${file.id})`}
+                        />`
+                      : html`
+                          <wa-tag
+                            size="s"
+                            appearance="outlined"
+                            title=${`${file.path || file.name} (${file.id})`}
+                          >
+                            <wa-icon slot="start" name=${file.kind === 'image' ? 'image' : 'file'}></wa-icon>
+                            ${file.name}
+                          </wa-tag>
+                        `;
+                  })}
+                </div>
+              `
+            : nothing}
+          ${texts.map((p) => this.renderTextPart(p))}
           ${this.renderMessageMeta(message)}
         </div>
       `;

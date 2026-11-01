@@ -552,9 +552,9 @@ export class DocksCognitiveView extends DocksPart {
     return estimateSessionContextUsage(this.focusedSession(), this.activeModelRef());
   }
 
-  private compactFocused(): void {
+  private async compactFocused(): Promise<void> {
     if (!this.focusedId) return;
-    cognitiveRuntime.compactSession(this.focusedId);
+    await cognitiveRuntime.compactSession(this.focusedId);
     this.syncSessions();
   }
 

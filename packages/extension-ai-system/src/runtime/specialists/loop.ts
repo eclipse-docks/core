@@ -1,6 +1,7 @@
 import type { ChatMessage, MessagePart, SpecialistRole } from '../types';
 import type { ModelProvider, ProviderChatMessage, ResolvedModel, ToolDefinition } from '../models/types';
 import type { ToolBroker } from '../tools/broker';
+import { compactionContextMessage } from '../compact/compaction';
 import { classifyToolRisks } from './classify-risk';
 
 const MAX_TOOL_ITERATIONS = 8;
@@ -9,6 +10,8 @@ export interface SpecialistLoopInput {
   role: SpecialistRole;
   systemPrompt: string;
   history: ChatMessage[];
+  /** Prior turns folded out of history; injected as a system message. */
+  compactionSummary?: string;
   resolved: ResolvedModel;
   provider: ModelProvider;
   broker: ToolBroker;
@@ -29,8 +32,15 @@ function textFromParts(parts: MessagePart[]): string {
     .join('\n');
 }
 
-function historyToProviderMessages(systemPrompt: string, history: ChatMessage[]): ProviderChatMessage[] {
+export function historyToProviderMessages(
+  systemPrompt: string,
+  history: ChatMessage[],
+  compactionSummary?: string,
+): ProviderChatMessage[] {
   const messages: ProviderChatMessage[] = [{ role: 'system', content: systemPrompt }];
+  if (compactionSummary?.trim()) {
+    messages.push({ role: 'system', content: compactionContextMessage(compactionSummary) });
+  }
   for (const msg of history) {
     if (msg.role === 'user' || msg.role === 'system') {
       const text = textFromParts(msg.parts);
@@ -74,7 +84,11 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
   };
 
   const tools: ToolDefinition[] = input.broker.listDefinitions(input.role);
-  const messages = historyToProviderMessages(input.systemPrompt, input.history);
+  const messages = historyToProviderMessages(
+    input.systemPrompt,
+    input.history,
+    input.compactionSummary,
+  );
   let success = true;
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {

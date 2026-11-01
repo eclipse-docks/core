@@ -26,10 +26,15 @@ import type { PermissionHandler } from './tools';
 import { SessionRuntime } from './session';
 import { runSpecialistLoop, systemPromptFor } from './specialists';
 import type { SystemPromptEnhancer } from './specialists';
+import { summarizeDroppedHistory } from './compact/compaction';
 import { RuntimeEvents, TOPIC } from './events';
 import { detectEffortCapability } from './models/effort-support';
 
 const PERSIST_KEY = 'cognitive/v1/state';
+/** Auto-compact after a turn when live history exceeds this many messages. */
+const AUTO_COMPACT_AFTER = 40;
+/** Messages retained in the live transcript after compaction. */
+const COMPACT_KEEP_COUNT = 12;
 
 export class CognitiveRuntime {
   readonly events = new RuntimeEvents();
@@ -178,10 +183,48 @@ export class CognitiveRuntime {
     void this.persist();
   }
 
-  /** Compact a session's history and persist. */
-  compactSession(sessionId: string, keepCount = 12): void {
-    this.sessions.compact(sessionId, keepCount);
+  /**
+   * Compact a session: drop older turns, store a summary (LLM when possible),
+   * and persist. The summary is injected into later model calls.
+   */
+  async compactSession(
+    sessionId: string,
+    keepCount = COMPACT_KEEP_COUNT,
+    signal?: AbortSignal,
+  ): Promise<{ didCompact: boolean }> {
+    this.start();
+    await this.ready;
+    const prepared = this.sessions.prepareCompact(sessionId, keepCount);
+    if (!prepared?.didCompact) return { didCompact: false };
+
+    this.sessions.update(sessionId, { status: 'compact' });
+    this.emitSessions();
+
+    let summary = prepared.summary;
+    const resolved = this.models.resolve(
+      { role: 'compact', complexity: 0.2, requireTools: false },
+      this.policy,
+    );
+    const provider = this.providers.resolveProvider(resolved.model) ?? this.providers.list()[0];
+    if (provider) {
+      const llmSummary = await summarizeDroppedHistory({
+        provider,
+        model: resolved.model,
+        dropped: prepared.dropped,
+        previousSummary: this.sessions.get(sessionId)?.compactionSummary,
+        providerOptions: resolved.providerOptions,
+        signal,
+      });
+      if (llmSummary) summary = llmSummary;
+    }
+
+    this.sessions.update(sessionId, {
+      history: prepared.kept,
+      compactionSummary: summary,
+      status: 'idle',
+    });
     this.commitSessions();
+    return { didCompact: true };
   }
 
   async prompt(input: {
@@ -259,10 +302,12 @@ export class CognitiveRuntime {
     for (const enhance of this.promptEnhancers) {
       systemPrompt = await enhance(systemPrompt, { role, goal, sessionId: session.id });
     }
+    const liveSession = this.sessions.get(session.id)!;
     const result = await runSpecialistLoop({
       role,
       systemPrompt,
-      history: this.sessions.get(session.id)!.history,
+      history: liveSession.history,
+      compactionSummary: liveSession.compactionSummary,
       resolved,
       provider,
       broker: this.tools,
@@ -281,8 +326,8 @@ export class CognitiveRuntime {
       activation: 0.7,
     });
 
-    if (this.sessions.get(session.id)!.history.length > 40) {
-      this.sessions.compact(session.id);
+    if ((this.sessions.get(session.id)?.history.length ?? 0) > AUTO_COMPACT_AFTER) {
+      await this.compactSession(session.id, COMPACT_KEEP_COUNT, input.signal);
     }
 
     this.sessions.update(session.id, { status: 'idle' });

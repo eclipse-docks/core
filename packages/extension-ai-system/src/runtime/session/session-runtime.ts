@@ -151,16 +151,40 @@ export class SessionRuntime {
     return { sessionId: input.sessionId };
   }
 
-  compact(sessionId: string, keepCount = 12): void {
+  /**
+   * Truncate history and store a compaction summary.
+   * Pass `summary` to override the extractive default (e.g. LLM summary).
+   * Returns whether history was shortened.
+   */
+  compact(
+    sessionId: string,
+    keepCount = 12,
+    summary?: string,
+  ): { didCompact: boolean; summary: string } {
     const session = this.sessions.get(sessionId);
-    if (!session) return;
+    if (!session) return { didCompact: false, summary: '' };
     const result = compactHistory(session.history, {
       keepCount,
       previousSummary: session.compactionSummary,
     });
+    if (!result.didCompact) {
+      return { didCompact: false, summary: session.compactionSummary ?? '' };
+    }
+    const nextSummary = (summary?.trim() || result.summary || session.compactionSummary || '').trim();
     this.update(sessionId, {
       history: result.kept,
-      compactionSummary: result.summary || session.compactionSummary,
+      compactionSummary: nextSummary,
+    });
+    return { didCompact: true, summary: nextSummary };
+  }
+
+  /** Preview a compact without mutating (for LLM summarization of dropped turns). */
+  prepareCompact(sessionId: string, keepCount = 12) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+    return compactHistory(session.history, {
+      keepCount,
+      previousSummary: session.compactionSummary,
     });
   }
 

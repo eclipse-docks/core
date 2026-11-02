@@ -46,25 +46,25 @@ const canvasSkills = [
     {
         name: 'eclipse-docks-canvas',
         label: 'Eclipse Docks canvas',
-        load: () => import('../skills/eclipse-docks-canvas/SKILL.md?raw'),
+        load: () => import('./skills/eclipse-docks-canvas/SKILL.md?raw'),
         ranking: 100,
     },
     {
         name: 'eclipse-docks-lit',
         label: 'Eclipse Docks Lit',
-        load: () => import('../skills/eclipse-docks-lit/SKILL.md?raw'),
+        load: () => import('./skills/eclipse-docks-lit/SKILL.md?raw'),
         ranking: 90,
     },
     {
         name: 'eclipse-docks-webawesome',
         label: 'Eclipse Docks Web Awesome',
-        load: () => import('../skills/eclipse-docks-webawesome/SKILL.md?raw'),
+        load: () => import('./skills/eclipse-docks-webawesome/SKILL.md?raw'),
         ranking: 90,
     },
     {
         name: 'eclipse-docks-core',
         label: 'Eclipse Docks core',
-        load: () => import('../skills/eclipse-docks-core/SKILL.md?raw'),
+        load: () => import('./skills/eclipse-docks-core/SKILL.md?raw'),
         ranking: 90,
     },
 ] as const satisfies ReadonlyArray<SkillContribution>;

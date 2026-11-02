@@ -38,7 +38,7 @@ import {
 } from './session-workspace';
 import { runSpecialistLoop, systemPromptFor } from './specialists';
 import type { SystemPromptEnhancer } from './specialists';
-import { registerSkillMarkdown } from './skills';
+import { registerSkillMarkdown, registeredSkillsPromptSection } from './skills';
 import { summarizeDroppedHistory } from './compact/compaction';
 import { RuntimeEvents, TOPIC } from './events';
 import { detectEffortCapability } from './models/effort-support';
@@ -433,7 +433,8 @@ export class CognitiveRuntime {
     const goal = tick.intent?.summary ?? promptSummary;
     const hasAttachments =
       published.length > 0 || (this.sessions.get(session.id)?.attachments?.length ?? 0) > 0;
-    let systemPrompt = systemPromptFor(role, goal, { hasAttachments });
+    const skillsSection = await registeredSkillsPromptSection();
+    let systemPrompt = systemPromptFor(role, goal, { hasAttachments, skillsSection });
     for (const enhance of this.promptEnhancers) {
       systemPrompt = await enhance(systemPrompt, { role, goal, sessionId: session.id });
     }

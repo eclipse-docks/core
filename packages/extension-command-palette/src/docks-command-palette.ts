@@ -50,16 +50,14 @@ export class DocksCommandPalette extends DocksWidget {
     if (!this.isPaletteOpen && !this.showParameterPrompt) return;
 
     await this.updateComplete;
-    const target = e.target as Node;
+    const path = e.composedPath();
+    if (path.includes(this)) return;
 
-    if (this.contains(target)) return;
+    const dialog = this.dialogRef.value as HTMLElement | undefined;
+    if (dialog && path.includes(dialog)) return;
 
-    if (this.dialogRef.value) {
-      const dialog = this.dialogRef.value as HTMLElement;
-      if (dialog.contains(target)) return;
-    }
-
-    let element = target as HTMLElement;
+    const target = path[0] as HTMLElement | undefined;
+    let element = target;
     while (element) {
       if (element.tagName === "WA-DIALOG") return;
       element = element.parentElement as HTMLElement;
@@ -218,23 +216,32 @@ export class DocksCommandPalette extends DocksWidget {
 
   protected render() {
     return html`
-      <wa-input
-      appearance="filled"
-        ${ref(this.inputRef)}
-        placeholder="${t.PLACEHOLDER}"
-        .value=${this.inputValue}
-        @input=${this.handleInputChange}
-        @keydown=${this.handleKeyDown}
-        @focus=${this.handleInputFocus}
-        @click=${this.handleInputClick}
-        @mousedown=${this.handleInputMouseDown}
-        autocomplete="off"
-        size="s"
+      <wa-popup
+        placement="bottom-start"
+        distance="4"
+        sync="width"
+        shift
+        flip
+        ?active=${this.isPaletteOpen}
       >
-        <wa-icon slot="start" name="terminal" label="Terminal"></wa-icon>
-      </wa-input>
+        <wa-input
+          slot="anchor"
+          appearance="filled"
+          ${ref(this.inputRef)}
+          placeholder="${t.PLACEHOLDER}"
+          .value=${this.inputValue}
+          @input=${this.handleInputChange}
+          @keydown=${this.handleKeyDown}
+          @focus=${this.handleInputFocus}
+          @click=${this.handleInputClick}
+          @mousedown=${this.handleInputMouseDown}
+          autocomplete="off"
+          size="s"
+        >
+          <wa-icon slot="start" name="terminal" label="Terminal"></wa-icon>
+        </wa-input>
 
-      <div class="commands-container ${this.isPaletteOpen ? "open" : ""}" @click=${this.handleContainerClick}>
+        <div class="commands-container" @click=${this.handleContainerClick}>
         ${this.filteredCommands.length > 0
           ? html`${this.filteredCommands.map(
               (cmd) => html`
@@ -267,7 +274,8 @@ export class DocksCommandPalette extends DocksWidget {
               ></wa-icon>
               <div>${t.NO_COMMANDS_FOUND}</div>
             </div>`}
-      </div>
+        </div>
+      </wa-popup>
 
       ${this.showParameterPrompt && this.selectedCommand
         ? html`<wa-dialog
@@ -325,23 +333,13 @@ export class DocksCommandPalette extends DocksWidget {
     }
 
     .commands-container {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      margin-top: 4px;
+      box-sizing: border-box;
       background: var(--wa-color-surface-raised);
       border: 1px solid var(--wa-color-surface-border);
       border-radius: 4px;
       max-height: 400px;
       overflow-y: auto;
-      z-index: 1000;
       box-shadow: 0 8px 24px var(--wa-color-shadow);
-      display: none;
-    }
-
-    .commands-container.open {
-      display: block;
     }
 
     .command-item {

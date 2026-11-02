@@ -11,7 +11,7 @@ export type SystemPromptEnhancer = (
 export function systemPromptFor(
   role: string,
   goal: string,
-  opts: { hasAttachments?: boolean } = {},
+  opts: { hasAttachments?: boolean; skillsSection?: string } = {},
 ): string {
   const base =
     'You are a specialist in the Eclipse Docks AI runtime. Prefer tools for file and command actions. Be concise.';
@@ -22,16 +22,16 @@ export function systemPromptFor(
         'This turn publishes session attachments under the shared in-memory root (in-memory/<sessionId>/… or in-memory://<sessionId>/…).',
         'Read them with workspace_read / workspace_list — in-memory paths work without mounting that root into the workspace tree.',
         'Do not call load_workspace / connect_opfs / connect_indexeddb to find attachments.',
-        'Canvas from a screenshot: skills.load eclipse-docks-canvas → workspace_read the attachment path → workspace_write a new .canvas.js (into a durable workspace folder) → canvas.open. Change a canvas with canvas.apply_source. An open editor is marked dirty and recompiled and is not saved; a canvas that is not open in an editor is written to its file. Do not workspace_write a canvas that is already open.',
-        'Qualify durable writes as <root>/<file> using a root from workspace_list (e.g. tests/demo.canvas.js); bare filenames are auto-rooted when a single durable folder is connected, otherwise a folder picker appears.',
-        'If no durable workspace folder is connected for writing canvases, say so and stop.',
       ].join(' ')
     : 'Session attachments live under the shared in-memory root and are readable via workspace_read / workspace_list.';
   const pathRule =
     'Workspace paths use a connected root prefix from workspace_list (never write bare names at the composite root unless a single durable folder can auto-qualify them).';
   const skillRule =
-    'For specialized workflows (e.g. canvas.js), call skills.list to discover registered skills, then skills.load with the matching name before following those instructions.';
-  const preamble = `${base} ${replyRule} ${attachmentRule} ${pathRule} ${skillRule}`;
+    'Before a complex task, call skills.list, then skills.load the matching skill and follow it.';
+  const skillsSection = opts.skillsSection?.trim();
+  const preamble = skillsSection
+    ? `${base} ${replyRule} ${attachmentRule} ${pathRule} ${skillRule}\n${skillsSection}`
+    : `${base} ${replyRule} ${attachmentRule} ${pathRule} ${skillRule}`;
   switch (role) {
     case 'plan':
       return `${preamble}\nMode: PLAN (read-only). Analyze and propose a plan for: ${goal}`;

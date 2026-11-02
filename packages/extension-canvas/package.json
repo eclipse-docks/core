@@ -16,8 +16,7 @@
     }
   },
   "files": [
-    "dist",
-    "skills"
+    "dist"
   ],
   "scripts": {
     "build": "vite build",

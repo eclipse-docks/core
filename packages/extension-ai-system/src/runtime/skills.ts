@@ -1,5 +1,7 @@
 import { contributionRegistry } from '@eclipse-docks/core';
 import { parseSkillMarkdown } from './skills-parse';
+import { resolveSkill } from './skills-resolve';
+import { formatSkillsPromptSection } from './skills-select';
 import { isSkillContribution, type SkillContribution } from './skills-types';
 
 export type { AgentSkill } from './skills-parse';
@@ -21,6 +23,26 @@ export function listSkillContributions(): SkillContribution[] {
   return contributionRegistry
     .getContributions(SYSTEM_SKILLS)
     .filter(isSkillContribution);
+}
+
+/** Descriptions for the specialist prompt. Full bodies stay behind skills.load. */
+export async function registeredSkillsPromptSection(): Promise<string> {
+  const skills = listSkillContributions()
+    .slice()
+    .sort((a, b) => (b.ranking ?? 0) - (a.ranking ?? 0));
+  const described = await Promise.all(skills.map(describeSkill));
+  return formatSkillsPromptSection(described);
+}
+
+async function describeSkill(skill: SkillContribution): Promise<SkillContribution> {
+  try {
+    const resolved = await resolveSkill(skill);
+    const description = resolved.description || skill.description;
+    if (!description || description === skill.description) return skill;
+    return { ...skill, description };
+  } catch {
+    return skill;
+  }
 }
 
 /** Register a SKILL.md document on {@link SYSTEM_SKILLS}. Returns an unregister function. */

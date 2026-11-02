@@ -1,1 +1,0 @@
-import{n as e}from"./rolldown-runtime-Dd_uD5pT.js";import{r as t}from"./canvas-bridge-core.js-BpL9CAdA.js";var n=e({v4:()=>r});function r(){return crypto.randomUUID()}t(`./externals/third-party`,n);var i=import.meta.url;export{r as n,i as t};

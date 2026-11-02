@@ -52,7 +52,8 @@ export default class extends LitElement {
   }
 
   addItem() {
-    const text = this.draft.trim();
+    const input = this.renderRoot.querySelector("wa-input");
+    const text = String(input?.value ?? "").trim();
     if (!text) return;
     this.items = [...this.items, { id: crypto.randomUUID(), text, done: false }];
     this.draft = "";
@@ -64,7 +65,6 @@ export default class extends LitElement {
       <wa-input
         placeholder="New item"
         .value=${this.draft}
-        @input=${(e) => { this.draft = e.target.value; }}
         @keydown=${(e) => { if (e.key === "Enter") this.addItem(); }}
       ></wa-input>
       <wa-button @click=${() => this.addItem()}>Add</wa-button>

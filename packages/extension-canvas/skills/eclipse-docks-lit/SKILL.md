@@ -51,10 +51,9 @@ import { repeat, when, classMap, styleMap, ifDefined, live, ref, keyed } from "d
 
 ```js
 html`<wa-button @click=${this.onSave}>Save</wa-button>`
-html`<wa-input @wa-input=${(e) => { this.q = e.target.value; }}></wa-input>`
 ```
 
-Use arrow functions or bound methods so `this` stays the element.
+Use arrow functions or bound methods so `this` stays the element. For `wa-*` props and events, follow `eclipse-docks-webawesome`.
 
 ## Signals (optional)
 

@@ -1,1 +1,0 @@
-import{r as e}from"./canvas-bridge-core.js-DTckHTiR.js";e(`./parts`,{});var t=import.meta.url;export{t};

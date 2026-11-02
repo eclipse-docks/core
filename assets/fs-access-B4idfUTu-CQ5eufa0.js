@@ -1,1 +1,0 @@
-import{Z as e}from"./canvas-bridge-core.js-DTckHTiR.js";export{e as FileSysDirHandleResource};

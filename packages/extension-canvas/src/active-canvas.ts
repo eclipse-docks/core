@@ -22,6 +22,11 @@ export function readActiveCanvas(): ActiveCanvas | null {
     return fromElement(activeEditorSignal.get() as unknown as CanvasElement | null);
 }
 
+/** Contributed canvas opened from the dropdown. It is not an editable editor. */
+export function isCanvasViewer(active: ActiveCanvas | null = readActiveCanvas()): boolean {
+    return !!active && !active.editor && active.kind === 'registered';
+}
+
 /** Connected workspace canvas editors. Optional path keeps only that file. */
 export function connectedWorkspaceEditors(path?: string): ActiveCanvas[] {
     const editors = [...document.querySelectorAll('docks-canvas-editor')]
@@ -37,7 +42,7 @@ export function connectedWorkspaceEditors(path?: string): ActiveCanvas[] {
 export function findOpenCanvas(): ActiveCanvas | null {
     const active = readActiveCanvas();
     if (active?.capturePreview) return active;
-    for (const node of document.querySelectorAll('docks-canvas-editor, docks-canvas-surface')) {
+    for (const node of document.querySelectorAll('docks-canvas-editor, docks-canvas-surface, docks-canvas-readonly')) {
         const mapped = fromElement(node as unknown as CanvasElement);
         if (mapped?.capturePreview) return mapped;
     }
@@ -47,7 +52,7 @@ export function findOpenCanvas(): ActiveCanvas | null {
 function fromElement(active: CanvasElement | null): ActiveCanvas | null {
     if (!active) return null;
     const localName = active.localName;
-    if (localName !== 'docks-canvas-editor' && localName !== 'docks-canvas-surface') return null;
+    if (localName !== 'docks-canvas-editor' && localName !== 'docks-canvas-surface' && localName !== 'docks-canvas-readonly') return null;
     return {
         kind: active.kind === 'registered' ? 'registered' : 'workspace',
         canvasName: active.canvasName,

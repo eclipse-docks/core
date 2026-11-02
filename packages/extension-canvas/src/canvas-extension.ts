@@ -12,6 +12,7 @@ import { html } from '@eclipse-docks/core/externals/lit';
 import { SYSTEM_SKILLS, type SkillContribution } from '@eclipse-docks/extension-ai-system/api';
 import { isCanvasContribution, SYSTEM_CANVASES } from './contribution';
 import { listRegisteredCanvases } from './canvases';
+import tasksSource from './canvases/tasks.canvas.js?raw';
 import { registerCanvasTools } from './canvas-tools';
 import { registerCanvasCommands } from './commands';
 import './canvas-switcher';
@@ -76,6 +77,14 @@ for (const skill of canvasSkills) {
 function registerListedCanvasTools(): void {
     for (const canvas of listRegisteredCanvases()) registerCanvasTools(canvas);
 }
+
+contributionRegistry.registerContribution(SYSTEM_CANVASES, {
+    name: 'tasks',
+    label: 'Tasks',
+    icon: 'list-check',
+    settingsKey: 'canvas.docks.demos.tasks',
+    source: tasksSource,
+});
 
 registerCanvasCommands();
 registerListedCanvasTools();

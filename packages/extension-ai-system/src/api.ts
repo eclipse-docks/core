@@ -50,4 +50,7 @@ export {
   resolveSkillBody,
   selectRelevantSkills,
   isSkillContribution,
+  appContextPromptEnhancer,
+  summarizeExecutionContext,
+  formatExecutionContextForPrompt,
 } from './runtime';

@@ -31,7 +31,7 @@ export async function createFileHost(file: File): Promise<CanvasHost> {
 }
 
 export async function createContributionHost(contribution: CanvasContribution): Promise<CanvasHost> {
-    const key = `canvas.${contribution.name}`;
+    const key = contribution.settingsKey;
     const stored = await appSettings.get(key);
     const initial = stored && typeof stored === 'object' ? stored as Record<string, unknown> : {};
     return createMemoryHost(initial, state => {

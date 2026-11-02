@@ -19,13 +19,17 @@ export interface CanvasToolContribution {
 
 /** A canvas module registered on {@link SYSTEM_CANVASES} and opened from the toolbar dropdown. */
 export interface CanvasContribution extends TabContribution {
-    /** Module whose default export is an HTMLElement subclass. */
-    load: () => Promise<{ default: CustomElementConstructor }>;
-    /** When set, the editor can toggle between preview and source and counts as an editor. */
+    /** Unique app-settings key for this canvas's `canvasHost` state. */
+    settingsKey: string;
+    /** Constructor module. Omit when `source` is canvas text; the editor compiles that. */
+    load?: () => Promise<{ default: CustomElementConstructor }>;
+    /** Canvas module source. Compiled for the preview; the contribution is not editable. */
     source?: string | (() => Promise<string>);
     tools?: CanvasToolContribution[];
 }
 
 export function isCanvasContribution(contribution: Contribution): contribution is CanvasContribution {
-    return typeof (contribution as CanvasContribution).load === 'function';
+    const canvas = contribution as CanvasContribution;
+    return typeof canvas.settingsKey === 'string' && canvas.settingsKey.length > 0
+        && (typeof canvas.load === 'function' || canvas.source !== undefined);
 }

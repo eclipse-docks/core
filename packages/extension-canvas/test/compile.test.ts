@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import tasksSource from '../src/canvases/tasks.canvas.js?raw';
 import { compileCanvas, type CanvasBridges, type CanvasFileBytes } from '../src/compile';
 import { mountCompiled } from '../src/mount';
 
@@ -125,5 +126,18 @@ export default class extends HTMLElement {
         expect(mounted.ok).toBe(false);
         if (mounted.ok) return;
         expect(mounted.error).toContain('canvas-boom');
+    });
+
+    it('compiles the registered tasks canvas', async () => {
+        const result = await compileCanvas({
+            entryPath: 'tasks.canvas.js',
+            entrySource: tasksSource,
+            read: files({}),
+            bridges,
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.code).toContain('__docksCanvas.lit');
+        expect(result.code).toContain('Today, with intention.');
     });
 });

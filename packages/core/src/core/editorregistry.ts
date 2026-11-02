@@ -14,6 +14,8 @@ export interface EditorInput {
     data: any;
     component: (container: any, tab: HTMLElement) => any;
     state: { [key: string]: any };
+    /** When false, the opened tab has no part toolbar. */
+    toolbar?: boolean;
 }
 
 export interface EditorInputHandler {
@@ -216,13 +218,15 @@ class EditorRegistry {
         const editorId = (editorInput as Record<string, unknown>).editorId as string | undefined ?? preferredEditorId;
         if (editorId) (editorInput as Record<string, unknown>).editorId = editorId;
 
+        const input = editorInput as EditorInput;
         await this.openTab({
-            name: editorInput.key,
+            name: input.key,
             editorId,
-            label: this.tabLabelForEditorInput(editorInput as EditorInput),
-            icon: editorInput.icon,
+            label: this.tabLabelForEditorInput(input),
+            icon: input.icon,
             closable: true,
-            component: editorInput.component
+            toolbar: input.toolbar,
+            component: input.component
         } as TabContribution) 
     }
 

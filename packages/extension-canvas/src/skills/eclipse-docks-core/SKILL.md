@@ -87,7 +87,7 @@ contributionRegistry.registerContribution(SIDEBAR_MAIN, {
 });
 ```
 
-Common slots: sidebars, panel bottom, toolbars, settings. Canvas modules contributed by extensions use `system.canvases` (`SYSTEM_CANVASES` from `@eclipse-docks/extension-canvas/contribution`) with a `load()` that returns `{ default: CustomElementConstructor }`.
+Common slots: sidebars, panel bottom, toolbars, settings. Canvas modules contributed by extensions use `system.canvases` (`SYSTEM_CANVASES` from `@eclipse-docks/extension-canvas/contribution`). Each contribution sets a unique `settingsKey` for its `canvasHost` state. `load()` returns `{ default: CustomElementConstructor }`, or `source` is the canvas module text and the preview compiles it. A contributed canvas is not editable and opens without a toolbar.
 
 ## Dialogs & toasts
 

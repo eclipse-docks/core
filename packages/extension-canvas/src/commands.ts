@@ -10,29 +10,28 @@ import {
     type EditorInput,
 } from '@eclipse-docks/core';
 import { html } from '@eclipse-docks/core/externals/lit';
-import { connectedWorkspaceEditors, findOpenCanvas, readActiveCanvas } from './active-canvas';
+import { connectedWorkspaceEditors, findOpenCanvas, isCanvasViewer, readActiveCanvas } from './active-canvas';
 import { listRegisteredCanvases } from './canvases';
 import type { CanvasContribution } from './contribution';
 import { attachPreviewShot } from './preview-image';
 import { writeWorkspaceFile } from './workspace-file';
 import './canvas-editor';
+import './canvas-readonly';
 
 const VIEW_SLOTS = new Set([SIDEBAR_MAIN, SIDEBAR_AUXILIARY, PANEL_BOTTOM]);
 
 export function canvasEditorInput(contribution: CanvasContribution, sourceText = ''): EditorInput {
-    const hasSource = contribution.source !== undefined;
     const input = {
         key: `canvas:${contribution.name}`,
         title: contribution.label,
         icon: contribution.icon ?? 'table-columns',
         data: { contribution },
         state: { mode: 'preview' },
+        toolbar: false,
         component: () => html``,
     } as EditorInput;
-    input.component = (id: string) => hasSource
-        ? html`<docks-canvas-editor id="${id}" .input=${input} .source=${sourceText}></docks-canvas-editor>`
-        : html`<docks-canvas-surface id="${id}" .input=${input}></docks-canvas-surface>`;
-    (input as unknown as { editorId: string }).editorId = 'system.canvas-editor';
+    input.component = (id: string) => html`<docks-canvas-readonly id="${id}" .input=${input} .source=${sourceText}></docks-canvas-readonly>`;
+    (input as unknown as { editorId: string }).editorId = 'system.canvas-readonly';
     return input;
 }
 
@@ -138,6 +137,7 @@ export function registerCanvasCommands(): void {
             ],
         },
         handler: {
+            canExecute: () => !isCanvasViewer(),
             execute: async ({ params }) => {
                 const source = String(params?.source ?? '');
                 const requested = typeof params?.path === 'string' ? params.path : undefined;

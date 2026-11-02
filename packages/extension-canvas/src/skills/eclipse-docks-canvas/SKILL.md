@@ -124,4 +124,4 @@ Before non-trivial UI or shell integration, load companion skills as needed:
 3. Change a canvas with `canvas.apply_source`. If that canvas is open in an editor, the editor marks itself dirty and recompiles the preview and does not save. If it is not open in an editor, the tool writes the file. Do not `workspace_write` a canvas that is already open.
 4. Optional: `canvas.capture_preview` to attach a screenshot (iframe contents may be blank).
 
-Extension-registered canvases live on `system.canvases` and open by name via `canvas.open`.
+Extension-registered canvases live on `system.canvases` and open by name via `canvas.open`. That opens a read-only viewer. Do not edit it: `canvas.apply_source`, `canvas.get_source`, `canvas.set_state`, and any tools declared by that canvas are not available while it is active.

@@ -336,7 +336,16 @@ export abstract class DocksPart extends DocksContainer {
             overflow: hidden;
         }
 
+        .part-toolbar {
+            grid-row: 1;
+            min-height: 0;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
         .part-content {
+            grid-row: 2;
             min-height: 0;
             overflow: hidden;
             position: relative;
@@ -376,12 +385,6 @@ export abstract class DocksPart extends DocksContainer {
             min-height: 0;
         }
 
-        .part-toolbar {
-            min-height: 0;
-            min-width: 0;
-            max-width: 100%;
-            overflow: hidden;
-        }
     `;
 
     static finalizeStyles(styles?: CSSResultGroup) {

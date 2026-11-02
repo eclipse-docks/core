@@ -12,6 +12,7 @@ import {
   AI_SETTINGS_KEY,
   AI_VIEW_NAME,
   OPEN_AI_SETTINGS_COMMAND,
+  appContextPromptEnhancer,
   cognitiveRuntime,
   registerSkillCommands,
 } from './runtime';
@@ -20,6 +21,7 @@ import './view/cognitive-settings-editor';
 
 cognitiveRuntime.start();
 registerSkillCommands();
+cognitiveRuntime.addSystemPromptEnhancer(appContextPromptEnhancer);
 rootContext.put('cognitiveRuntime', cognitiveRuntime);
 
 contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {

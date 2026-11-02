@@ -1,0 +1,1 @@
+import{n as e}from"./rolldown-runtime-Dd_uD5pT.js";import{dn as t,ln as n,r,un as i}from"./canvas-bridge-core.js-D_3Lt3pw.js";r(`./core/events`,e({publish:()=>n,subscribe:()=>i,unsubscribe:()=>t}));var a=import.meta.url;export{a as t};

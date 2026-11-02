@@ -1,0 +1,1 @@
+import{r as e}from"./canvas-bridge-core.js-D_3Lt3pw.js";e(`./parts`,{});var t=import.meta.url;export{t};

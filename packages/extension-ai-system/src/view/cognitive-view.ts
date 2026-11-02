@@ -385,6 +385,27 @@ export class DocksCognitiveView extends DocksPart {
       min-width: 0;
     }
 
+    .queued-prompt {
+      display: flex;
+      align-items: center;
+      gap: var(--wa-space-2xs);
+      padding: var(--wa-space-2xs) var(--wa-space-s);
+      border-radius: var(--wa-border-radius-m);
+      border: var(--wa-border-width-s) solid var(--wa-color-border-normal);
+      background: color-mix(in srgb, var(--wa-color-brand-fill-quiet) 40%, transparent);
+      color: var(--wa-color-text-quiet);
+      font-size: var(--wa-font-size-s);
+      min-width: 0;
+    }
+
+    .queued-prompt-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .composer-row {
       display: flex;
       gap: var(--wa-space-s);
@@ -636,6 +657,8 @@ export class DocksCognitiveView extends DocksPart {
   @state() private toolDetail: Extract<MessagePart, { type: 'tool' }> | null = null;
   @state() private busy = false;
   @state() private busyStatus = INITIAL_BUSY_STATUS;
+  /** Follow-up composed while a turn is running; sent automatically when the turn ends. */
+  @state() private queuedPrompt: { text: string; attachmentIds: string[] } | null = null;
   @state() private pendingPermission: PermissionRequest | null = null;
   @state() private policyMode: 'auto' | 'manual' = 'auto';
   @state() private optimizeFor: 'cost' | 'balance' | 'intelligence' = 'balance';
@@ -721,12 +744,10 @@ export class DocksCognitiveView extends DocksPart {
   private startBusyStatus(): void {
     this.stopBusyStatus();
     this.busyStatus = INITIAL_BUSY_STATUS;
-    void this.setComposerText(this.busyStatus);
     window.addEventListener('keydown', this.cancelKeyHandler);
     const schedule = () => {
       this.busyStatusTimer = setTimeout(() => {
         this.busyStatus = nextBusyStatus(this.busyStatus);
-        void this.setComposerText(this.busyStatus);
         schedule();
       }, busyStatusRotateMs());
     };
@@ -1073,10 +1094,6 @@ export class DocksCognitiveView extends DocksPart {
 
   /** Attach clipboard files/images (e.g. Ctrl+V screenshot) when focused in the prompt. */
   private async onComposerPaste(e: ClipboardEvent): Promise<void> {
-    if (this.busy) {
-      e.preventDefault();
-      return;
-    }
     const files = filesFromClipboard(e.clipboardData);
     if (!files.length) return;
     e.preventDefault();
@@ -1089,13 +1106,32 @@ export class DocksCognitiveView extends DocksPart {
     if (this.pendingPermission) this.resolvePermission('deny');
   }
 
+  private clearQueuedPrompt(): void {
+    this.queuedPrompt = null;
+  }
+
+  private async queueFollowUp(text: string, attachmentIds: string[]): Promise<void> {
+    this.queuedPrompt = { text, attachmentIds };
+    this.pendingAttachmentIds = [];
+    if (this.fileInput) this.fileInput.value = '';
+    await this.setComposerText('');
+  }
+
   private async send(): Promise<void> {
     const text = this.draft.trim();
     const attachmentIds = [...this.pendingAttachmentIds];
-    if ((!text && !attachmentIds.length) || this.busy) return;
+    if (!text && !attachmentIds.length) return;
+
+    // Cursor-like: keep typing during a run; Enter queues a follow-up for after this turn.
+    if (this.busy) {
+      await this.queueFollowUp(text, attachmentIds);
+      return;
+    }
+
     this.applyPolicy();
     this.pendingAttachmentIds = [];
     if (this.fileInput) this.fileInput.value = '';
+    await this.setComposerText('');
     const controller = new AbortController();
     this.promptController = controller;
     this.busy = true;
@@ -1113,9 +1149,18 @@ export class DocksCognitiveView extends DocksPart {
       this.stopBusyStatus();
       this.busy = false;
       this.streamingParts = [];
-      await this.clearComposer();
       this.syncSessions();
       this.scheduleScrollToBottom();
+      const next = this.queuedPrompt;
+      this.queuedPrompt = null;
+      if (next && (next.text.trim() || next.attachmentIds.length)) {
+        this.draft = next.text;
+        this.pendingAttachmentIds = next.attachmentIds;
+        await this.updateComplete;
+        if (this.textarea) this.textarea.value = next.text;
+        await this.send();
+        return;
+      }
       this.textarea?.focus();
     }
   }
@@ -1130,7 +1175,6 @@ export class DocksCognitiveView extends DocksPart {
           size="s"
           appearance="plain"
           title=${count ? `${count} attachment${count === 1 ? '' : 's'}` : 'Attachments'}
-          ?disabled=${this.busy}
         >
           <wa-icon name="paperclip" label="Attachments"></wa-icon>
           ${count > 0 ? html`<wa-badge pill>${count}</wa-badge>` : nothing}
@@ -1169,7 +1213,6 @@ export class DocksCognitiveView extends DocksPart {
                           size="s"
                           appearance="plain"
                           title=${`Save ${file.name} to workspace folder`}
-                          ?disabled=${this.busy}
                           @click=${() => void this.saveAttachmentToWorkspace(file.id)}
                         >
                           <wa-icon name="floppy-disk" label=${`Save ${file.name}`}></wa-icon>
@@ -1178,7 +1221,6 @@ export class DocksCognitiveView extends DocksPart {
                           size="s"
                           appearance="plain"
                           title="Remove from session"
-                          ?disabled=${this.busy}
                           @click=${() => this.removeSessionAttachment(file.id)}
                         >
                           <wa-icon name="xmark" label="Remove"></wa-icon>
@@ -1192,7 +1234,7 @@ export class DocksCognitiveView extends DocksPart {
           <wa-button
             size="s"
             appearance="outlined"
-            ?disabled=${this.busy || count >= MAX_ATTACHMENTS}
+            ?disabled=${count >= MAX_ATTACHMENTS}
             @click=${() => this.openFilePicker()}
           >
             <wa-icon slot="start" name="plus"></wa-icon>
@@ -1429,27 +1471,38 @@ export class DocksCognitiveView extends DocksPart {
             @change=${(e: Event) => void this.onFileInputChange(e)}
           />
           <div class="composer">
+            ${this.queuedPrompt
+              ? html`
+                  <div class="queued-prompt" title="Sends automatically when the current turn finishes">
+                    <wa-icon name="clock"></wa-icon>
+                    <span class="queued-prompt-text">
+                      Queued: ${this.queuedPrompt.text.trim() || `(${this.queuedPrompt.attachmentIds.length} attachment${this.queuedPrompt.attachmentIds.length === 1 ? '' : 's'})`}
+                    </span>
+                    <wa-button
+                      size="s"
+                      appearance="plain"
+                      title="Remove queued follow-up"
+                      @click=${() => this.clearQueuedPrompt()}
+                    >
+                      <wa-icon name="xmark" label="Remove queue"></wa-icon>
+                    </wa-button>
+                  </div>
+                `
+              : nothing}
             <div class="composer-row">
               <wa-textarea
-                placeholder=${this.busy ? this.busyStatus : 'Enter your message here…'}
+                placeholder=${this.busy ? 'Add a follow-up…' : 'Enter your message here…'}
                 size="s"
                 resize="auto"
                 rows="1"
-                .value=${this.busy ? this.busyStatus : this.draft}
-                ?disabled=${this.busy}
-                ?readonly=${this.busy}
+                .value=${this.draft}
                 @input=${(e: Event) => {
-                  if (this.busy) return;
                   this.draft = (e.target as HTMLTextAreaElement).value;
                 }}
                 @keydown=${(e: KeyboardEvent) => {
-                  if (this.busy) {
-                    if (e.key === 'Escape') {
-                      e.preventDefault();
-                      this.cancelTurn();
-                      return;
-                    }
+                  if (e.key === 'Escape' && this.busy) {
                     e.preventDefault();
+                    this.cancelTurn();
                     return;
                   }
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -1485,7 +1538,9 @@ export class DocksCognitiveView extends DocksPart {
   }
 
   private renderTranscript(session: CognitiveSession) {
-    const showStreaming = this.streamingParts.length > 0;
+    // Show the live assistant row as soon as the turn starts (busy), not only after
+    // the first streamed part — otherwise the transcript stays blank until tools/text arrive.
+    const showStreaming = this.busy || this.streamingParts.length > 0;
     const showPermission =
       this.pendingPermission && this.pendingPermission.sessionId === session.id;
 

@@ -20,11 +20,14 @@ export async function readWorkspaceFile(path: string): Promise<CanvasFileBytes |
     return null;
 }
 
-export async function writeWorkspaceFile(path: string, contents: string): Promise<File | null> {
+/** Writes a canvas module. Used when that file is not open in an editor. */
+export async function writeWorkspaceFile(path: string, contents: string): Promise<string> {
+    const normalized = path.replace(/^\/+/, '');
+    if (!normalized.endsWith('.canvas.js')) return `Not a canvas file "${path}"`;
     const workspace = workspaceService.getWorkspaceSync() ?? await workspaceService.getWorkspace();
-    if (!workspace) return null;
-    const resource = await workspace.getResource(path.replace(/^\/+/, ''), { create: true });
-    if (!(resource instanceof File)) return null;
+    if (!workspace) return 'No workspace is open';
+    const resource = await workspace.getResource(normalized, { create: true });
+    if (!(resource instanceof File)) return `Cannot write workspace file "${path}"`;
     await resource.saveContents(contents);
-    return resource;
+    return 'ready';
 }

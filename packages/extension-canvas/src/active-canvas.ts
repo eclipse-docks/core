@@ -10,6 +10,8 @@ export interface ActiveCanvas {
     getContent?: () => string | null;
     getFilePath?: () => string | null;
     setSource?: (source: string) => void;
+    save?: () => Promise<void>;
+    syncFromFile?: () => Promise<boolean>;
     reload?: () => Promise<string>;
     capturePreview?: () => Promise<PreviewShot>;
     getState?: (key: string) => unknown;
@@ -18,6 +20,17 @@ export interface ActiveCanvas {
 
 export function readActiveCanvas(): ActiveCanvas | null {
     return fromElement(activeEditorSignal.get() as unknown as CanvasElement | null);
+}
+
+/** Connected workspace canvas editors. Optional path keeps only that file. */
+export function connectedWorkspaceEditors(path?: string): ActiveCanvas[] {
+    const editors = [...document.querySelectorAll('docks-canvas-editor')]
+        .filter(node => (node as HTMLElement).isConnected)
+        .map(node => fromElement(node as unknown as CanvasElement))
+        .filter((item): item is ActiveCanvas => !!item && item.editor && item.kind === 'workspace');
+    if (!path) return editors;
+    const normalized = path.replace(/^\/+/, '');
+    return editors.filter(item => (item.getFilePath?.() ?? '').replace(/^\/+/, '') === normalized);
 }
 
 /** Active canvas editor, or any open canvas part when focus has moved elsewhere. */
@@ -42,6 +55,8 @@ function fromElement(active: CanvasElement | null): ActiveCanvas | null {
         getContent: active.getContent?.bind(active),
         getFilePath: active.getFilePath?.bind(active),
         setSource: active.setSource?.bind(active),
+        save: active.save?.bind(active),
+        syncFromFile: active.syncFromFile?.bind(active),
         reload: active.reload?.bind(active),
         capturePreview: active.capturePreview?.bind(active),
         getState: active.getState?.bind(active),

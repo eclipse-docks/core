@@ -122,7 +122,7 @@ log.info("ready");
 ## Canvas notes
 
 - Host persistence for a workspace `.canvas.js` is `canvasHost.getState` / `setState`, not `appSettings`, unless you intentionally share app-wide settings.
-- Cross-origin isolation applies: third-party documents without CORP belong in iframe `srcdoc`, not naked fetches from the canvas element.
+- Cross-origin loads follow the canvas skill: CORS plus `Access-Control-Allow-Origin`, or `Cross-Origin-Resource-Policy: cross-origin`. An iframe `srcdoc` does not opt out.
 - Keep UI building blocks on `docks/lit` + `docks/webawesome`; use `docks/core` for shell integration.
 
 ## Anti-patterns

@@ -10,10 +10,11 @@ import {
     type EditorInput,
 } from '@eclipse-docks/core';
 import { html } from '@eclipse-docks/core/externals/lit';
-import { findOpenCanvas, readActiveCanvas } from './active-canvas';
+import { connectedWorkspaceEditors, findOpenCanvas, readActiveCanvas } from './active-canvas';
 import { listRegisteredCanvases } from './canvases';
 import type { CanvasContribution } from './contribution';
 import { attachPreviewShot } from './preview-image';
+import { writeWorkspaceFile } from './workspace-file';
 import './canvas-editor';
 
 const VIEW_SLOTS = new Set([SIDEBAR_MAIN, SIDEBAR_AUXILIARY, PANEL_BOTTOM]);
@@ -115,8 +116,11 @@ export function registerCanvasCommands(): void {
                 if (path) {
                     const opened = await openCanvasByPath(path);
                     if (opened !== 'ready') return opened;
-                    const active = await waitForCanvas(item => item.kind === 'workspace');
-                    return active?.reload ? active.reload() : opened;
+                    const normalized = path.replace(/^\/+/, '');
+                    const active = await waitForCanvas(item => item.getFilePath?.()?.replace(/^\/+/, '') === normalized);
+                    if (!active?.reload) return opened;
+                    await active.syncFromFile?.();
+                    return active.reload();
                 }
                 return 'Provide a workspace path or a registered canvas name';
             },
@@ -127,26 +131,29 @@ export function registerCanvasCommands(): void {
         command: {
             id: 'canvas.apply_source',
             name: 'Apply canvas source',
-            description: 'Writes source into the active workspace canvas, compiles it, and returns ready or the compile error',
+            description: 'Updates an open canvas editor and recompiles its preview without saving. When that canvas is not open in an editor, writes the file instead.',
             parameters: [
                 { name: 'source', description: 'Full canvas module source', required: true },
-                { name: 'path', description: 'Workspace path of the canvas file', required: false },
+                { name: 'path', description: 'Workspace path of the canvas file. Required when that canvas is not open in an editor.', required: false },
             ],
         },
         handler: {
-            canExecute: () => !!workspaceCanvas(),
             execute: async ({ params }) => {
-                const active = workspaceCanvas();
-                if (!active?.setSource || !active.reload) return 'No workspace canvas is active';
                 const source = String(params?.source ?? '');
-                const path = (params?.path as string | undefined) ?? active.getFilePath?.() ?? undefined;
-                if (path) {
-                    const { writeWorkspaceFile } = await import('./workspace-file');
-                    const written = await writeWorkspaceFile(path, source);
-                    if (!written) return `Cannot write workspace file "${path}"`;
+                const requested = typeof params?.path === 'string' ? params.path : undefined;
+                const path = requested ?? workspaceCanvas()?.getFilePath?.() ?? undefined;
+                const targets = path ? connectedWorkspaceEditors(path) : [];
+                if (targets.length) {
+                    let compiled = 'ready';
+                    for (const editor of targets) {
+                        if (!editor.setSource || !editor.reload) continue;
+                        editor.setSource(source);
+                        compiled = await editor.reload();
+                    }
+                    return compiled;
                 }
-                active.setSource(source);
-                return active.reload();
+                if (!path) return 'Provide a workspace path';
+                return writeWorkspaceFile(path, source);
             },
         },
     });

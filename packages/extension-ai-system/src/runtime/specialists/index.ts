@@ -22,7 +22,7 @@ export function systemPromptFor(
         'This turn publishes session attachments under the shared in-memory root (in-memory/<sessionId>/… or in-memory://<sessionId>/…).',
         'Read them with workspace_read / workspace_list — in-memory paths work without mounting that root into the workspace tree.',
         'Do not call load_workspace / connect_opfs / connect_indexeddb to find attachments.',
-        'Canvas from a screenshot: skills.load eclipse-docks-canvas → workspace_read the attachment path → workspace_write a .canvas.js (into a durable workspace folder) → canvas.open / canvas.apply_source.',
+        'Canvas from a screenshot: skills.load eclipse-docks-canvas → workspace_read the attachment path → workspace_write a new .canvas.js (into a durable workspace folder) → canvas.open. Change a canvas with canvas.apply_source. An open editor is marked dirty and recompiled and is not saved; a canvas that is not open in an editor is written to its file. Do not workspace_write a canvas that is already open.',
         'Qualify durable writes as <root>/<file> using a root from workspace_list (e.g. tests/demo.canvas.js); bare filenames are auto-rooted when a single durable folder is connected, otherwise a folder picker appears.',
         'If no durable workspace folder is connected for writing canvases, say so and stop.',
       ].join(' ')

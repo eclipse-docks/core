@@ -2,12 +2,12 @@ import {
     DocksPart,
     File,
     icon,
+    TOPIC_WORKSPACE_CHANGED,
     type EditorContentProvider,
     type EditorInput,
 } from '@eclipse-docks/core';
 import { css, html, nothing, type PropertyValues } from '@eclipse-docks/core/externals/lit';
 import { customElement, property, query, state } from '@eclipse-docks/core/externals/lit';
-import { Directive, directive } from 'lit/directive.js';
 import '@eclipse-docks/extension-monaco-editor/widget';
 import type { DocksMonacoWidget } from '@eclipse-docks/extension-monaco-editor/widget';
 import type { CanvasContribution } from './contribution';
@@ -17,12 +17,6 @@ import { elementFromConstructor, mountCompiled, type CanvasViewElement } from '.
 import { canvasBridges } from './bridges/urls';
 import { attachPreviewShot, rasterizeElement, type PreviewShot } from './preview-image';
 import { readWorkspaceFile } from './workspace-file';
-
-const heldNode = directive(class extends Directive {
-    render(node?: Node) {
-        return node ?? nothing;
-    }
-});
 
 @customElement('docks-canvas-surface')
 export class DocksCanvasSurface extends DocksPart implements EditorContentProvider {
@@ -46,12 +40,15 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
     private contribution?: CanvasContribution;
     private ready = false;
     private reloadGeneration = 0;
+    private reloadTail: Promise<void> = Promise.resolve();
+    private syncToken = 0;
     private compiledSource = '';
     protected previewStale = false;
 
     override connectedCallback() {
         super.connectedCallback();
         this.addEventListener('dirty', this.onDirty);
+        this.subscribe(TOPIC_WORKSPACE_CHANGED, this.onWorkspaceChanged);
     }
 
     override disconnectedCallback() {
@@ -86,6 +83,7 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
         }
         this.mode = this.input?.state?.mode === 'source' ? 'source' : 'preview';
         this.ready = true;
+        await this.syncFromFile();
         this.requestUpdate();
         if (this.mode === 'preview' || !this.showSource) await this.reload();
     }
@@ -132,11 +130,30 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
     }
 
     setSource(source: string): void {
-        this.previewStale = source !== this.compiledSource;
+        const current = this.getContent() ?? '';
         this.sourceText = source;
         const model = this.widget?.getModel();
         if (model && model.getValue() !== source) model.setValue(source);
+        const next = this.getContent() ?? source;
+        this.previewStale = next !== this.compiledSource || !this.previewElement;
+        if (next !== current || this.previewStale) this.markDirty(true);
         this.requestUpdate();
+    }
+
+    async syncFromFile(): Promise<boolean> {
+        for (let attempt = 0; attempt < 30 && !this.ready; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        if (!this.ready || this.kind !== 'workspace' || !this.entryPath) return false;
+        const token = ++this.syncToken;
+        const before = this.getContent() ?? '';
+        const file = await readWorkspaceFile(this.entryPath);
+        if (token !== this.syncToken) return false;
+        if (file?.text === undefined) return false;
+        const current = this.getContent() ?? '';
+        if (current !== before || file.text === current) return false;
+        this.setSource(file.text);
+        return true;
     }
 
     async capturePreview(): Promise<PreviewShot> {
@@ -167,14 +184,31 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
         }
     }
 
-    async reload(): Promise<string> {
-        const source = this.getContent() ?? '';
-        if (this.previewElement && !this.previewStale && source === this.compiledSource && !this.previewError) return 'ready';
+    reload(): Promise<string> {
+        const run = this.reloadTail.then(() => this.reloadLatest());
+        this.reloadTail = run.then(() => undefined, () => undefined);
+        return run;
+    }
+
+    private async reloadLatest(): Promise<string> {
+        let result = 'ready';
+        for (let pass = 0; pass < 4; pass++) {
+            const source = this.getContent() ?? '';
+            if (this.previewElement && !this.previewStale && source === this.compiledSource && !this.previewError) return result;
+            result = await this.mountSource(source);
+            if (!result) continue;
+            if ((this.getContent() ?? '') === source) return result;
+            this.previewStale = true;
+        }
+        return result;
+    }
+
+    private async mountSource(source: string): Promise<string> {
         const generation = ++this.reloadGeneration;
         if (this.kind === 'registered' && this.contribution) {
             try {
                 const mod = await this.contribution.load();
-                if (generation !== this.reloadGeneration) return 'ready';
+                if (generation !== this.reloadGeneration) return '';
                 const Ctor = mod.default;
                 if (typeof Ctor !== 'function' || !(Ctor.prototype instanceof HTMLElement)) {
                     this.previewError = 'Canvas default export must be an HTMLElement subclass';
@@ -183,10 +217,10 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
                 }
                 const element = elementFromConstructor(Ctor);
                 element.canvasHost = this.host;
-                this.replacePreview(element);
+                this.replacePreview(element, source);
                 return 'ready';
             } catch (err) {
-                if (generation !== this.reloadGeneration) return 'ready';
+                if (generation !== this.reloadGeneration) return '';
                 this.previewError = err instanceof Error ? err.message : String(err);
                 this.requestUpdate();
                 return this.previewError;
@@ -198,7 +232,7 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
             read: readWorkspaceFile,
             bridges: canvasBridges(),
         });
-        if (generation !== this.reloadGeneration) return 'ready';
+        if (generation !== this.reloadGeneration) return '';
         if (!compiled.ok) {
             this.previewError = compiled.error;
             this.requestUpdate();
@@ -207,7 +241,7 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
         const mounted = await mountCompiled(compiled.code);
         if (generation !== this.reloadGeneration) {
             if (mounted.ok) mounted.dispose();
-            return 'ready';
+            return '';
         }
         if (!mounted.ok) {
             this.previewError = mounted.error;
@@ -215,21 +249,39 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
             return mounted.error;
         }
         mounted.element.canvasHost = this.host;
-        this.compiledSource = source;
-        this.previewStale = false;
-        this.replacePreview(mounted.element, mounted.dispose);
+        this.replacePreview(mounted.element, source, mounted.dispose);
         return 'ready';
     }
 
-    private replacePreview(element: CanvasViewElement, dispose?: () => void) {
+    private replacePreview(element: CanvasViewElement, source: string, dispose?: () => void) {
         const previous = this.previewDispose;
         this.previewDispose = dispose ?? (() => element.remove());
         this.previewElement = element;
         this.previewError = undefined;
-        this.compiledSource = this.getContent() ?? this.compiledSource;
-        this.previewStale = false;
+        this.compiledSource = source;
+        this.previewStale = (this.getContent() ?? '') !== source;
+        this.placePreview();
         this.requestUpdate();
         previous?.();
+    }
+
+    /** The mount has no Lit child part, so replacing its children leaves part markers intact. */
+    private placePreview() {
+        const mount = this.renderRoot.querySelector('.canvas-mount');
+        const element = this.previewElement;
+        if (!mount || !element) return;
+        if (mount.childElementCount === 1 && mount.firstElementChild === element) return;
+        mount.replaceChildren(element);
+    }
+
+    private onWorkspaceChanged = () => {
+        void this.refreshFromFile();
+    };
+
+    private async refreshFromFile() {
+        const changed = await this.syncFromFile();
+        if (!changed) return;
+        if (this.mode === 'preview' || !this.showSource) await this.reload();
     }
 
     private onDirty = (event: Event) => {
@@ -242,6 +294,7 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
 
     protected updated(changed: PropertyValues) {
         super.updated(changed);
+        this.placePreview();
         if (this.mode === 'source') this.widget?.layout();
     }
 
@@ -312,7 +365,7 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
             <div class="canvas-preview ${showPreview ? '' : 'canvas-hidden'}">
                 ${this.previewError ? html`<pre class="canvas-error">${this.previewError}</pre>` : nothing}
                 <wa-scroller class="canvas-scroll" orientation="vertical">
-                    <div class="canvas-mount">${heldNode(this.previewElement)}</div>
+                    <div class="canvas-mount"></div>
                 </wa-scroller>
             </div>
             ${this.showSource ? html`
@@ -358,8 +411,8 @@ export class DocksCanvasEditor extends DocksCanvasSurface {
         const value = this.getContent() ?? '';
         const data = this.input?.data;
         if (data instanceof File) await data.saveContents(value);
+        if ((this.mode === 'preview' || !this.showSource) && this.previewStale) await this.reload();
         this.markDirty(false);
-        if (this.mode === 'preview' && this.previewStale) await this.reload();
     }
 }
 

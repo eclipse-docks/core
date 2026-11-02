@@ -147,4 +147,5 @@ static styles = css`
 - Per-component package imports inside `.canvas.js`
 - Using `wa-dropdown` where a form `wa-select` is required
 - Hardcoded colors in CSS/templates instead of `--wa-*` color tokens
-- Putting third-party map/CDN documents in the Lit tree — use iframe `srcdoc` (see canvas skill); keep WA on the host element
+- Hand-rolled `<button>`, `<input>`, or checkbox chrome, or a hardcoded color palette, when `wa-*` and `--wa-color-*` tokens cover it
+- Loading a cross-origin image, style, or script as no-cors when the host omits CORP — request it as CORS (see canvas skill); keep `wa-*` on the host element. A widget stylesheet added to `document.head` does not apply inside the canvas shadow root — adopt it there (see canvas skill)

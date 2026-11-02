@@ -6,9 +6,19 @@ import {
   customElement,
   query,
   state,
+  unsafeHTML,
   type TemplateResult,
 } from '@eclipse-docks/core/externals/lit';
-import { DocksPart, toastError } from '@eclipse-docks/core';
+import {
+  DocksPart,
+  File as WorkspaceFile,
+  FileContentType,
+  filebrowserDialog,
+  parseMarkdownHtml,
+  toastError,
+  toastInfo,
+  workspaceService,
+} from '@eclipse-docks/core';
 import {
   ATTACHMENT_FILE_ACCEPT,
   MAX_ATTACHMENTS,
@@ -147,11 +157,21 @@ export class DocksCognitiveView extends DocksPart {
       display: flex;
       flex-direction: column;
       gap: var(--wa-space-2xs);
-      max-width: 100%;
+      width: 90%;
+      min-width: 90%;
+      max-width: 90%;
+      align-self: flex-start;
+      align-items: stretch;
     }
 
     .msg.user {
-      align-items: flex-end;
+      align-self: flex-end;
+    }
+
+    .msg .bubble,
+    .msg wa-details.msg-details {
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .msg-meta {
@@ -189,6 +209,39 @@ export class DocksCognitiveView extends DocksPart {
       white-space: pre-wrap;
       line-height: var(--wa-line-height-normal);
       max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .bubble.markdown {
+      white-space: normal;
+    }
+
+    .bubble.markdown > :first-child {
+      margin-block-start: 0;
+    }
+
+    .bubble.markdown > :last-child {
+      margin-block-end: 0;
+    }
+
+    .bubble.markdown pre {
+      overflow-x: auto;
+      padding: var(--wa-space-s);
+      border-radius: var(--wa-border-radius-m);
+      background: color-mix(in srgb, var(--wa-color-neutral-fill-quiet) 55%, transparent);
+    }
+
+    .bubble.markdown code {
+      font-family: var(--wa-font-family-code, ui-monospace, monospace);
+      font-size: 0.92em;
+    }
+
+    .bubble.markdown pre code {
+      font-size: inherit;
+    }
+
+    .bubble.markdown a {
+      color: var(--wa-color-brand-on-normal);
     }
 
     .msg.user .bubble {
@@ -283,6 +336,34 @@ export class DocksCognitiveView extends DocksPart {
       height: 100%;
       border-radius: inherit;
       background: var(--bucket-color, var(--wa-color-brand-fill-normal));
+    }
+
+    .context-io {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--wa-space-2xs);
+      padding-top: var(--wa-space-s);
+      border-top: var(--wa-border-width-s) solid var(--wa-color-border-normal);
+      font-size: var(--wa-font-size-xs);
+    }
+
+    .context-io-heading {
+      grid-column: 1 / -1;
+      font-weight: var(--wa-font-weight-semibold, 600);
+    }
+
+    .context-io-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .context-io-item span {
+      color: var(--wa-color-text-quiet);
+    }
+
+    .context-io-item strong {
+      font-variant-numeric: tabular-nums;
     }
 
     .context-footer {
@@ -885,6 +966,47 @@ export class DocksCognitiveView extends DocksPart {
     this.syncSessions();
   }
 
+  private async saveAttachmentToWorkspace(attachmentId: string): Promise<void> {
+    const attachment = this.sessionAttachments().find((a) => a.id === attachmentId);
+    if (!attachment) return;
+
+    const preferredName = attachmentSaveFileName(attachment);
+    const parent = await filebrowserDialog('directory');
+    if (!parent) return;
+
+    try {
+      const workspace = await workspaceService.getWorkspace();
+      if (!workspace) {
+        toastError('No workspace connected');
+        return;
+      }
+      const parentPath = parent.replace(/\/$/, '');
+      const fileName = await uniqueWorkspaceFileName(workspace, parentPath, preferredName);
+      const path = `${parentPath}/${fileName}`;
+      const resource = await workspace.getResource(path, { create: true });
+      if (!(resource instanceof WorkspaceFile)) {
+        toastError('Could not create file in the selected folder');
+        return;
+      }
+
+      if (attachment.dataUrl) {
+        const blob = await (await fetch(attachment.dataUrl)).blob();
+        const named = new globalThis.File([blob], fileName, {
+          type: blob.type || attachment.mime || '',
+        });
+        await resource.saveContents(named, { contentType: FileContentType.BINARY });
+      } else if (attachment.text != null) {
+        await resource.saveContents(attachment.text);
+      } else {
+        toastError('Attachment has no payload to save');
+        return;
+      }
+      toastInfo(`Saved ${fileName}`);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   private async addFiles(fileList: FileList | File[]): Promise<void> {
     const files = [...fileList];
     if (!files.length) return;
@@ -1046,6 +1168,15 @@ export class DocksCognitiveView extends DocksPart {
                         <wa-button
                           size="s"
                           appearance="plain"
+                          title=${`Save ${file.name} to workspace folder`}
+                          ?disabled=${this.busy}
+                          @click=${() => void this.saveAttachmentToWorkspace(file.id)}
+                        >
+                          <wa-icon name="floppy-disk" label=${`Save ${file.name}`}></wa-icon>
+                        </wa-button>
+                        <wa-button
+                          size="s"
+                          appearance="plain"
                           title="Remove from session"
                           ?disabled=${this.busy}
                           @click=${() => this.removeSessionAttachment(file.id)}
@@ -1185,7 +1316,7 @@ export class DocksCognitiveView extends DocksPart {
     const usage = this.contextUsage();
     const canCompact = (this.focusedSession()?.history.length ?? 0) > 12;
     const percentLabel = formatContextPercent(usage.percent);
-    const title = `Context ${percentLabel} · ${formatTokenCount(usage.used)} / ${formatTokenCount(usage.limit)} tokens`;
+    const title = `Context window ${percentLabel} · ~${formatTokenCount(usage.used)} / ${formatTokenCount(usage.limit)}`;
     const ringValue = Math.min(100, Math.max(usage.percent, usage.used > 0 ? 1 : 0));
 
     return html`
@@ -1215,7 +1346,7 @@ export class DocksCognitiveView extends DocksPart {
           @keydown=${(e: Event) => e.stopPropagation()}
         >
           <div class="context-header">
-            <strong>Context tokens</strong>
+            <strong>Context window</strong>
             <span>${percentLabel}</span>
           </div>
           <div class="context-bars">
@@ -1236,10 +1367,26 @@ export class DocksCognitiveView extends DocksPart {
           </div>
           <div class="context-footer">
             <span class="context-remaining">
-              ~${formatTokenCount(usage.used)} used · ${formatTokenCount(usage.remaining)} free of
+              ~${formatTokenCount(usage.used)} in window · ${formatTokenCount(usage.remaining)} free of
               ${formatTokenCount(usage.limit)}
               · ${shortModelLabel(usage.modelRef)}
             </span>
+          </div>
+          <div
+            class="context-io"
+            title="Sum of provider-reported tokens across every model request in this chat. Each tool-loop call re-sends the prompt, so API input grows much faster than the context window fill."
+          >
+            <div class="context-io-heading">API usage (this chat)</div>
+            <div class="context-io-item">
+              <span>Input</span>
+              <strong>${usage.inputTokens ? formatTokenCount(usage.inputTokens) : '—'}</strong>
+            </div>
+            <div class="context-io-item">
+              <span>Output</span>
+              <strong>${usage.outputTokens ? formatTokenCount(usage.outputTokens) : '—'}</strong>
+            </div>
+          </div>
+          <div class="context-footer">
             <wa-button
               size="s"
               variant=${usage.level === 'critical' ? 'danger' : 'neutral'}
@@ -1642,8 +1789,10 @@ export class DocksCognitiveView extends DocksPart {
       techParts.some((p) => (p.type === 'reasoning' || p.type === 'tool') && p.status === 'streaming');
 
     const summaryBubble = summaryText.length
-      ? summaryText.map((p) => this.renderTextPart(p))
-      : html`<div class="bubble">${technicalSummary(techParts)}</div>`;
+      ? summaryText.map((p) => this.renderTextPart(p, { markdown: true }))
+      : opts.streaming
+        ? nothing
+        : html`<div class="bubble">${technicalSummary(techParts)}</div>`;
 
     const summary = html`
       <div slot="summary" class="msg-summary">
@@ -1704,9 +1853,12 @@ export class DocksCognitiveView extends DocksPart {
     `;
   }
 
-  private renderTextPart(part: MessagePart) {
-    if (part.type === 'text') return html`<div class="bubble">${part.text}</div>`;
-    return nothing;
+  private renderTextPart(part: MessagePart, opts: { markdown?: boolean } = {}) {
+    if (part.type !== 'text') return nothing;
+    if (opts.markdown) {
+      return html`<div class="bubble markdown">${unsafeHTML(parseMarkdownHtml(part.text))}</div>`;
+    }
+    return html`<div class="bubble">${part.text}</div>`;
   }
 
   private renderTechnicalPart(part: MessagePart) {
@@ -1754,6 +1906,41 @@ const APPROVAL_OPTIONS: Array<{ value: ToolApprovalMode; label: string }> = [
 
 function capitalize(value: string): string {
   return value ? value[0]!.toUpperCase() + value.slice(1) : value;
+}
+
+/** Basename used when saving an attachment into a workspace folder. */
+function attachmentSaveFileName(attachment: SessionAttachment): string {
+  const fromName = attachment.name.trim().split(/[/\\]/).pop()?.trim();
+  if (fromName) return fromName;
+  const fromPath = attachment.path?.split(/[/\\]/).pop()?.trim();
+  if (fromPath) return fromPath;
+  if (attachment.kind === 'image') {
+    return attachment.mime === 'image/jpeg' ? 'attachment.jpg' : 'attachment.png';
+  }
+  return 'attachment.txt';
+}
+
+/** `photo.png` → `photo (1).png`, `photo (2).png`, … when the path is taken. */
+function withNumericSuffix(fileName: string, n: number): string {
+  const dot = fileName.lastIndexOf('.');
+  if (dot > 0) {
+    return `${fileName.slice(0, dot)} (${n})${fileName.slice(dot)}`;
+  }
+  return `${fileName} (${n})`;
+}
+
+async function uniqueWorkspaceFileName(
+  workspace: { getResource(path: string): Promise<unknown> },
+  parentPath: string,
+  fileName: string,
+): Promise<string> {
+  const candidatePath = (name: string) => `${parentPath}/${name}`;
+  if (!(await workspace.getResource(candidatePath(fileName)))) return fileName;
+  for (let n = 1; n < 10_000; n++) {
+    const next = withNumericSuffix(fileName, n);
+    if (!(await workspace.getResource(candidatePath(next)))) return next;
+  }
+  return withNumericSuffix(fileName, Date.now());
 }
 
 /**

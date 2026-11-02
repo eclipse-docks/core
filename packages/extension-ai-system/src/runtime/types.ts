@@ -121,6 +121,12 @@ export interface SessionAttachment {
   messageId?: string;
 }
 
+/** Provider-reported token counts for a model turn (may span multiple tool-loop calls). */
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -128,6 +134,8 @@ export interface ChatMessage {
   createdAt: number;
   routedModel?: string;
   effort?: EffortLevel;
+  /** Cumulative provider usage for this assistant turn, when reported. */
+  usage?: TokenUsage;
 }
 
 export interface Checkpoint {

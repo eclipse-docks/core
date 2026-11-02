@@ -26,7 +26,7 @@ import {
   parseModelIds,
 } from './models';
 import type { ModelCatalogEntry, ModelProvider, ProvidersSettings, RouteRequest } from './models';
-import { ToolBroker, registerWorkspaceTools, refreshCommandTools } from './tools';
+import { ToolBroker, registerWorkspaceTools, registerFetchTools, refreshCommandTools } from './tools';
 import type { PermissionHandler } from './tools';
 import { SessionRuntime } from './session';
 import {
@@ -38,6 +38,7 @@ import {
 } from './session-workspace';
 import { runSpecialistLoop, systemPromptFor } from './specialists';
 import type { SystemPromptEnhancer } from './specialists';
+import { registerSkillMarkdown } from './skills';
 import { summarizeDroppedHistory } from './compact/compaction';
 import { RuntimeEvents, TOPIC } from './events';
 import { detectEffortCapability } from './models/effort-support';
@@ -70,6 +71,7 @@ export class CognitiveRuntime {
     this.started = true;
     this.applyProvidersSettings(defaultProvidersSettings(), { persist: false, emit: false });
     registerWorkspaceTools(this.tools);
+    registerFetchTools(this.tools);
     this.tools.setApprovalMode(this.approvalMode);
     this.tools.setPermissionHandler(async (req) => this.requestPermission(req));
     this.ready = this.hydrateAll();
@@ -128,6 +130,14 @@ export class CognitiveRuntime {
     return () => {
       this.promptEnhancers = this.promptEnhancers.filter((e) => e !== enhancer);
     };
+  }
+
+  /**
+   * Register a Cursor-compatible SKILL.md document on {@link SYSTEM_SKILLS}.
+   * Relevant skills are selected into the specialist prompt each turn.
+   */
+  addSkillMarkdown(raw: string): () => void {
+    return registerSkillMarkdown(raw);
   }
 
   /** First catalog model for the default provider — used by Manual routing. */
@@ -387,6 +397,8 @@ export class CognitiveRuntime {
     const tick = coreTick({ state: this.core, buffers, context: contextChunk });
     this.core = tick.state;
     this.sessions.update(session.id, { buffers: tick.buffers, status: 'running' });
+    // Publish immediately so the user bubble appears before the model turn starts.
+    this.emitSessions();
     this.events.publish(TOPIC.coreTick, {
       valenceDelta: tick.valenceDelta,
       intent: tick.intent,

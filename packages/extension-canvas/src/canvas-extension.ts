@@ -9,7 +9,7 @@ import {
     type HTMLContribution,
 } from '@eclipse-docks/core';
 import { html } from '@eclipse-docks/core/externals/lit';
-import { CANVAS_SKILL } from './help';
+import { SYSTEM_SKILLS, type SkillContribution } from '@eclipse-docks/extension-ai-system/api';
 import { isCanvasContribution, SYSTEM_CANVASES } from './contribution';
 import { listRegisteredCanvases } from './canvases';
 import { registerCanvasTools } from './canvas-tools';
@@ -42,6 +42,37 @@ contributionRegistry.registerContribution(TOOLBAR_MAIN_RIGHT, {
     component: () => html`<docks-canvas-switcher></docks-canvas-switcher>`,
 } as HTMLContribution);
 
+const canvasSkills = [
+    {
+        name: 'eclipse-docks-canvas',
+        label: 'Eclipse Docks canvas',
+        load: () => import('../skills/eclipse-docks-canvas/SKILL.md?raw'),
+        ranking: 100,
+    },
+    {
+        name: 'eclipse-docks-lit',
+        label: 'Eclipse Docks Lit',
+        load: () => import('../skills/eclipse-docks-lit/SKILL.md?raw'),
+        ranking: 90,
+    },
+    {
+        name: 'eclipse-docks-webawesome',
+        label: 'Eclipse Docks Web Awesome',
+        load: () => import('../skills/eclipse-docks-webawesome/SKILL.md?raw'),
+        ranking: 90,
+    },
+    {
+        name: 'eclipse-docks-core',
+        label: 'Eclipse Docks core',
+        load: () => import('../skills/eclipse-docks-core/SKILL.md?raw'),
+        ranking: 90,
+    },
+] as const satisfies ReadonlyArray<SkillContribution>;
+
+for (const skill of canvasSkills) {
+    contributionRegistry.registerContribution(SYSTEM_SKILLS, skill);
+}
+
 function registerListedCanvasTools(): void {
     for (const canvas of listRegisteredCanvases()) registerCanvasTools(canvas);
 }
@@ -54,7 +85,3 @@ subscribe(TOPIC_CONTRIBUTEIONS_CHANGED, (event: { target?: string }) => {
         if (isCanvasContribution(contribution)) registerCanvasTools(contribution);
     }
 });
-
-void import('@eclipse-docks/extension-ai-system/api').then(ai => {
-    ai.cognitiveRuntime.addSystemPromptEnhancer(prompt => `${prompt}\n\n${CANVAS_SKILL}`);
-}).catch(() => undefined);

@@ -4,10 +4,10 @@ vi.mock('@eclipse-docks/core', () => ({
   commandRegistry: {
     createExecutionContext: () => ({}),
     listCommands: () => ({
-      canvas_help: {
-        id: 'canvas.help',
-        name: 'Canvas help',
-        description: 'Show canvas help',
+      canvas_open: {
+        id: 'canvas.open',
+        name: 'Open canvas',
+        description: 'Open a canvas',
         parameters: [],
       },
       connect_opfs: {
@@ -41,7 +41,7 @@ describe('refreshCommandTools', () => {
     vi.clearAllMocks();
   });
 
-  it('keeps workspace tools and skips storage bootstrap commands', () => {
+  it('keeps workspace/fetch tools and skips storage bootstrap commands', () => {
     const broker = new ToolBroker();
     broker.register(
       {
@@ -51,12 +51,21 @@ describe('refreshCommandTools', () => {
       },
       async (call) => ({ id: call.id, name: call.name, ok: true, output: '' }),
     );
+    broker.register(
+      {
+        name: 'fetch',
+        description: 'fetch',
+        parameters: { type: 'object', properties: {} },
+      },
+      async (call) => ({ id: call.id, name: call.name, ok: true, output: '' }),
+    );
 
     refreshCommandTools(broker, 'build');
 
     const names = broker.listDefinitions('build').map((d) => d.name);
     expect(names).toContain('workspace_read');
-    expect(names).toContain('canvas_help');
+    expect(names).toContain('fetch');
+    expect(names).toContain('canvas_open');
     expect(names).toContain('format_document');
     expect(names).not.toContain('connect_opfs');
     expect(names).not.toContain('load_workspace');

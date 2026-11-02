@@ -15,6 +15,7 @@ import { compileCanvas } from './compile';
 import { createContributionHost, createFileHost, type CanvasHost } from './host';
 import { elementFromConstructor, mountCompiled, type CanvasViewElement } from './mount';
 import { canvasBridges } from './bridges/urls';
+import { attachPreviewShot, rasterizeElement, type PreviewShot } from './preview-image';
 import { readWorkspaceFile } from './workspace-file';
 
 const heldNode = directive(class extends Directive {
@@ -35,6 +36,7 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
     @state() protected sourceText = '';
     @state() protected mode: 'preview' | 'source' = 'preview';
     @state() protected previewError?: string;
+    @state() private attachingPreview = false;
     @state() protected previewElement?: CanvasViewElement;
     @query('docks-monaco-widget') protected widget?: DocksMonacoWidget;
 
@@ -137,6 +139,34 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
         this.requestUpdate();
     }
 
+    async capturePreview(): Promise<PreviewShot> {
+        for (let attempt = 0; attempt < 30 && !this.ready; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        if (!this.ready) throw new Error('Canvas is still opening');
+        await this.reload();
+        await this.updateComplete;
+        const preview = this.renderRoot.querySelector('.canvas-preview') as HTMLElement | null;
+        if (!preview) throw new Error('Canvas preview is not rendered');
+        const hidden = preview.classList.contains('canvas-hidden') || preview.getBoundingClientRect().width < 2;
+        if (hidden) {
+            preview.classList.add('canvas-capture');
+            preview.style.width = `${this.clientWidth || 960}px`;
+            preview.style.height = `${this.clientHeight || 640}px`;
+        }
+        try {
+            await nextFrame();
+            await nextFrame();
+            const view = this.previewElement as { updateComplete?: Promise<unknown> } | undefined;
+            if (view?.updateComplete) await view.updateComplete;
+            return await rasterizeElement(preview);
+        } finally {
+            preview.classList.remove('canvas-capture');
+            preview.style.width = '';
+            preview.style.height = '';
+        }
+    }
+
     async reload(): Promise<string> {
         const source = this.getContent() ?? '';
         if (this.previewElement && !this.previewStale && source === this.compiledSource && !this.previewError) return 'ready';
@@ -230,14 +260,47 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
         if (next === 'preview' && (this.previewStale || !this.previewElement)) void this.reload();
     }
 
+    private attachPreview = async () => {
+        if (this.attachingPreview) return;
+        this.attachingPreview = true;
+        try {
+            const result = await attachPreviewShot(this);
+            if (typeof result === 'string') {
+                this.showError(result);
+                return;
+            }
+            if (result.stored === false) {
+                this.showError(String(result.note ?? 'Could not attach the preview'));
+                return;
+            }
+            this.showInfo('Attached preview');
+        } catch (err) {
+            this.showError(err instanceof Error ? err.message : String(err));
+        } finally {
+            this.attachingPreview = false;
+        }
+    };
+
     protected renderToolbar() {
-        if (!this.ready || !this.showSource) return nothing;
+        if (!this.ready) return nothing;
         const toSource = this.mode === 'preview';
         const label = toSource ? 'Source' : 'Preview';
         return html`
-            <wa-button appearance="plain" size="s" title=${label} @click=${() => this.toggleMode()}>
-                ${icon(toSource ? 'code' : 'eye', { slot: 'start' })}
-                ${label}
+            ${this.showSource ? html`
+                <wa-button appearance="plain" size="s" title=${label} @click=${() => this.toggleMode()}>
+                    ${icon(toSource ? 'code' : 'eye', { slot: 'start' })}
+                    ${label}
+                </wa-button>
+            ` : nothing}
+            <wa-button
+                appearance="plain"
+                size="s"
+                title="Attach a screenshot of the preview"
+                ?loading=${this.attachingPreview}
+                ?disabled=${this.attachingPreview}
+                @click=${() => this.attachPreview()}>
+                ${icon('camera', { slot: 'start' })}
+                Screenshot
             </wa-button>
         `;
     }
@@ -268,6 +331,15 @@ export class DocksCanvasSurface extends DocksPart implements EditorContentProvid
         :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
         .canvas-preview { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
         .canvas-preview.canvas-hidden, docks-monaco-widget.canvas-hidden { display: none; }
+        .canvas-preview.canvas-capture {
+            display: flex !important;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 2147483000;
+            overflow: hidden;
+            background: var(--wa-color-surface-default, #fff);
+        }
         wa-scroller.canvas-scroll { flex: 1 1 0; min-height: 0; height: 100%; }
         .canvas-mount > * { display: block; }
         docks-monaco-widget { display: block; height: 100%; min-height: 0; }
@@ -289,6 +361,10 @@ export class DocksCanvasEditor extends DocksCanvasSurface {
         this.markDirty(false);
         if (this.mode === 'preview' && this.previewStale) await this.reload();
     }
+}
+
+function nextFrame(): Promise<void> {
+    return new Promise(resolve => requestAnimationFrame(() => resolve()));
 }
 
 declare global {

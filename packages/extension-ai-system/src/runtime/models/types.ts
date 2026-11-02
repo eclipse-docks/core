@@ -1,9 +1,15 @@
 import type { EffortLevel, OptimizeFor, SpecialistRole } from '../types';
 
+export interface StreamTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface StreamChunk {
-  type: 'text' | 'reasoning' | 'tool_call_delta' | 'done' | 'error';
+  type: 'text' | 'reasoning' | 'tool_call_delta' | 'usage' | 'done' | 'error';
   text?: string;
   toolCall?: { id: string; name: string; arguments: string };
+  usage?: StreamTokenUsage;
   error?: string;
 }
 

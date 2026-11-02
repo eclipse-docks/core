@@ -1,4 +1,4 @@
-import type { ChatMessage, MessagePart, SpecialistRole } from '../types';
+import type { ChatMessage, MessagePart, SpecialistRole, TokenUsage } from '../types';
 import type { ModelProvider, ProviderChatMessage, ResolvedModel, ToolDefinition } from '../models/types';
 import type { ToolBroker } from '../tools/broker';
 import { isAborted } from '../abort';
@@ -105,6 +105,7 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
   );
   let success = true;
   let cancelled = false;
+  const usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
 
   const markCancelled = () => {
     if (cancelled) return;
@@ -137,6 +138,10 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
         emit({ type: 'text', text: `Error: ${chunk.error}` });
         success = false;
         break;
+      }
+      if (chunk.type === 'usage' && chunk.usage) {
+        usage.inputTokens += chunk.usage.inputTokens;
+        usage.outputTokens += chunk.usage.outputTokens;
       }
       if (chunk.type === 'reasoning' && chunk.text) {
         emit({ type: 'reasoning', text: chunk.text, status: 'streaming' });
@@ -293,6 +298,7 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
     createdAt: Date.now(),
     routedModel: input.resolved.model,
     effort: input.resolved.effort,
+    ...(usage.inputTokens > 0 || usage.outputTokens > 0 ? { usage } : {}),
   };
 
   return { message, success };

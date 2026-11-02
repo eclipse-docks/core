@@ -15,7 +15,10 @@
       "import": "./dist/contribution.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "skills"
+  ],
   "scripts": {
     "build": "vite build",
     "test": "vitest run"
@@ -23,7 +26,8 @@
   "dependencies": {
     "@eclipse-docks/core": "*",
     "@eclipse-docks/extension-ai-system": "*",
-    "@eclipse-docks/extension-monaco-editor": "*"
+    "@eclipse-docks/extension-monaco-editor": "*",
+    "modern-screenshot": "^4.7.0"
   },
   "devDependencies": {
     "jsdom": "^25.0.0",

@@ -10,10 +10,10 @@ import {
     type EditorInput,
 } from '@eclipse-docks/core';
 import { html } from '@eclipse-docks/core/externals/lit';
-import { readActiveCanvas } from './active-canvas';
+import { findOpenCanvas, readActiveCanvas } from './active-canvas';
 import { listRegisteredCanvases } from './canvases';
 import type { CanvasContribution } from './contribution';
-import { CANVAS_HELP } from './help';
+import { attachPreviewShot } from './preview-image';
 import './canvas-editor';
 
 const VIEW_SLOTS = new Set([SIDEBAR_MAIN, SIDEBAR_AUXILIARY, PANEL_BOTTOM]);
@@ -92,21 +92,6 @@ async function waitForCanvas(match: (active: NonNullable<ReturnType<typeof readA
 }
 
 export function registerCanvasCommands(): void {
-    registerAll({
-        command: {
-            id: 'canvas.help',
-            name: 'Canvas help',
-            description: 'Returns the canvas.js contract and the canvases registered on system.canvases',
-            parameters: [],
-        },
-        handler: {
-            execute: async () => {
-                const listed = listRegisteredCanvases().map(item => `${item.name}: ${item.label}`).join('\n');
-                return listed ? `${CANVAS_HELP}\n\nRegistered canvases:\n${listed}` : CANVAS_HELP;
-            },
-        },
-    });
-
     registerAll({
         command: {
             id: 'canvas.open',
@@ -209,6 +194,23 @@ export function registerCanvasCommands(): void {
                 if (!active?.setState) return 'No workspace canvas is active';
                 active.setState(String(params?.key ?? ''), params?.value);
                 return 'ready';
+            },
+        },
+    });
+
+    registerAll({
+        command: {
+            id: 'canvas.capture_preview',
+            name: 'Capture canvas preview',
+            description: 'Renders the open canvas preview to an image, attaches it to the session, and returns it for visual inspection. Content inside an iframe may be blank.',
+            parameters: [],
+        },
+        handler: {
+            canExecute: () => !!findOpenCanvas()?.capturePreview,
+            execute: async () => {
+                const active = findOpenCanvas();
+                if (!active) return 'No canvas is open';
+                return attachPreviewShot(active);
             },
         },
     });

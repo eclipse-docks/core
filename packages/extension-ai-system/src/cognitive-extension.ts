@@ -13,11 +13,13 @@ import {
   AI_VIEW_NAME,
   OPEN_AI_SETTINGS_COMMAND,
   cognitiveRuntime,
+  registerSkillCommands,
 } from './runtime';
 import './view/cognitive-view';
 import './view/cognitive-settings-editor';
 
 cognitiveRuntime.start();
+registerSkillCommands();
 rootContext.put('cognitiveRuntime', cognitiveRuntime);
 
 contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {

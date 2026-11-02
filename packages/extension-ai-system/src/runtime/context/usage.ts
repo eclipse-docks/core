@@ -19,6 +19,9 @@ export interface ContextUsage {
   level: ContextUsageLevel;
   buckets: ContextUsageBucket[];
   modelRef: string;
+  /** Provider-reported totals across assistant turns (0 when unavailable). */
+  inputTokens: number;
+  outputTokens: number;
 }
 
 /** Rough token estimate (~4 chars / token) with a small structural overhead. */
@@ -106,6 +109,13 @@ export function estimateSessionContextUsage(
 
   const used = buckets.reduce((sum, b) => sum + b.tokens, 0);
   const percent = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  for (const message of session?.history ?? []) {
+    if (!message.usage) continue;
+    inputTokens += message.usage.inputTokens;
+    outputTokens += message.usage.outputTokens;
+  }
   return {
     used,
     limit,
@@ -114,6 +124,8 @@ export function estimateSessionContextUsage(
     level: contextUsageLevel(percent),
     buckets: buckets.filter((b) => b.tokens > 0),
     modelRef,
+    inputTokens,
+    outputTokens,
   };
 }
 

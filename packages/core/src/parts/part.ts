@@ -25,6 +25,16 @@ export abstract class DocksPart extends DocksContainer {
     @property({ type: Boolean, reflect: true })
     embedded = false;
 
+    /** When true, a dirty editor saves itself after `autoSaveDelay` milliseconds without further edits. */
+    protected autoSave = false;
+
+    /** Quiet period before an auto-save runs. Each {@link markDirty} restarts it. */
+    protected autoSaveDelay = 1000;
+
+    private autoSaveTimer?: ReturnType<typeof setTimeout>;
+    private autoSaveRunning = false;
+    private autoSaveEpoch = 0;
+
     protected commandStack?: CommandStack;
 
     public getCommandStack(): CommandStack | undefined {
@@ -233,13 +243,15 @@ export abstract class DocksPart extends DocksContainer {
     }
 
     disconnectedCallback() {
+        this.flushAutoSave();
         super.disconnectedCallback();
         // Don't automatically close when disconnected - the element might just be moving
         // Call close() explicitly when actually closing the part
     }
 
     public close() {
-        this.doClose()
+        this.flushAutoSave();
+        this.doClose();
     }
 
     connectedCallback() {
@@ -262,6 +274,52 @@ export abstract class DocksPart extends DocksContainer {
         partDirtySignal.set(this)
         activePartSignal.set(null as unknown as DocksPart)
         activePartSignal.set(this)
+        if (dirty) this.autoSaveEpoch++;
+        this.queueAutoSave()
+    }
+
+    private queueAutoSave() {
+        if (this.autoSaveTimer !== undefined) {
+            clearTimeout(this.autoSaveTimer);
+            this.autoSaveTimer = undefined;
+        }
+        if (!this.autoSave || !this.dirty) return;
+        this.autoSaveTimer = setTimeout(() => {
+            this.autoSaveTimer = undefined;
+            this.runAutoSave();
+        }, this.autoSaveDelay);
+    }
+
+    private flushAutoSave() {
+        if (this.autoSaveTimer !== undefined) {
+            clearTimeout(this.autoSaveTimer);
+            this.autoSaveTimer = undefined;
+        }
+        this.runAutoSave();
+    }
+
+    private runAutoSave() {
+        if (!this.autoSave || !this.dirty) return;
+        if (this.autoSaveRunning) {
+            this.queueAutoSave();
+            return;
+        }
+        this.autoSaveRunning = true;
+        const epoch = this.autoSaveEpoch;
+        let result: unknown;
+        try {
+            result = this.save();
+        } catch (err) {
+            console.error(err);
+            this.finishAutoSave(epoch);
+            return;
+        }
+        void Promise.resolve(result).catch(err => console.error(err)).finally(() => this.finishAutoSave(epoch));
+    }
+
+    private finishAutoSave(epoch: number) {
+        this.autoSaveRunning = false;
+        if (this.autoSave && this.dirty && this.autoSaveEpoch !== epoch) this.queueAutoSave();
     }
 
     private static readonly baseStyles = css`

@@ -20,7 +20,7 @@ const SKIP = new Set([
 const SKIP_PREFIXES = ['connect_', 'disconnect_', 'install_', 'uninstall_'];
 
 /** Built-in tools that must survive command refresh (not command-backed). */
-const KEEP_TOOLS = new Set(['workspace_list', 'workspace_read', 'workspace_write']);
+const KEEP_TOOLS = new Set(['workspace_list', 'workspace_read', 'workspace_write', 'fetch']);
 
 function sanitizeName(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);

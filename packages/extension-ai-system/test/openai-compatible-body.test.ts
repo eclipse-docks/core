@@ -24,6 +24,7 @@ describe('buildChatCompletionBody', () => {
     expect(body.model).toBe('gpt-5-mini');
     expect(body.tools).toHaveLength(1);
     expect(body.reasoning_effort).toBe('none');
+    expect(body.stream_options).toEqual({ include_usage: true });
   });
 
   it('forces none even when providerOptions omit effort', () => {

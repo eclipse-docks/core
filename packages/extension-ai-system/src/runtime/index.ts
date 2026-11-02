@@ -13,3 +13,5 @@ export * from './attachments';
 export * from './attachment-paths';
 export * from './session-workspace';
 export * from './cognitive-runtime';
+export * from './skills';
+export * from './skills-commands';

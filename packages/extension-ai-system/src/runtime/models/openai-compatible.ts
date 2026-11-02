@@ -88,11 +88,18 @@ export function buildChatCompletionBody(params: StreamParams): Record<string, un
   const { reasoning_effort: _a, reasoningEffort: _b, reasoning: _c, ...safeOptions } =
     (params.providerOptions ?? {}) as Record<string, unknown>;
 
+  const { stream_options: userStreamOptions, ...restSafeOptions } = safeOptions;
   const body: Record<string, unknown> = {
     model,
     messages: toOpenAIMessages(params.messages),
     stream: true,
-    ...safeOptions,
+    ...restSafeOptions,
+    stream_options: {
+      ...(userStreamOptions && typeof userStreamOptions === 'object'
+        ? (userStreamOptions as Record<string, unknown>)
+        : {}),
+      include_usage: true,
+    },
   };
 
   const requestedEffort =
@@ -191,15 +198,30 @@ export class OpenAICompatibleProvider implements ModelProvider {
           return;
         }
         try {
-          const json = JSON.parse(data);
+          const json = JSON.parse(data) as {
+            choices?: Array<{ delta?: Record<string, unknown> }>;
+            usage?: {
+              prompt_tokens?: number;
+              completion_tokens?: number;
+              input_tokens?: number;
+              output_tokens?: number;
+            };
+          };
+          const usage = parseStreamUsage(json.usage);
+          if (usage) yield { type: 'usage', usage };
           const delta = json.choices?.[0]?.delta;
           if (!delta) continue;
-          if (delta.content) yield { type: 'text', text: delta.content };
-          if (delta.reasoning_content || delta.reasoning) {
-            yield { type: 'reasoning', text: String(delta.reasoning_content ?? delta.reasoning) };
+          if (typeof delta.content === 'string' && delta.content) {
+            yield { type: 'text', text: delta.content };
           }
+          const reasoning = delta.reasoning_content ?? delta.reasoning;
+          if (reasoning) yield { type: 'reasoning', text: String(reasoning) };
           if (Array.isArray(delta.tool_calls)) {
-            for (const tc of delta.tool_calls) {
+            for (const tc of delta.tool_calls as Array<{
+              index?: number;
+              id?: string;
+              function?: { name?: string; arguments?: string };
+            }>) {
               const idx = tc.index ?? 0;
               const cur = toolAcc.get(idx) ?? { id: tc.id ?? `call-${idx}`, name: '', arguments: '' };
               if (tc.id) cur.id = tc.id;
@@ -216,4 +238,25 @@ export class OpenAICompatibleProvider implements ModelProvider {
     }
     yield { type: 'done' };
   }
+}
+
+function parseStreamUsage(
+  usage:
+    | {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        input_tokens?: number;
+        output_tokens?: number;
+      }
+    | undefined,
+): { inputTokens: number; outputTokens: number } | null {
+  if (!usage) return null;
+  const inputTokens = Number(usage.prompt_tokens ?? usage.input_tokens ?? 0);
+  const outputTokens = Number(usage.completion_tokens ?? usage.output_tokens ?? 0);
+  if (!Number.isFinite(inputTokens) && !Number.isFinite(outputTokens)) return null;
+  if (inputTokens <= 0 && outputTokens <= 0) return null;
+  return {
+    inputTokens: Math.max(0, Math.round(inputTokens) || 0),
+    outputTokens: Math.max(0, Math.round(outputTokens) || 0),
+  };
 }

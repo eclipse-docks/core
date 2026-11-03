@@ -4,7 +4,9 @@ import {
   EditorInput,
   confirmDialog,
   toastError,
+  subscribe,
   toastInfo,
+  unsubscribe,
 } from '@eclipse-docks/core';
 import { css, customElement, html, property, state } from '@eclipse-docks/core/externals/lit';
 import {
@@ -36,7 +38,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
   @state() private loadingModels: Record<number, boolean> = {};
   @state() private modelErrors: Record<number, string> = {};
 
-  private unsubs: Array<() => void> = [];
+  private unsubs: string[] = [];
   private fetchControllers = new Map<number, AbortController>();
   private fetchTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private autoFetchedKeys = new Set<string>();
@@ -45,17 +47,17 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     cognitiveRuntime.start();
     this.loadFromRuntime();
     this.unsubs.push(
-      cognitiveRuntime.events.subscribe(TOPIC.providersChanged, () => {
+      subscribe(TOPIC.providersChanged, () => {
         if (!this.isDirty()) this.loadFromRuntime();
       }),
-      cognitiveRuntime.events.subscribe(TOPIC.approvalModeChanged, (mode) => {
+      subscribe(TOPIC.approvalModeChanged, (mode) => {
         this.approvalMode = mode as ToolApprovalMode;
       }),
     );
   }
 
   disconnectedCallback(): void {
-    for (const unsub of this.unsubs) unsub();
+    for (const token of this.unsubs) unsubscribe(token);
     this.unsubs = [];
     for (const timer of this.fetchTimers.values()) clearTimeout(timer);
     this.fetchTimers.clear();

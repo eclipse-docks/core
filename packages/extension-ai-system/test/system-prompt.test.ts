@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { systemPromptFor } from '../src/runtime/specialists';
-import { registerSkillMarkdown, registeredSkillsPromptSection } from '../src/runtime/skills';
+import { registerSkillMarkdown, registeredSkillsPromptSection } from '../src/runtime/skills/skills';
 
 describe('specialist skill prompt', () => {
   it('tells a build turn to list skills before a complex task', () => {

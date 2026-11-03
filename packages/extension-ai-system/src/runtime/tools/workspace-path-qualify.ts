@@ -1,4 +1,4 @@
-import { IN_MEMORY_ROOT_NAME } from '../attachment-paths';
+import { IN_MEMORY_ROOT_NAME } from '../attachments/attachment-paths';
 
 export type RootQualificationDecision =
   | { action: 'keep' }

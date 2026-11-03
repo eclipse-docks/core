@@ -26,12 +26,14 @@ export function systemPromptFor(
     : 'Session attachments live under the shared in-memory root and are readable via workspace_read / workspace_list.';
   const pathRule =
     'Workspace paths use a connected root prefix from workspace_list (never write bare names at the composite root unless a single durable folder can auto-qualify them).';
+  const spillRule =
+    'Large tool results from earlier turns are files under in-memory/<sessionId>/tool-results/. The transcript keeps a preview and a workspace_read path; read the file when the preview is not enough. Large tool arguments are the sibling .args.txt file.';
   const skillRule =
     'Before a complex task, call skills.list, then skills.load the matching skill and follow it.';
   const skillsSection = opts.skillsSection?.trim();
   const preamble = skillsSection
-    ? `${base} ${replyRule} ${attachmentRule} ${pathRule} ${skillRule}\n${skillsSection}`
-    : `${base} ${replyRule} ${attachmentRule} ${pathRule} ${skillRule}`;
+    ? `${base} ${replyRule} ${attachmentRule} ${pathRule} ${spillRule} ${skillRule}\n${skillsSection}`
+    : `${base} ${replyRule} ${attachmentRule} ${pathRule} ${spillRule} ${skillRule}`;
   switch (role) {
     case 'plan':
       return `${preamble}\nMode: PLAN (read-only). Analyze and propose a plan for: ${goal}`;

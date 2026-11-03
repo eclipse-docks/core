@@ -1,4 +1,4 @@
-import { persistenceService } from '@eclipse-docks/core';
+import { persistenceService, publish } from '@eclipse-docks/core';
 import type {
   ChatMessage,
   EffortLevel,
@@ -10,7 +10,7 @@ import type {
   SpecialistRole,
   ToolApprovalMode,
 } from './types';
-import { MAX_ATTACHMENTS, toFileRefPart, toSessionAttachment } from './attachments';
+import { MAX_ATTACHMENTS, toFileRefPart, toSessionAttachment } from './attachments/attachments';
 import { createCoreState, coreTick, defaultNeeds } from './core';
 import { CognitiveMemory } from './memory';
 import {
@@ -35,12 +35,13 @@ import {
   removeAttachmentFromWorkspace,
   removeSessionWorkspaceFolder,
   syncAttachmentsToWorkspace,
-} from './session-workspace';
+} from './attachments/session-workspace';
 import { runSpecialistLoop, systemPromptFor } from './specialists';
 import type { SystemPromptEnhancer } from './specialists';
-import { registerSkillMarkdown, registeredSkillsPromptSection } from './skills';
+import { registerSkillMarkdown, registeredSkillsPromptSection } from './skills/skills';
 import { summarizeDroppedHistory } from './compact/compaction';
-import { RuntimeEvents, TOPIC } from './events';
+import { publishSpilledToolResults } from './compact/tool-result-spill';
+import { TOPIC } from './constants';
 import { detectEffortCapability } from './models/effort-support';
 
 const PERSIST_KEY = 'cognitive/v1/state';
@@ -50,7 +51,6 @@ const AUTO_COMPACT_AFTER = 40;
 const COMPACT_KEEP_COUNT = 12;
 
 export class CognitiveRuntime {
-  readonly events = new RuntimeEvents();
   readonly sessions = new SessionRuntime();
   readonly memory = new CognitiveMemory();
   readonly providers = new ProviderRegistry();
@@ -115,13 +115,13 @@ export class CognitiveRuntime {
   registerExternalProvider(provider: ModelProvider): void {
     this.providers.registerExternal(provider);
     this.rebuildCatalog();
-    this.events.publish(TOPIC.providersChanged, this.providersSettings);
+    publish(TOPIC.providersChanged, this.providersSettings);
   }
 
   unregisterExternalProvider(id: string): void {
     this.providers.unregisterExternal(id);
     this.rebuildCatalog();
-    this.events.publish(TOPIC.providersChanged, this.providersSettings);
+    publish(TOPIC.providersChanged, this.providersSettings);
   }
 
   /** Append instructions to the specialist system prompt (e.g. RAG guidance). */
@@ -169,7 +169,7 @@ export class CognitiveRuntime {
     this.tools.setApprovalMode(mode);
     this.tools.setPermissionHandler(async (req) => this.requestPermission(req));
     if (!changed) return;
-    this.events.publish(TOPIC.approvalModeChanged, mode);
+    publish(TOPIC.approvalModeChanged, mode);
     void this.persist();
   }
 
@@ -399,7 +399,7 @@ export class CognitiveRuntime {
     this.sessions.update(session.id, { buffers: tick.buffers, status: 'running' });
     // Publish immediately so the user bubble appears before the model turn starts.
     this.emitSessions();
-    this.events.publish(TOPIC.coreTick, {
+    publish(TOPIC.coreTick, {
       valenceDelta: tick.valenceDelta,
       intent: tick.intent,
       conscious: tick.state.conscious,
@@ -414,7 +414,7 @@ export class CognitiveRuntime {
       requireTools: true,
     };
     const resolved = this.models.resolve(routeReq, this.policy);
-    this.events.publish(TOPIC.modelRouted, resolved);
+    publish(TOPIC.modelRouted, resolved);
 
     const provider = this.providers.resolveProvider(resolved.model) ?? this.providers.list()[0];
     if (!provider) {
@@ -450,7 +450,7 @@ export class CognitiveRuntime {
       refreshTools: () => refreshCommandTools(this.tools, role),
       sessionId: session.id,
       signal: input.signal,
-      onPart: (part) => this.events.publish(TOPIC.messagePart, { sessionId: session.id, part }),
+      onPart: (part) => publish(TOPIC.messagePart, { sessionId: session.id, part }),
     });
 
     this.models.recordOutcome(role, resolved.model, resolved.effort, result.success);
@@ -469,7 +469,7 @@ export class CognitiveRuntime {
     }
 
     this.sessions.update(session.id, { status: 'idle' });
-    this.events.publish(TOPIC.messageDone, { sessionId: session.id, message: result.message });
+    publish(TOPIC.messageDone, { sessionId: session.id, message: result.message });
     this.emitSessions();
     void this.persist();
     return result.message;
@@ -498,7 +498,7 @@ export class CognitiveRuntime {
       );
     }
     this.rebuildCatalog();
-    if (opts.emit) this.events.publish(TOPIC.providersChanged, normalized);
+    if (opts.emit) publish(TOPIC.providersChanged, normalized);
     if (opts.persist) void this.persistProviders();
   }
 
@@ -528,14 +528,14 @@ export class CognitiveRuntime {
     this.emitSessions();
     return new Promise((resolve) => {
       this.permissionResolvers.set(requestId, resolve);
-      this.events.publish(TOPIC.permissionAsked, { requestId, ...req });
+      publish(TOPIC.permissionAsked, { requestId, ...req });
     });
   }
 
   private emitSessions(): void {
     const focusedId = this.sessions.focused()?.id ?? null;
     projectInMemoryMountToFolder(focusedId);
-    this.events.publish(TOPIC.sessionChanged, {
+    publish(TOPIC.sessionChanged, {
       sessions: this.sessions.list(),
       focusedId,
     });
@@ -559,14 +559,16 @@ export class CognitiveRuntime {
     if (mostRecent) this.sessions.focus(mostRecent.id);
     for (const session of this.sessions.list()) {
       const list = session.attachments ?? [];
-      if (!list.length) continue;
-      const stamped = list.map((a) =>
-        a.path ? a : { ...a, path: attachmentUri(session.id, a) },
-      );
-      if (stamped.some((a, i) => a.path !== list[i]?.path)) {
-        this.sessions.update(session.id, { attachments: stamped });
+      if (list.length) {
+        const stamped = list.map((a) =>
+          a.path ? a : { ...a, path: attachmentUri(session.id, a) },
+        );
+        if (stamped.some((a, i) => a.path !== list[i]?.path)) {
+          this.sessions.update(session.id, { attachments: stamped });
+        }
+        await this.mirrorAttachments(session.id, stamped).catch(() => undefined);
       }
-      await this.mirrorAttachments(session.id, stamped).catch(() => undefined);
+      await publishSpilledToolResults(session.id, session.history).catch(() => undefined);
     }
     this.emitSessions();
   }

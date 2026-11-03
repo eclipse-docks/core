@@ -17,6 +17,8 @@ import {
   parseMarkdownHtml,
   toastError,
   toastInfo,
+  subscribe,
+  unsubscribe,
   workspaceService,
 } from '@eclipse-docks/core';
 import {
@@ -669,7 +671,7 @@ export class DocksCognitiveView extends DocksPart {
   @state() private streamingParts: MessagePart[] = [];
   @state() private historyOpen = false;
   @state() private historyQuery = '';
-  private unsubs: Array<() => void> = [];
+  private unsubs: string[] = [];
   private scrollDebounceTimer?: ReturnType<typeof setTimeout>;
   private busyStatusTimer?: ReturnType<typeof setTimeout>;
   private promptController: AbortController | null = null;
@@ -703,25 +705,25 @@ export class DocksCognitiveView extends DocksPart {
       this.scheduleScrollToBottom();
     });
     this.unsubs.push(
-      cognitiveRuntime.events.subscribe(TOPIC.sessionChanged, () => {
+      subscribe(TOPIC.sessionChanged, () => {
         this.syncSessions();
         this.scheduleScrollToBottom();
       }),
-      cognitiveRuntime.events.subscribe(TOPIC.providersChanged, () => this.onProvidersChanged()),
-      cognitiveRuntime.events.subscribe(TOPIC.approvalModeChanged, (mode) => {
+      subscribe(TOPIC.providersChanged, () => this.onProvidersChanged()),
+      subscribe(TOPIC.approvalModeChanged, (mode) => {
         this.approvalMode = mode as ToolApprovalMode;
       }),
-      cognitiveRuntime.events.subscribe(TOPIC.permissionAsked, (payload) => {
+      subscribe(TOPIC.permissionAsked, (payload) => {
         this.pendingPermission = payload as PermissionRequest;
         this.scheduleScrollToBottom();
       }),
-      cognitiveRuntime.events.subscribe(TOPIC.messagePart, (payload) => {
+      subscribe(TOPIC.messagePart, (payload) => {
         const { sessionId, part } = payload as { sessionId: string; part: MessagePart };
         if (sessionId !== this.focusedId) return;
         this.streamingParts = mergePart(this.streamingParts, part);
         this.scheduleScrollToBottom();
       }),
-      cognitiveRuntime.events.subscribe(TOPIC.messageDone, () => {
+      subscribe(TOPIC.messageDone, () => {
         this.streamingParts = [];
         this.syncSessions();
         this.scheduleScrollToBottom();
@@ -737,7 +739,7 @@ export class DocksCognitiveView extends DocksPart {
     const native = this.textarea?.shadowRoot?.querySelector('textarea');
     native?.removeEventListener('paste', this.nativePasteHandler);
     this.composerPasteBound = false;
-    for (const u of this.unsubs) u();
+    for (const token of this.unsubs) unsubscribe(token);
     this.unsubs = [];
   }
 

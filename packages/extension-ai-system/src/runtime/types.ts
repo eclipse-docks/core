@@ -168,5 +168,3 @@ export interface CognitiveSession {
 export type ModelPolicy =
   | { mode: 'manual'; model: string; effort?: EffortLevel | 'auto'; maxEffort?: EffortLevel }
   | { mode: 'auto'; optimizeFor: OptimizeFor; maxEffort?: EffortLevel };
-
-export type Unsubscribe = () => void;

@@ -9,8 +9,8 @@ import {
   IMAGE_PRESENT_KEY,
   isSvgAttachment,
   resolveMediaType,
-} from '../attachments';
-import { toWorkspaceToolPath } from '../attachment-paths';
+} from '../attachments/attachments';
+import { toWorkspaceToolPath } from '../attachments/attachment-paths';
 import { qualifyWorkspaceToolPath } from './workspace-path';
 import { isInMemoryToolPath, isWorkspaceRootPath } from './workspace-path-qualify';
 import type { ToolBroker } from './broker';

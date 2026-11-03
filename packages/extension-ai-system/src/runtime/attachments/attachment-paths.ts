@@ -1,4 +1,4 @@
-import type { SessionAttachment } from './types';
+import type { SessionAttachment } from '../types';
 
 /** Mirrors core `IN_MEMORY_ROOT_NAME` without importing the filesys graph. */
 export const IN_MEMORY_ROOT_NAME = 'in-memory';

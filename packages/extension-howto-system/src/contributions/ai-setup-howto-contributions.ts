@@ -1,10 +1,12 @@
 import {
   contributionRegistry,
   activeEditorSignal,
-  partDirtySignal,
   appLoaderService,
+  partDirtySignal,
+  subscribe,
+  unsubscribe,
+  watchSignal,
 } from '@eclipse-docks/core';
-import { watchSignal } from '@eclipse-docks/core';
 import {
   AI_SETTINGS_KEY,
   OPEN_AI_SETTINGS_COMMAND,
@@ -91,12 +93,9 @@ const aiSetupContribution: HowToContribution = {
 
     cleanups.push(watchSignal(activeEditorSignal, () => context.requestUpdate()));
     cleanups.push(watchSignal(partDirtySignal, () => context.requestUpdate()));
-    cleanups.push(
-      cognitiveRuntime.events.subscribe(TOPIC.providersChanged, () => context.requestUpdate()),
-    );
-    cleanups.push(
-      cognitiveRuntime.events.subscribe(TOPIC.sessionChanged, () => context.requestUpdate()),
-    );
+    const providersToken = subscribe(TOPIC.providersChanged, () => context.requestUpdate());
+    const sessionToken = subscribe(TOPIC.sessionChanged, () => context.requestUpdate());
+    cleanups.push(() => unsubscribe(providersToken), () => unsubscribe(sessionToken));
 
     return () => {
       cleanups.forEach((cleanup) => cleanup());

@@ -4,12 +4,12 @@ import {
   toFileRefPart,
   toSessionAttachment,
   userContentFromParts,
-} from '../src/runtime/attachments';
+} from '../src/runtime/attachments/attachments';
 import {
   attachmentUri,
   attachmentWorkspacePath,
   toWorkspaceToolPath,
-} from '../src/runtime/attachment-paths';
+} from '../src/runtime/attachments/attachment-paths';
 
 describe('in-memory session attachment paths', () => {
   it('maps in-memory:// URIs to workspace paths', () => {

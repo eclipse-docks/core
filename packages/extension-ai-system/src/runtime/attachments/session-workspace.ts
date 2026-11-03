@@ -7,7 +7,7 @@ import {
   type MemoryLiveContents,
   type MemoryRootDirectory,
 } from '@eclipse-docks/core';
-import type { SessionAttachment } from './types';
+import type { SessionAttachment } from '../types';
 import { attachmentWorkspacePath } from './attachment-paths';
 
 export {

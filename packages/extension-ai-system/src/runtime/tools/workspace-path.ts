@@ -1,5 +1,5 @@
 import { filebrowserDialog, workspaceService } from '@eclipse-docks/core';
-import { toWorkspaceToolPath } from '../attachment-paths';
+import { toWorkspaceToolPath } from '../attachments/attachment-paths';
 import {
   decideRootQualification,
   isInMemoryToolPath,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { formatSkillForPrompt, parseSkillMarkdown } from '../src/runtime/skills-parse';
-import { resolveSkill, resolveSkillBody } from '../src/runtime/skills-resolve';
-import { isSkillContribution, type SkillContribution } from '../src/runtime/skills-types';
+import { formatSkillForPrompt, parseSkillMarkdown } from '../src/runtime/skills/skills-parse';
+import { resolveSkill, resolveSkillBody } from '../src/runtime/skills/skills-resolve';
+import { isSkillContribution, type SkillContribution } from '../src/runtime/skills/skills-types';
 
 describe('parseSkillMarkdown', () => {
   it('parses Cursor-style frontmatter with folded description', () => {

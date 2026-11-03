@@ -9,7 +9,7 @@ import {
   toFileRefPart,
   toSessionAttachment,
   userContentFromParts,
-} from '../src/runtime/attachments';
+} from '../src/runtime/attachments/attachments';
 import { historyToProviderMessages } from '../src/runtime/specialists/loop';
 import type { ChatMessage } from '../src/runtime/types';
 

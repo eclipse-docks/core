@@ -1,5 +1,6 @@
 import type { ChatMessage, CognitiveSession, MessagePart } from '../types';
 import { getModelContextLimit } from '../models/effort-support';
+import { toolArgsTranscript, toolResultTranscript } from '../compact/tool-result-spill';
 
 export type ContextUsageLevel = 'ok' | 'warn' | 'critical';
 
@@ -30,7 +31,7 @@ export function estimateTokens(text: string): number {
   return Math.max(1, Math.ceil(text.length / 4));
 }
 
-export function estimatePartTokens(part: MessagePart): number {
+export function estimatePartTokens(part: MessagePart, sessionId = ''): number {
   if (part.type === 'text' || part.type === 'reasoning') return estimateTokens(part.text);
   if (part.type === 'file') {
     // History only stores a reference; payloads live under in-memory/<sessionId>/.
@@ -39,8 +40,8 @@ export function estimatePartTokens(part: MessagePart): number {
   if (part.type === 'tool') {
     return (
       estimateTokens(part.name) +
-      estimateTokens(JSON.stringify(part.args ?? {})) +
-      estimateTokens(JSON.stringify(part.result ?? {})) +
+      estimateTokens(toolArgsTranscript(sessionId, part)) +
+      estimateTokens(toolResultTranscript(sessionId, part)) +
       8
     );
   }
@@ -48,7 +49,7 @@ export function estimatePartTokens(part: MessagePart): number {
   return 0;
 }
 
-export function estimateMessageTokens(message: ChatMessage): {
+export function estimateMessageTokens(message: ChatMessage, sessionId = ''): {
   messages: number;
   tools: number;
   reasoning: number;
@@ -62,13 +63,13 @@ export function estimateMessageTokens(message: ChatMessage): {
   let reasoningCount = 0;
   for (const part of message.parts) {
     if (part.type === 'tool') {
-      tools += estimatePartTokens(part);
+      tools += estimatePartTokens(part, sessionId);
       toolCount += 1;
     } else if (part.type === 'reasoning') {
-      reasoning += estimatePartTokens(part);
+      reasoning += estimatePartTokens(part, sessionId);
       reasoningCount += 1;
     } else {
-      messages += estimatePartTokens(part);
+      messages += estimatePartTokens(part, sessionId);
     }
   }
   return { messages, tools, reasoning, toolCount, reasoningCount };
@@ -98,7 +99,7 @@ export function estimateSessionContextUsage(
     buckets[0]!.count = 1;
   }
   for (const message of session?.history ?? []) {
-    const parts = estimateMessageTokens(message);
+    const parts = estimateMessageTokens(message, session?.id ?? '');
     buckets[1]!.tokens += parts.messages;
     buckets[1]!.count += 1;
     buckets[2]!.tokens += parts.tools;

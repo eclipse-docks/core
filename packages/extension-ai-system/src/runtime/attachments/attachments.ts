@@ -1,5 +1,5 @@
-import type { MessagePart, PromptAttachment, SessionAttachment } from './types';
-import type { ProviderContent } from './models/types';
+import type { MessagePart, PromptAttachment, SessionAttachment } from '../types';
+import type { ProviderContent } from '../models/types';
 import { toWorkspaceToolPath } from './attachment-paths';
 
 /** Soft cap per attached text file when stored / returned via workspace_read. */

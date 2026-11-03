@@ -6,8 +6,9 @@ import {
   IMAGE_PRESENT_KEY,
   stripAttachmentToolOutput,
   userContentFromParts,
-} from '../attachments';
+} from '../attachments/attachments';
 import { compactionContextMessage } from '../compact/compaction';
+import { publishSpilledToolResults, toolArgsTranscript, toolResultTranscript } from '../compact/tool-result-spill';
 import { classifyToolRisks } from './classify-risk';
 
 const MAX_TOOL_ITERATIONS = 8;
@@ -44,6 +45,7 @@ export function historyToProviderMessages(
   systemPrompt: string,
   history: ChatMessage[],
   compactionSummary?: string,
+  sessionId?: string,
 ): ProviderChatMessage[] {
   const messages: ProviderChatMessage[] = [{ role: 'system', content: systemPrompt }];
   if (compactionSummary?.trim()) {
@@ -72,7 +74,7 @@ export function historyToProviderMessages(
         toolCalls: tools.map((t) => ({
           id: t.id,
           name: t.name,
-          arguments: JSON.stringify(t.args ?? {}),
+          arguments: toolArgsTranscript(sessionId ?? '', t),
         })),
       });
       for (const tool of tools) {
@@ -80,7 +82,7 @@ export function historyToProviderMessages(
           role: 'tool',
           toolCallId: tool.id,
           name: tool.name,
-          content: JSON.stringify(tool.result ?? {}),
+          content: toolResultTranscript(sessionId ?? '', tool),
         });
       }
       continue;
@@ -98,10 +100,12 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
     input.onPart?.(part);
   };
 
+  await publishSpilledToolResults(input.sessionId, input.history);
   const messages = historyToProviderMessages(
     input.systemPrompt,
     input.history,
     input.compactionSummary,
+    input.sessionId,
   );
   let success = true;
   let cancelled = false;

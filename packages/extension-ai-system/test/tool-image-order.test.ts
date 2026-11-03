@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IMAGE_PRESENT_KEY } from '../src/runtime/attachments';
+import { IMAGE_PRESENT_KEY } from '../src/runtime/attachments/attachments';
 import type { ProviderChatMessage, ProviderContentPart } from '../src/runtime/models/types';
 
 /**

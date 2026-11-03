@@ -24,6 +24,7 @@ describe('buildChatCompletionBody', () => {
     expect(body.model).toBe('gpt-5-mini');
     expect(body.tools).toHaveLength(1);
     expect(body.reasoning_effort).toBe('none');
+    expect(body.temperature).toBe(0);
     expect(body.stream_options).toEqual({ include_usage: true });
   });
 
@@ -51,6 +52,7 @@ describe('buildChatCompletionBody', () => {
     });
 
     expect(body.reasoning_effort).toBe('high');
+    expect(body.temperature).toBe(0);
     expect(body.tools).toBeUndefined();
   });
 

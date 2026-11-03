@@ -119,6 +119,7 @@ export function buildChatCompletionBody(params: StreamParams): Record<string, un
     body.reasoning_effort = requestedEffort;
   }
 
+  body.temperature = 0;
   return body;
 }
 

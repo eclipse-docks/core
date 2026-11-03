@@ -33,14 +33,56 @@ import { DocksWebDAVConnect } from "./webdav-connect";
 // Import commands (registers themselves)
 import './webdav-commands';
 
-async function getNextWebdavWorkspaceName(): Promise<string> {
+/** Turn a PROPFIND display name into a workspace folder label, ignoring generic DAV endpoints. */
+function folderNameFromDisplayName(displayName: string | undefined, url: string): string | undefined {
+    const cleaned = displayName?.replace(/[\\/]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleaned || cleaned === '.' || cleaned === '..') {
+        return undefined;
+    }
+    const leaf = extractWorkspaceNameFromUrl(url);
+    if (cleaned.toLowerCase() === leaf.toLowerCase() && /^(webdav|dav)$/i.test(leaf)) {
+        return undefined;
+    }
+    return cleaned;
+}
+
+async function usedFolderNames(): Promise<Set<string>> {
     const folders = await workspaceService.getFolders();
-    const used = new Set(folders.filter((f) => f.type === 'webdav').map((f) => f.name));
-    let n = 1;
-    while (used.has(`webdav${n}`)) {
+    return new Set(folders.map((folder) => folder.name));
+}
+
+async function allocateFolderName(preferred?: string): Promise<string> {
+    const used = await usedFolderNames();
+    if (preferred && !used.has(preferred)) {
+        return preferred;
+    }
+    if (!preferred) {
+        let n = 1;
+        while (used.has(`webdav${n}`)) {
+            n += 1;
+        }
+        return `webdav${n}`;
+    }
+    let n = 2;
+    while (used.has(`${preferred} ${n}`)) {
         n += 1;
     }
-    return `webdav${n}`;
+    return `${preferred} ${n}`;
+}
+
+async function resolveConnectionName(client: WebDAVClient, input: WebDAVConnectionInfo): Promise<string> {
+    const explicit = input.name?.trim();
+    if (explicit) {
+        return explicit;
+    }
+    try {
+        const [root] = await client.propfind(input.url, 0);
+        const detected = folderNameFromDisplayName(root?.displayName, input.url);
+        return await allocateFolderName(detected);
+    } catch (error) {
+        logger.debug('Could not read WebDAV root name', error);
+        return await allocateFolderName();
+    }
 }
 
 // Register WebDAV as a workspace contribution
@@ -54,14 +96,11 @@ workspaceService.registerContribution({
     },
 
     async connect(input: WebDAVConnectionInfo) {
-        const name =
-            typeof input.name === 'string' && input.name.trim().length > 0
-                ? input.name.trim()
-                : await getNextWebdavWorkspaceName();
         const client = new WebDAVClient(input);
+        const name = await resolveConnectionName(client, input);
         const rootResource: WebDAVResource = {
             href: input.url,
-            displayName: extractWorkspaceNameFromUrl(input.url),
+            displayName: name,
             isDirectory: true
         };
         return new WebDAVDirectoryResource(client, rootResource, undefined, { ...input, name });
@@ -81,7 +120,7 @@ workspaceService.registerContribution({
             const name =
                 typeof data.name === 'string' && data.name.trim().length > 0
                     ? data.name.trim()
-                    : await getNextWebdavWorkspaceName();
+                    : await allocateFolderName();
 
             const client = new WebDAVClient(restored);
             const rootResource: WebDAVResource = {

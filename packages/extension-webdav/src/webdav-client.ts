@@ -2,7 +2,7 @@ export interface WebDAVConnectionInfo {
     url: string;
     username?: string;
     password?: string;
-    /** Workspace root label (composite path prefix); defaults to webdav1, webdav2, … */
+    /** Workspace root label. Detected from the share folder when omitted. */
     name?: string;
 }
 
@@ -141,6 +141,10 @@ export class WebDAVClient {
         const headers: Record<string, string> = { ...(extra ?? {}) };
         if (this.authHeader) {
             headers['Authorization'] = this.authHeader;
+        }
+        // Nextcloud rejects non-GET calls on public shares unless this is set.
+        if (this.baseUrl.includes('/public.php/') && !headers['X-Requested-With']) {
+            headers['X-Requested-With'] = 'XMLHttpRequest';
         }
         return headers;
     }

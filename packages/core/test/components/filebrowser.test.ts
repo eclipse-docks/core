@@ -229,9 +229,40 @@ describe('docks-filebrowser', () => {
     const adir = new TestDir('folder-a', root, []);
     root.setChildren([zfile, adir]);
 
+    const nested = new TestDir('nested', adir, []);
+    const nestedList = vi.spyOn(nested, 'listChildren');
+    adir.setChildren([nested]);
+
     const node = await fb.resourceToTreeNode(root, true, false);
     expect(node.loaded).toBe(true);
     expect(node.children.map((c) => c.label)).toEqual(['folder-a', 'z.txt']);
+    expect(node.children[0].loaded).toBeFalsy();
+    expect(node.children[0].children).toEqual([]);
+    expect(nestedList).not.toHaveBeenCalled();
+    fb.remove();
+  });
+
+  it('loadWorkspace fills expanded roots and leaves nested directories unloaded', async () => {
+    const fb = await mountFileBrowser();
+    const workspace = new TestDir('workspace', undefined, []);
+    const folder = new TestDir('webdav1', workspace, []);
+    const nested = new TestDir('nested', folder, []);
+    nested.setChildren([new TestFile('deep.txt', nested)]);
+    folder.setChildren([nested]);
+    workspace.setChildren([folder]);
+
+    const folderList = vi.spyOn(folder, 'listChildren');
+    const nestedList = vi.spyOn(nested, 'listChildren');
+
+    await fb.loadWorkspace(workspace, false);
+
+    const root = (fb as unknown as { root?: TreeNode }).root;
+    expect(folderList).toHaveBeenCalled();
+    expect(nestedList).not.toHaveBeenCalled();
+    expect(root?.children[0].loaded).toBe(true);
+    expect(root?.children[0].children.map((child) => child.label)).toEqual(['nested']);
+    expect(root?.children[0].children[0].loaded).toBeFalsy();
+    expect(root?.children[0].children[0].children).toEqual([]);
     fb.remove();
   });
 

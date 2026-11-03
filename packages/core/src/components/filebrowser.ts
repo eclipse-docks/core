@@ -378,7 +378,14 @@ export class DocksFileBrowser extends DocksPart {
                     if (HIDE_DOT_RESOURCE && childResource.getName().startsWith(".")) {
                         continue;
                     }
-                    const child = await this.resourceToTreeNode(childResource, true, forceRefreshChildren);
+                    // The file tree renders workspace roots expanded, so those nodes need their
+                    // immediate children. Anything deeper stays unloaded until the user expands it.
+                    const childIsOpenRoot = resource === this.workspaceDir;
+                    const child = await this.resourceToTreeNode(
+                        childResource,
+                        childIsOpenRoot,
+                        childIsOpenRoot && forceRefreshChildren,
+                    );
                     if (buildGen !== this.treeBuildGeneration) {
                         node.loaded = true;
                         return node;

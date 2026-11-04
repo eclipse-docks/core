@@ -40,7 +40,7 @@ export async function createContributionHost(contribution: CanvasContribution): 
 }
 
 function sidecarName(fileName: string): string {
-    return fileName.replace(/\.canvas\.js$/i, '.canvas.data.json');
+    return fileName.replace(/\.canvas\.js$/i, '.canvas.json');
 }
 
 async function readSidecar(file: File): Promise<Record<string, unknown>> {

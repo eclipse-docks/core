@@ -22,7 +22,7 @@ import { CanvasView, html, css, nothing } from "docks/canvas";
 | Call | Role |
 | --- | --- |
 | `this.getState(key, fallback)` | Read persisted state. Returns `fallback` when the key is missing. |
-| `this.setState(key, value)` | Write persisted state. |
+| `this.setState(key, value)` | Write persisted state. Creates a sidecar `canvas.json` for this canvas. |
 | `this.openFile(path)` | Open a workspace path in the editor. |
 | `this.subscribe(topic, callback)` | Listen on the app event bus. The subscription ends when this canvas disconnects. |
 | `this.unsubscribe(token)` | End one subscription early. |
@@ -32,12 +32,29 @@ import { CanvasView, html, css, nothing } from "docks/canvas";
 
 The host attaches after construction and before `onConnect`. From `constructor`, `getState` returns the fallback, and `setState` and `openFile` do nothing. Leave `connectedCallback` and `disconnectedCallback` on `CanvasView`. The subclass still owns `render`, `static properties`, and `static styles`.
 
+`setState` creates a sidecar `canvas.json` for that canvas to persist its settings.
+
+Each canvas has its own `canvas.md` spec sidecar, named like the module: `notes.canvas.js` uses `notes.canvas.md`. It holds that canvas's requirements and spec, and nothing else. Use this shape:
+
+```md
+# Requirements
+
+What the user asked for, in their words.
+
+# Spec
+
+Behavior, the data stored in canvas.json, and the UI.
+```
+
+`workspace_write` that canvas's `canvas.md` before writing the module, and `workspace_read` it before changing an existing canvas. When the user changes the request, update that `canvas.md` first, then change the module so it matches the spec. The canvas does not import its `canvas.md`. An extension-registered canvas does not use one.
+
 ## Hard rules
 
 1. Pure JavaScript only — no TypeScript, no decorators. Declare reactive fields with `static properties = { … }`. Initialize plain defaults in `constructor`; hydrate with `getState` in `onConnect`.
 2. Build controls and chrome with Web Awesome (`wa-button`, `wa-input`, `wa-checkbox`, `wa-card`, `wa-callout`, `wa-spinner`). A raw `<button>` or `<input>` is not a substitute. Load `eclipse-docks-webawesome` before a non-trivial UI, and use `--wa-color-*` tokens instead of hardcoded colors.
 3. Emit complete, valid JavaScript — no truncated objects or unfinished strings.
 4. The page uses `Cross-Origin-Embedder-Policy: require-corp`. A cross-origin response loads only when the request is CORS and the server sends `Access-Control-Allow-Origin`, or when the server sends `Cross-Origin-Resource-Policy: cross-origin`. An `<iframe srcdoc>` inherits this policy; `sandbox="allow-same-origin"` does not exempt it.
+5. Keep the user's requirements and the spec in that canvas's `canvas.md`. When the request changes, update that file before changing the module.
 
 ## Code
 
@@ -140,9 +157,10 @@ Before non-trivial UI or shell integration, load companion skills as needed:
 
 ## Workflow
 
-1. `workspace_write` a durable `<root>/….canvas.js` (qualify with a root from `workspace_list`).
-2. `canvas.open` with that path — returns `ready` or the compile/runtime error.
-3. Change a canvas with `canvas.apply_source`. If that canvas is open in an editor, the editor marks itself dirty and recompiles the preview and does not save. If it is not open in an editor, the tool writes the file. Do not `workspace_write` a canvas that is already open.
-4. Optional: `canvas.capture_preview` to attach a screenshot (iframe contents may be blank).
+1. `workspace_write` `<root>/….canvas.md` with the requirements and the spec. The stem matches the module: `notes.canvas.js` uses `notes.canvas.md`.
+2. `workspace_write` the matching `<root>/….canvas.js` (qualify with a root from `workspace_list`).
+3. `canvas.open` with that path — returns `ready` or the compile/runtime error.
+4. Before changing a canvas, `workspace_read` its `….canvas.md`. If the request changed, `workspace_write` that file, then `canvas.apply_source`. If that canvas is open in an editor, the editor marks itself dirty and recompiles the preview and does not save. If it is not open in an editor, the tool writes the file. Do not `workspace_write` a canvas that is already open.
+5. Optional: `canvas.capture_preview` to attach a screenshot (iframe contents may be blank).
 
 Extension-registered canvases live on `system.canvases` and open by name via `canvas.open`. That opens a read-only viewer. Do not edit it: `canvas.apply_source`, `canvas.get_source`, `canvas.set_state`, and any tools declared by that canvas are not available while it is active.

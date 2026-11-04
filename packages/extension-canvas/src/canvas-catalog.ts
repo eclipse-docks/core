@@ -1,6 +1,5 @@
 import type { CatalogContribution } from '@eclipse-docks/extension-catalog/api';
 import { registerCatalog } from '@eclipse-docks/extension-catalog/api';
-import playerSource from './canvases/player.canvas.js?raw';
 import tasksSource from './canvases/tasks.canvas.js?raw';
 
 function canvasFileUrl(source: string): string {
@@ -18,7 +17,6 @@ const CANVAS_CATALOG: CatalogContribution = {
             contributionId: 'catalog.canvases.examples',
             items: [
                 { label: 'Tasks', icon: 'list-check', state: { url: canvasFileUrl(tasksSource), filename: 'tasks.canvas.js' } },
-                { label: 'Player', icon: 'circle-play', state: { url: canvasFileUrl(playerSource), filename: 'player.canvas.js' } },
             ],
         },
     ],

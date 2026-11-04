@@ -9,17 +9,15 @@ function textOf(url: string | undefined): string {
 }
 
 describe('canvas catalog', () => {
-    it('offers the tasks and player canvases for checkout', () => {
+    it('offers the tasks canvas for checkout', () => {
         registerCanvasCatalog();
         const leaves = contributionRegistry.getContributions('catalog.canvases.examples') as Array<{
             label: string;
             state?: { filename?: string; url?: string };
         }>;
         const tasks = leaves.find(item => item.label === 'Tasks');
-        const player = leaves.find(item => item.label === 'Player');
         expect(tasks?.state?.filename).toBe('tasks.canvas.js');
-        expect(player?.state?.filename).toBe('player.canvas.js');
         expect(textOf(tasks?.state?.url)).toContain('Today, with intention.');
-        expect(textOf(player?.state?.url)).toContain('Watch and listen.');
+        expect(leaves.some(item => item.label === 'Player')).toBe(false);
     });
 });

@@ -13,7 +13,6 @@ import { SYSTEM_SKILLS, type SkillContribution } from '@eclipse-docks/extension-
 import { isCanvasContribution, SYSTEM_CANVASES } from './contribution';
 import { listRegisteredCanvases } from './canvases';
 import tasksSource from './canvases/tasks.canvas.js?raw';
-import playerSource from './canvases/player.canvas.js?raw';
 import { registerCanvasCatalog } from './canvas-catalog';
 import { registerCanvasTools } from './canvas-tools';
 import { registerCanvasCommands } from './commands';
@@ -86,14 +85,6 @@ contributionRegistry.registerContribution(SYSTEM_CANVASES, {
     icon: 'list-check',
     settingsKey: 'canvas.docks.demos.tasks',
     source: tasksSource,
-});
-
-contributionRegistry.registerContribution(SYSTEM_CANVASES, {
-    name: 'player',
-    label: 'Player',
-    icon: 'circle-play',
-    settingsKey: 'canvas.docks.demos.player',
-    source: playerSource,
 });
 
 registerCanvasCatalog();

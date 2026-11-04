@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import tasksSource from '../src/canvases/tasks.canvas.js?raw';
-import playerSource from '../src/canvases/player.canvas.js?raw';
 import { registerCanvasBridge } from '../src/bridges/register';
 import { compileCanvas, type CanvasFileBytes } from '../src/compile';
 import { mountCompiled } from '../src/mount';
@@ -133,18 +132,5 @@ export default class extends HTMLElement {
         if (!result.ok) return;
         expect(result.code).toContain('__docksCanvas.canvas');
         expect(result.code).toContain('Today, with intention.');
-    });
-
-    it('compiles the registered player canvas', async () => {
-        const result = await compileCanvas({
-            entryPath: 'player.canvas.js',
-            entrySource: playerSource,
-            read: files({}),
-        });
-        expect(result.ok).toBe(true);
-        if (!result.ok) return;
-        expect(result.code).toContain('__docksCanvas.canvas.repeat');
-        expect(result.code).toContain('__docksCanvas.core');
-        expect(result.code).toContain('youtube-nocookie.com/embed');
     });
 });

@@ -4,8 +4,8 @@ import { DocksCanvasPart } from './canvas-part';
 import { createContributionHost } from './host';
 
 /** Read-only preview for a canvas opened from the canvases dropdown. */
-@customElement('docks-canvas-readonly')
-export class DocksCanvasReadonly extends DocksCanvasPart {
+@customElement('docks-canvas-viewer')
+export class CanvasViewer extends DocksCanvasPart {
     readonly kind = 'registered' as const;
 
     private contribution?: CanvasContribution;
@@ -51,6 +51,6 @@ export class DocksCanvasReadonly extends DocksCanvasPart {
 
 declare global {
     interface HTMLElementTagNameMap {
-        'docks-canvas-readonly': DocksCanvasReadonly;
+        'docks-canvas-viewer': CanvasViewer;
     }
 }

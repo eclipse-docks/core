@@ -7,13 +7,16 @@ description: >-
   writing wa-* markup.
 ---
 
-# Eclipse Docks Web Awesome (`docks/webawesome`)
+# Eclipse Docks Web Awesome
+
+A canvas extends `CanvasView`. That registers the components, the theme, and the `docks` icon library, and it exports the Web Awesome module. Import `registerIconLibrary` from `docks/canvas`. Do not import `docks/webawesome` from a `.canvas.js` file. Custom elements take a closing tag: `<wa-input></wa-input>`.
+
+Shell UI outside a canvas uses `docks/webawesome`:
 
 ```js
 import "docks/webawesome";
+import { registerIconLibrary } from "docks/webawesome";
 ```
-
-That import registers the components, the theme, and the `docks` icon library. Canvas files use this import. Custom elements take a closing tag: `<wa-input></wa-input>`.
 
 ## Look up the component, then write it
 

@@ -68,7 +68,7 @@ describe('system.canvases', () => {
         activeEditorSignal.set({ localName: 'docks-canvas-editor', kind: 'workspace' } as never);
         expect(handler?.canExecute?.(commandRegistry.createExecutionContext())).toBe(false);
         activeEditorSignal.set({
-            localName: 'docks-canvas-readonly',
+            localName: 'docks-canvas-viewer',
             kind: 'registered',
             canvasName: 'test.canvas.tool',
         } as never);

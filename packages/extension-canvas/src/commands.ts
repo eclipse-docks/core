@@ -16,7 +16,7 @@ import type { CanvasContribution } from './contribution';
 import { attachPreviewShot } from './preview-image';
 import { writeWorkspaceFile } from './workspace-file';
 import './canvas-editor';
-import './canvas-readonly';
+import './canvas-viewer';
 
 const VIEW_SLOTS = new Set([SIDEBAR_MAIN, SIDEBAR_AUXILIARY, PANEL_BOTTOM]);
 
@@ -30,8 +30,8 @@ export function canvasEditorInput(contribution: CanvasContribution, sourceText =
         toolbar: false,
         component: () => html``,
     } as EditorInput;
-    input.component = (id: string) => html`<docks-canvas-readonly id="${id}" .input=${input} .source=${sourceText}></docks-canvas-readonly>`;
-    (input as unknown as { editorId: string }).editorId = 'system.canvas-readonly';
+    input.component = (id: string) => html`<docks-canvas-viewer id="${id}" .input=${input} .source=${sourceText}></docks-canvas-viewer>`;
+    (input as unknown as { editorId: string }).editorId = 'system.canvas-viewer';
     return input;
 }
 

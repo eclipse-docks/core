@@ -1,7 +1,6 @@
-import { LitElement, html, css } from "docks/lit";
-import "docks/webawesome";
+import { CanvasView, html, css } from "docks/canvas";
 
-export default class extends LitElement {
+export default class extends CanvasView {
   static properties = {
     tasks: { state: true },
     query: { state: true },
@@ -64,13 +63,12 @@ export default class extends LitElement {
     this.editingId = null;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    const saved = this.canvasHost?.getState("tasks", null);
+  onConnect() {
+    const saved = this.getState("tasks", null);
     if (Array.isArray(saved)) this.tasks = saved;
   }
 
-  persist() { this.canvasHost?.setState("tasks", this.tasks); }
+  persist() { this.setState("tasks", this.tasks); }
 
   addTask() {
     const input = this.renderRoot.querySelector("#new-task");

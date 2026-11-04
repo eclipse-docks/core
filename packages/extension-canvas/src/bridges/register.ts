@@ -1,17 +1,15 @@
 export interface CanvasRuntime {
-    lit?: object;
-    webawesome?: object;
-    core?: object;
-    subpaths: Record<string, object>;
+    [name: string]: object;
 }
 
-const runtime = ((globalThis as { __docksCanvas?: CanvasRuntime }).__docksCanvas ??= { subpaths: {} });
+const runtime: CanvasRuntime = (globalThis as { __docksCanvas?: CanvasRuntime }).__docksCanvas ??= {};
+const hrefs: Record<string, string> = {};
 
-export function registerCanvasBridge(key: 'lit' | 'webawesome' | 'core', namespace: object, subpath?: string): void {
-    runtime[key] = namespace;
-    if (subpath) runtime.subpaths[subpath] = namespace;
+export function registerCanvasBridge(namespace: object, href: string, location: string): void {
+    runtime[location] = namespace;
+    hrefs[location] = href;
 }
 
-export function registerCanvasSubpath(subpath: string, namespace: object): void {
-    runtime.subpaths[subpath] = namespace;
+export function bridgeHref(location: string): string | undefined {
+    return hrefs[location];
 }

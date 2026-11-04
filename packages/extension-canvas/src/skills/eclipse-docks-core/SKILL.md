@@ -28,7 +28,7 @@ import {
 } from "docks/core";
 ```
 
-Alias: `@eclipse-docks/core`. Subpaths map to the same bridges, e.g. `docks/core/parts`, `docks/core/widgets`, `docks/core/externals/lit`.
+Alias: `@eclipse-docks/core`. `publish`, `subscribe`, and `unsubscribe` come from this module.
 
 ## Workspace
 
@@ -43,7 +43,7 @@ if (resource instanceof File) {
 
 - Paths are workspace-relative (root-prefixed in the composite workspace).
 - Create with `getResource(path, { create: true })` when the API allows.
-- Canvases can also open a path via `this.canvasHost.openFile(path)` without importing core.
+- A canvas opens a path in the editor with `this.openFile(path)` and does not import core for that call. Reading or writing file bytes still uses `workspaceService` and `File`.
 
 ## Editors
 
@@ -87,7 +87,7 @@ contributionRegistry.registerContribution(SIDEBAR_MAIN, {
 });
 ```
 
-Common slots: sidebars, panel bottom, toolbars, settings. Canvas modules contributed by extensions use `system.canvases` (`SYSTEM_CANVASES` from `@eclipse-docks/extension-canvas/contribution`). Each contribution sets a unique `settingsKey` for its `canvasHost` state. `load()` returns `{ default: CustomElementConstructor }`, or `source` is the canvas module text and the preview compiles it. A contributed canvas is not editable and opens without a toolbar.
+Common slots: sidebars, panel bottom, toolbars, settings. Canvas modules contributed by extensions use `system.canvases` (`SYSTEM_CANVASES` from `@eclipse-docks/extension-canvas/contribution`). Each contribution sets a unique `settingsKey` for the state behind `getState` / `setState`. `load()` returns `{ default: CustomElementConstructor }`, or `source` is the canvas module text and the preview compiles it. A contributed canvas is not editable and opens without a toolbar.
 
 ## Dialogs & toasts
 
@@ -121,12 +121,13 @@ log.info("ready");
 
 ## Canvas notes
 
-- Host persistence for a workspace `.canvas.js` is `canvasHost.getState` / `setState`, not `appSettings`, unless you intentionally share app-wide settings.
+- A canvas subclasses `CanvasView` from `docks/canvas`. Persist with `this.getState` / `this.setState` inside `onConnect` and later. Use `appSettings` only to share app-wide settings.
+- `this.openFile(path)` opens a workspace path. Dialogs, toasts, and file contents stay on `docks/core`.
+- A canvas listens and publishes with `this.subscribe`, `this.unsubscribe`, and `this.publish`. It does not import those functions.
 - Cross-origin loads follow the canvas skill: CORS plus `Access-Control-Allow-Origin`, or `Cross-Origin-Resource-Policy: cross-origin`. An iframe `srcdoc` does not opt out.
-- Keep UI building blocks on `docks/lit` + `docks/webawesome`; use `docks/core` for shell integration.
 
 ## Anti-patterns
 
 - Bare filenames at the composite workspace root when a durable root prefix is required
-- Assuming `canvasHost` APIs exist on arbitrary LitElements outside a canvas mount
+- Calling `getState`, `setState`, or `openFile` before `onConnect`
 - Re-implementing toast/dialog with `alert` when core helpers are available

@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import tasksSource from '../src/canvases/tasks.canvas.js?raw';
-import { compileCanvas, type CanvasBridges, type CanvasFileBytes } from '../src/compile';
+import playerSource from '../src/canvases/player.canvas.js?raw';
+import { registerCanvasBridge } from '../src/bridges/register';
+import { compileCanvas, type CanvasFileBytes } from '../src/compile';
 import { mountCompiled } from '../src/mount';
 
-const bridges: CanvasBridges = {
-    lit: 'https://bridges.example/lit.js',
-    webawesome: 'https://bridges.example/webawesome.js',
-    core: 'https://bridges.example/core.js',
-    coreSubpaths: {
-        './parts': 'https://bridges.example/parts.js',
-    },
-};
+const canvasHref = 'https://bridges.example/canvas.js';
+const coreHref = 'https://bridges.example/core.js';
+
+registerCanvasBridge({}, coreHref, 'core');
+registerCanvasBridge({}, canvasHref, 'canvas');
 
 function files(map: Record<string, string | Uint8Array>) {
     return async (path: string): Promise<CanvasFileBytes | null> => {
@@ -31,14 +30,14 @@ import rows from "./rows.json";
 import "./view.css";
 import logo from "./logo.png";
 import { LitElement } from "docks/lit";
-import { editorRegistry } from "@eclipse-docks/core/parts";
+import { subscribe } from "@eclipse-docks/core/core/events";
 import extra from "some-pkg";
 export default class extends HTMLElement {
   connectedCallback() {
     this.textContent = label + rows[0].n + logo.slice(0, 5);
     this.dataset.extra = String(extra);
     this.dataset.lit = String(LitElement);
-    this.dataset.registry = String(editorRegistry);
+    this.dataset.registry = String(subscribe);
   }
 }
 `,
@@ -48,7 +47,6 @@ export default class extends HTMLElement {
                 'view.css': 'h2{color:red}',
                 'logo.png': new Uint8Array([137, 80, 78, 71]),
             }),
-            bridges,
         });
         expect(result.ok).toBe(true);
         if (!result.ok) return;
@@ -60,8 +58,8 @@ export default class extends HTMLElement {
         expect(result.code).not.toContain('./rows.json');
         expect(result.code).not.toContain('./view.css');
         expect(result.code).not.toContain('./logo.png');
-        expect(result.code).toContain(bridges.lit);
-        expect(result.code).toContain(bridges.coreSubpaths['./parts']);
+        expect(result.code).toContain(canvasHref);
+        expect(result.code).toContain(coreHref);
         expect(result.code).toContain('some-pkg');
     });
 
@@ -81,7 +79,6 @@ export default class extends HTMLElement {
                 'helper.js': 'export const label = "from-helper";',
                 'rows.json': '[{"n":1}]',
             }),
-            bridges,
         });
         expect(result.ok).toBe(true);
         if (!result.ok) return;
@@ -99,7 +96,6 @@ export default class extends HTMLElement {
             entryPath: 'app.canvas.js',
             entrySource: 'import "./missing.js";\nexport default class extends HTMLElement {}',
             read: files({}),
-            bridges,
         });
         expect(result.ok).toBe(false);
         if (result.ok) return;
@@ -118,7 +114,6 @@ export default class extends HTMLElement {
 }
 `,
             read: files({}),
-            bridges,
         });
         expect(result.ok).toBe(true);
         if (!result.ok) return;
@@ -133,11 +128,23 @@ export default class extends HTMLElement {
             entryPath: 'tasks.canvas.js',
             entrySource: tasksSource,
             read: files({}),
-            bridges,
         });
         expect(result.ok).toBe(true);
         if (!result.ok) return;
-        expect(result.code).toContain('__docksCanvas.lit');
+        expect(result.code).toContain('__docksCanvas.canvas');
         expect(result.code).toContain('Today, with intention.');
+    });
+
+    it('compiles the registered player canvas', async () => {
+        const result = await compileCanvas({
+            entryPath: 'player.canvas.js',
+            entrySource: playerSource,
+            read: files({}),
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.code).toContain('__docksCanvas.canvas.repeat');
+        expect(result.code).toContain('__docksCanvas.core');
+        expect(result.code).toContain('youtube-nocookie.com/embed');
     });
 });

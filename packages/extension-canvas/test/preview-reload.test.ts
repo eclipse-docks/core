@@ -15,9 +15,8 @@ vi.mock('../src/mount', () => ({
     })),
     elementFromConstructor: vi.fn(),
 }));
-vi.mock('../src/bridges/urls', () => ({
-    canvasBridges: () => ({ lit: '', webawesome: '', core: '', coreSubpaths: {} }),
-}));
+vi.mock('../src/bridges/canvas', () => ({}));
+vi.mock('../src/bridges/core', () => ({}));
 vi.mock('../src/preview-image', () => ({
     attachPreviewShot: vi.fn(),
     rasterizeElement: vi.fn(),

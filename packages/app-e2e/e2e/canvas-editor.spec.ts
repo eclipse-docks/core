@@ -4,10 +4,9 @@ import { createFileMenuItem } from './story-utils.js';
 const FILE_NAME = 'hello.canvas.js';
 const UI_MS = 15_000;
 
-const SOURCE = `import { LitElement, html } from "docks/lit";
-import "docks/webawesome";
+const SOURCE = `import { CanvasView, html } from "docks/canvas";
 
-export default class extends LitElement {
+export default class extends CanvasView {
   render() {
     return html\`
       <wa-button>Canvas Ready</wa-button>

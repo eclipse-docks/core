@@ -1,7 +1,7 @@
 ---
 name: eclipse-docks-canvas
 description: >-
-  Create or edit interactive Eclipse Docks canvases (.canvas.js): LitElement UIs,
+  Create or edit interactive Eclipse Docks canvases (.canvas.js): CanvasView UIs,
   dashboards, todo apps, widgets, maps, and previewable tools. Use when the user
   wants an interactive view, canvas, widget, or .canvas.js file — even if they do
   not say "canvas".
@@ -9,23 +9,46 @@ description: >-
 
 # Eclipse Docks canvas
 
-Write a workspace file ending in `.canvas.js`. Default-export a `LitElement` subclass from `docks/lit`. Do **not** extend `HTMLElement`. Do **not** call `customElements.define` — the host registers the tag.
+Write a workspace file ending in `.canvas.js`. Default-export a `CanvasView` subclass from `docks/canvas`. The host registers the tag.
+
+```js
+import { CanvasView, html, css, nothing } from "docks/canvas";
+```
+
+`docks/canvas` exports `CanvasView`, the Lit module (`html`, `css`, `nothing`, `repeat`, and the rest), and the Web Awesome module (`registerIconLibrary`). `CanvasView` registers the Web Awesome elements. A canvas does not import `docks/lit` or `docks/webawesome`, and it does not extend `LitElement` or `HTMLElement`.
+
+## CanvasView
+
+| Call | Role |
+| --- | --- |
+| `this.getState(key, fallback)` | Read persisted state. Returns `fallback` when the key is missing. |
+| `this.setState(key, value)` | Write persisted state. |
+| `this.openFile(path)` | Open a workspace path in the editor. |
+| `this.subscribe(topic, callback)` | Listen on the app event bus. The subscription ends when this canvas disconnects. |
+| `this.unsubscribe(token)` | End one subscription early. |
+| `this.publish(topic, data)` | Publish on the app event bus. |
+| `onConnect()` | The element is connected and the host is attached. Hydrate state here. |
+| `onDisconnect()` | The element is leaving the document. Release timers, streams, and object URLs. |
+
+The host attaches after construction and before `onConnect`. From `constructor`, `getState` returns the fallback, and `setState` and `openFile` do nothing. Leave `connectedCallback` and `disconnectedCallback` on `CanvasView`. The subclass still owns `render`, `static properties`, and `static styles`.
 
 ## Hard rules
 
-1. **`canvasHost` is unavailable in `constructor`.** The host sets `this.canvasHost` after construction. Read/write persisted state in `connectedCallback` (after `super`) or later. Always guard: `this.canvasHost?.getState` / `setState`.
-2. Pure JavaScript only — no TypeScript, no decorators. Declare reactive fields with `static properties = { … }`. Initialize plain defaults in `constructor`; hydrate from `canvasHost` only after connect.
-3. Build controls and chrome with Web Awesome (`wa-button`, `wa-input`, `wa-checkbox`, `wa-card`, `wa-callout`, `wa-spinner`). `import "docks/webawesome"` only registers the elements; a raw `<button>` or `<input>` is not a substitute. Load `eclipse-docks-webawesome` before a non-trivial UI, and use `--wa-color-*` tokens instead of hardcoded colors.
-4. Emit complete, valid JavaScript — no truncated objects or unfinished strings.
-5. The page uses `Cross-Origin-Embedder-Policy: require-corp`. A cross-origin response loads only when the request is CORS and the server sends `Access-Control-Allow-Origin`, or when the server sends `Cross-Origin-Resource-Policy: cross-origin`. An `<iframe srcdoc>` inherits this policy; `sandbox="allow-same-origin"` does not exempt it. Keep `docks/lit`, `docks/webawesome`, and `canvasHost` on the LitElement.
+1. Pure JavaScript only — no TypeScript, no decorators. Declare reactive fields with `static properties = { … }`. Initialize plain defaults in `constructor`; hydrate with `getState` in `onConnect`.
+2. Build controls and chrome with Web Awesome (`wa-button`, `wa-input`, `wa-checkbox`, `wa-card`, `wa-callout`, `wa-spinner`). A raw `<button>` or `<input>` is not a substitute. Load `eclipse-docks-webawesome` before a non-trivial UI, and use `--wa-color-*` tokens instead of hardcoded colors.
+3. Emit complete, valid JavaScript — no truncated objects or unfinished strings.
+4. The page uses `Cross-Origin-Embedder-Policy: require-corp`. A cross-origin response loads only when the request is CORS and the server sends `Access-Control-Allow-Origin`, or when the server sends `Cross-Origin-Resource-Policy: cross-origin`. An `<iframe srcdoc>` inherits this policy; `sandbox="allow-same-origin"` does not exempt it.
+
+## Code
+
+Follow clean code, DRY, SOLID, KISS, YAGNI, AHA, separation of concerns, fail fast, least astonishment, and the usual design patterns. Make the UI accessible and responsive. Format the file for a person to read: 2-space indentation, semicolons, double quotes, and templates and CSS broken across lines.
 
 ## Minimal pattern
 
 ```js
-import { LitElement, html, css } from "docks/lit";
-import "docks/webawesome";
+import { CanvasView, html, css } from "docks/canvas";
 
-export default class extends LitElement {
+export default class extends CanvasView {
   static properties = {
     items: { state: true },
     draft: { state: true },
@@ -41,14 +64,13 @@ export default class extends LitElement {
     this.draft = "";
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    const saved = this.canvasHost?.getState("items", null);
+  onConnect() {
+    const saved = this.getState("items", null);
     if (Array.isArray(saved)) this.items = saved;
   }
 
   persist() {
-    this.canvasHost?.setState("items", this.items);
+    this.setState("items", this.items);
   }
 
   addItem() {
@@ -75,8 +97,6 @@ export default class extends LitElement {
   }
 }
 ```
-
-APIs: `this.canvasHost.getState(key, fallback)`, `this.canvasHost.setState(key, value)`, `this.canvasHost.openFile(path)`.
 
 ## Cross-origin resources
 
@@ -108,7 +128,8 @@ this.shadowRoot.adoptedStyleSheets = [...this.shadowRoot.adoptedStyleSheets, she
 
 ## Imports
 
-- `docks/lit`, `docks/webawesome`, `docks/core` → running app
+- `docks/canvas` — `CanvasView`, the Lit exports (`html`, `css`, `nothing`, `repeat`, `when`, `classMap`, and the rest), and the Web Awesome exports (`registerIconLibrary`). The elements are already registered.
+- `docks/core` — workspace files, dialogs, toasts, and commands. `openFile` does not need this import.
 - Relative imports → workspace files (compiler inlines them: JSON → value, text/CSS → string, binaries → data URL)
 
 Before non-trivial UI or shell integration, load companion skills as needed:

@@ -1,3 +1,5 @@
+import { bridgeHref } from './bridges/register';
+
 export interface CanvasFileBytes {
     text?: string;
     bytes?: Uint8Array;
@@ -5,19 +7,10 @@ export interface CanvasFileBytes {
 
 export type CanvasFileReader = (path: string) => Promise<CanvasFileBytes | null>;
 
-export interface CanvasBridges {
-    lit: string;
-    webawesome: string;
-    core: string;
-    /** Package export subpath (`./parts`) to a module URL. */
-    coreSubpaths: Record<string, string>;
-}
-
 export interface CompileCanvasInput {
     entryPath: string;
     entrySource: string;
     read: CanvasFileReader;
-    bridges: CanvasBridges;
 }
 
 export type CompileCanvasResult = { ok: true; code: string } | { ok: false; error: string };
@@ -68,28 +61,33 @@ export function isRelativeSpecifier(spec: string): boolean {
     return spec.startsWith("./") || spec.startsWith("../");
 }
 
-export function bridgeRuntime(spec: string, bridges: CanvasBridges): string | null {
-    if (spec === "docks/lit" || spec === "@eclipse-docks/core/externals/lit") return "__docksCanvas.lit";
-    if (spec === "docks/webawesome" || spec === "@eclipse-docks/core/externals/webawesome") return "__docksCanvas.webawesome";
-    if (spec === "docks/core" || spec === "@eclipse-docks/core") return "__docksCanvas.core";
-    const sub = coreSubpath(spec);
-    if (!sub || !bridges.coreSubpaths[sub]) return null;
-    return `__docksCanvas.subpaths[${JSON.stringify(sub)}]`;
+function usesCanvasNamespace(spec: string): boolean {
+    return spec === "docks/canvas"
+        || spec === "docks/lit"
+        || spec === "docks/webawesome"
+        || spec === "@eclipse-docks/core/externals/lit"
+        || spec === "@eclipse-docks/core/externals/webawesome"
+        || spec === "docks/core/externals/lit"
+        || spec === "docks/core/externals/webawesome";
 }
 
-export function rewriteBridgeSpecifier(spec: string, bridges: CanvasBridges): string {
-    if (spec === "docks/lit" || spec === "@eclipse-docks/core/externals/lit") return bridges.lit;
-    if (spec === "docks/webawesome" || spec === "@eclipse-docks/core/externals/webawesome") return bridges.webawesome;
-    if (spec === "docks/core" || spec === "@eclipse-docks/core") return bridges.core;
-    const sub = coreSubpath(spec);
-    if (!sub) return spec;
-    return bridges.coreSubpaths[sub] ?? spec;
+function usesCoreNamespace(spec: string): boolean {
+    return spec === "docks/core"
+        || spec === "@eclipse-docks/core"
+        || spec === "docks/core/core/events"
+        || spec === "@eclipse-docks/core/core/events";
 }
 
-function coreSubpath(spec: string): string | null {
-    if (spec.startsWith("@eclipse-docks/core/")) return `./${spec.slice("@eclipse-docks/core/".length)}`;
-    if (spec.startsWith("docks/core/")) return `./${spec.slice("docks/core/".length)}`;
+export function bridgeRuntime(spec: string): string | null {
+    if (usesCanvasNamespace(spec)) return "__docksCanvas.canvas";
+    if (usesCoreNamespace(spec)) return "__docksCanvas.core";
     return null;
+}
+
+export function rewriteBridgeSpecifier(spec: string): string {
+    if (usesCanvasNamespace(spec)) return bridgeHref("canvas") ?? "";
+    if (usesCoreNamespace(spec)) return bridgeHref("core") ?? "";
+    return spec;
 }
 
 function extensionOf(path: string): string {
@@ -306,7 +304,7 @@ return { default: __css };`
         let body = mod.text ?? "";
         const preludes: string[] = [];
         for (const ref of refs) {
-            const resolvedUrl = rewriteBridgeSpecifier(ref.spec, input.bridges);
+            const resolvedUrl = rewriteBridgeSpecifier(ref.spec);
             let replacement = "";
             if (ref.form === "asset-url") {
                 if (!isRelativeSpecifier(ref.spec)) {
@@ -326,11 +324,11 @@ return { default: __css };`
                 else if (ref.form === "export-from") preludes.push(exportFromPrelude(ref.raw, load));
                 else preludes.push(importPrelude(ref.raw, load));
             } else if (ref.form === "dynamic") {
-                const runtime = bridgeRuntime(ref.spec, input.bridges);
+                const runtime = bridgeRuntime(ref.spec);
                 replacement = runtime ? `Promise.resolve(${runtime})` : `import(${JSON.stringify(resolvedUrl)})`;
                 if (runtime) externalBinding(resolvedUrl, "side", externals, seq);
             } else {
-                const runtime = bridgeRuntime(ref.spec, input.bridges);
+                const runtime = bridgeRuntime(ref.spec);
                 if (runtime) {
                     externalBinding(resolvedUrl, "side", externals, seq);
                     if (ref.form === "import" && !/^import\s+['"]/.test(ref.raw.trim())) {

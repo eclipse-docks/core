@@ -1,26 +1,36 @@
 ---
 name: eclipse-docks-lit
 description: >-
-  LitElement patterns for Eclipse Docks canvases and UI code via docks/lit.
-  Use when writing or fixing .canvas.js, Lit templates, reactive properties,
+  Lit templates, reactive properties, and directives for Eclipse Docks canvases.
+  Use when writing or fixing .canvas.js render methods, static properties,
   directives, or styles — pure JavaScript only (no TypeScript decorators).
 ---
 
-# Eclipse Docks Lit (`docks/lit`)
+# Eclipse Docks Lit
 
-Import from `docks/lit` (same module as `@eclipse-docks/core/externals/lit`). In `.canvas.js` files use **pure JavaScript only** — no TypeScript, no decorators (`@property`, `@state`, `@customElement` are unavailable).
+A `.canvas.js` file imports `CanvasView` and every Lit export from `docks/canvas`. Use **pure JavaScript only** — no TypeScript, no decorators (`@property`, `@state`, `@customElement` are unavailable).
 
 ## Essentials
 
 ```js
-import { LitElement, html, css, nothing } from "docks/lit";
+import { CanvasView, html, css, nothing } from "docks/canvas";
+
+export default class extends CanvasView {
+  static properties = { count: { state: true }, label: { type: String } };
+  static styles = css`:host { display: block; }`;
+
+  render() {
+    return this.count ? html`<span>${this.label}</span>` : nothing;
+  }
+}
 ```
 
-- Default-export a `LitElement` subclass for canvases. Do **not** call `customElements.define` in a canvas — the host registers the tag.
+- The host registers the tag. Use `onConnect` and `onDisconnect` for setup and teardown.
 - Reactive fields: `static properties = { count: { state: true }, label: { type: String } }`.
 - Initialize defaults in `constructor` after `super()`.
 - Styles: `static styles = css\`:host { display: block; }\`;` (or an array of `css` results).
 - Templates: `render() { return html\`...\`; }` — use `nothing` for empty branches.
+- Shell UI that is not a canvas imports Lit from `docks/lit`. A canvas does not.
 
 ## Property options (common)
 
@@ -35,10 +45,10 @@ Assign **new** values for objects/arrays (`this.items = [...this.items, next]`),
 
 ## Directives
 
-Named exports from `docks/lit` (also available as in Lit docs):
+Named exports from `docks/canvas` (the same module as `@eclipse-docks/core/externals/lit`):
 
 ```js
-import { repeat, when, classMap, styleMap, ifDefined, live, ref, keyed } from "docks/lit";
+import { repeat, when, classMap, styleMap, ifDefined, live, ref, keyed } from "docks/canvas";
 ```
 
 - `repeat(items, (i) => i.id, (i) => html\`...\`)` for keyed lists
@@ -57,11 +67,12 @@ Use arrow functions or bound methods so `this` stays the element. For `wa-*` pro
 
 ## Signals (optional)
 
-`docks/lit` also re-exports `@lit-labs/signals` helpers: `signal`, `computed`, `watch`, `SignalWatcher`, `withWatch`. Prefer `static properties` for simple canvas state unless you already use signals.
+`docks/canvas` also exports the signal helpers `signal`, `computed`, `watch`, `SignalWatcher`, and `withWatch`. Prefer `static properties` for simple canvas state unless you already use signals.
 
 ## Anti-patterns
 
+- Extending `LitElement` or calling `customElements.define` in a `.canvas.js` file
 - Decorators or `.ts` syntax in `.canvas.js`
+- Implementing `connectedCallback` or `disconnectedCallback` on a canvas
 - Mutating arrays/objects in place without reassignment
 - Relying on `this` inside a non-arrow inline handler incorrectly
-- Calling `customElements.define` from a workspace canvas module

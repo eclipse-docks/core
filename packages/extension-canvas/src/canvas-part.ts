@@ -3,7 +3,8 @@ import { css, html, nothing, type PropertyValues } from '@eclipse-docks/core/ext
 import { property, state } from '@eclipse-docks/core/externals/lit';
 import type { CanvasContribution } from './contribution';
 import { compileCanvas } from './compile';
-import { canvasBridges } from './bridges/urls';
+import './bridges/canvas';
+import './bridges/core';
 import type { CanvasHost } from './host';
 import { elementFromConstructor, mountCompiled, type CanvasViewElement } from './mount';
 import { rasterizeElement, type PreviewShot } from './preview-image';
@@ -42,7 +43,6 @@ export abstract class DocksCanvasPart extends DocksPart {
             entryPath,
             entrySource: source,
             read: readWorkspaceFile,
-            bridges: canvasBridges(),
         });
         if (generation !== this.reloadGeneration) return '';
         if (!compiled.ok) {

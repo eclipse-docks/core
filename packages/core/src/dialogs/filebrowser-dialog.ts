@@ -126,6 +126,7 @@ export class DocksFilebrowserDialog extends DocksDialogContent {
       this.rootNodes = [];
     } finally {
       this.loading = false;
+      await this.selectFirstFolder();
     }
   }
 
@@ -146,6 +147,30 @@ export class DocksFilebrowserDialog extends DocksDialogContent {
     }
 
     return node;
+  }
+
+  private workspacePath(resource: Resource): string | null {
+    const path = resource.getWorkspacePath();
+    return typeof path === "string" ? path : null;
+  }
+
+  private async selectFirstFolder(): Promise<void> {
+    if (this.mode !== "directory" || this.selectedPath) return;
+    const folder = this.rootNodes.find((node) => node.resource instanceof Directory);
+    if (!folder) return;
+    this.selectedPath = this.workspacePath(folder.resource);
+    await this.updateComplete;
+    const items = this.renderRoot.querySelectorAll("wa-tree-item");
+    for (const item of items) {
+      const node = (item as HTMLElement & { model?: TreeNode }).model;
+      if (!node || !this.isSelected(node)) continue;
+      (item as HTMLElement & { selected: boolean }).selected = true;
+      return;
+    }
+  }
+
+  private isSelected(node: TreeNode): boolean {
+    return this.selectedPath != null && this.workspacePath(node.resource) === this.selectedPath;
   }
 
   private handleSelectionChange(e: CustomEvent) {
@@ -182,14 +207,13 @@ export class DocksFilebrowserDialog extends DocksDialogContent {
       this.requestUpdate();
       return;
     }
-    const path = (resource as any).getWorkspacePath?.();
-    this.selectedPath = typeof path === "string" ? path : null;
+    this.selectedPath = this.workspacePath(resource);
     this.requestUpdate();
   }
 
   private renderTreeNode(node: TreeNode): unknown {
     return html`
-      <wa-tree-item .model=${node} ?leaf=${node.leaf}>
+      <wa-tree-item .model=${node} ?leaf=${node.leaf} .selected=${this.isSelected(node)}>
         ${node.label}
         ${node.children.map((child) => this.renderTreeNode(child))}
       </wa-tree-item>

@@ -1,0 +1,1 @@
+var e=`Markdown-Editor`,t=`Markdown-Dateien (.md) anzeigen, bearbeiten und rendern`,n={EXT_MDEDITOR_NAME:e,EXT_MDEDITOR_DESC:t};export{t as EXT_MDEDITOR_DESC,e as EXT_MDEDITOR_NAME,n as default};

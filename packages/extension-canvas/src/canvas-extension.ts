@@ -12,6 +12,7 @@ import { html } from '@eclipse-docks/core/externals/lit';
 import { SYSTEM_SKILLS, type SkillContribution } from '@eclipse-docks/extension-ai-system/api';
 import { isCanvasContribution, SYSTEM_CANVASES } from './contribution';
 import { listRegisteredCanvases } from './canvases';
+import loungingCatSource from './canvases/lounging-cat.canvas.js?raw';
 import tasksSource from './canvases/tasks.canvas.js?raw';
 import { registerCanvasCatalog } from './canvas-catalog';
 import { registerCanvasTools } from './canvas-tools';
@@ -85,6 +86,14 @@ contributionRegistry.registerContribution(SYSTEM_CANVASES, {
     icon: 'list-check',
     settingsKey: 'canvas.docks.demos.tasks',
     source: tasksSource,
+});
+
+contributionRegistry.registerContribution(SYSTEM_CANVASES, {
+    name: 'lounging-cat',
+    label: 'Lounging Cat',
+    icon: 'cat',
+    settingsKey: 'canvas.docks.demos.lounging-cat',
+    source: loungingCatSource,
 });
 
 registerCanvasCatalog();

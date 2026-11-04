@@ -18,6 +18,9 @@ describe('canvas catalog', () => {
         const tasks = leaves.find(item => item.label === 'Tasks');
         expect(tasks?.state?.filename).toBe('tasks.canvas.js');
         expect(textOf(tasks?.state?.url)).toContain('Today, with intention.');
+        const cat = leaves.find(item => item.label === 'Lounging Cat');
+        expect(cat?.state?.filename).toBe('lounging-cat.canvas.js');
+        expect(textOf(cat?.state?.url)).toContain('A cat lounging on a couch');
         expect(leaves.some(item => item.label === 'Player')).toBe(false);
     });
 });

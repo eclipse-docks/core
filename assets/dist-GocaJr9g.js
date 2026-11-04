@@ -1,1 +1,0 @@
-import{St as e,Ut as t}from"./canvas-bridge-core.js-BAZLT7CK.js";import"./canvas-bridge-canvas.js-DrvOvBhU.js";export{t as File,e as getInMemoryRoot};

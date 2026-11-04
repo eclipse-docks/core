@@ -1,10 +1,11 @@
 ---
 name: eclipse-docks-canvas
 description: >-
-  Create or edit interactive Eclipse Docks canvases (.canvas.js): CanvasView UIs,
-  dashboards, todo apps, widgets, maps, and previewable tools. Use when the user
-  wants an interactive view, canvas, widget, or .canvas.js file — even if they do
-  not say "canvas".
+  Create or edit interactive Eclipse Docks canvases (.canvas.js and the matching
+  .canvas.md spec): CanvasView UIs, dashboards, todo apps, widgets, maps, and
+  previewable tools. Use when the user wants an interactive view, canvas, widget,
+  or .canvas.js file, or when a .canvas.md spec is open — even if they do not say
+  "canvas".
 ---
 
 # Eclipse Docks canvas
@@ -32,9 +33,7 @@ import { CanvasView, html, css, nothing } from "docks/canvas";
 
 The host attaches after construction and before `onConnect`. From `constructor`, `getState` returns the fallback, and `setState` and `openFile` do nothing. Leave `connectedCallback` and `disconnectedCallback` on `CanvasView`. The subclass still owns `render`, `static properties`, and `static styles`.
 
-`setState` creates a sidecar `canvas.json` for that canvas to persist its settings.
-
-Each canvas has its own `canvas.md` spec sidecar, named like the module: `notes.canvas.js` uses `notes.canvas.md`. It holds that canvas's requirements and spec, and nothing else. Use this shape:
+A canvas app consists of three files with the same stem: `….canvas.js`, `….canvas.json`, and `….canvas.md`. The `….canvas.md` file is the input that drives generation of the `….canvas.js` app. `setState` creates the `….canvas.json`. The canvas does not import either sidecar.
 
 ```md
 # Requirements
@@ -46,15 +45,13 @@ What the user asked for, in their words.
 Behavior, the data stored in canvas.json, and the UI.
 ```
 
-`workspace_write` that canvas's `canvas.md` before writing the module, and `workspace_read` it before changing an existing canvas. When the user changes the request, update that `canvas.md` first, then change the module so it matches the spec. The canvas does not import its `canvas.md`. An extension-registered canvas does not use one.
-
 ## Hard rules
 
 1. Pure JavaScript only — no TypeScript, no decorators. Declare reactive fields with `static properties = { … }`. Initialize plain defaults in `constructor`; hydrate with `getState` in `onConnect`.
 2. Build controls and chrome with Web Awesome (`wa-button`, `wa-input`, `wa-checkbox`, `wa-card`, `wa-callout`, `wa-spinner`). A raw `<button>` or `<input>` is not a substitute. Load `eclipse-docks-webawesome` before a non-trivial UI, and use `--wa-color-*` tokens instead of hardcoded colors.
 3. Emit complete, valid JavaScript — no truncated objects or unfinished strings.
 4. The page uses `Cross-Origin-Embedder-Policy: require-corp`. A cross-origin response loads only when the request is CORS and the server sends `Access-Control-Allow-Origin`, or when the server sends `Cross-Origin-Resource-Policy: cross-origin`. An `<iframe srcdoc>` inherits this policy; `sandbox="allow-same-origin"` does not exempt it.
-5. Keep the user's requirements and the spec in that canvas's `canvas.md`. When the request changes, update that file before changing the module.
+5. The `….canvas.md` file is the input that drives the `….canvas.js` app. When the request changes, update the markdown, then regenerate the module.
 
 ## Code
 
@@ -157,8 +154,8 @@ Before non-trivial UI or shell integration, load companion skills as needed:
 
 ## Workflow
 
-1. `workspace_write` `<root>/….canvas.md` with the requirements and the spec. The stem matches the module: `notes.canvas.js` uses `notes.canvas.md`.
-2. `workspace_write` the matching `<root>/….canvas.js` (qualify with a root from `workspace_list`).
+1. `workspace_write` the `<root>/….canvas.md` input (qualify with a root from `workspace_list`).
+2. `workspace_write` the `<root>/….canvas.js` app that this markdown drives, with the same stem in the same folder.
 3. `canvas.open` with that path — returns `ready` or the compile/runtime error.
 4. Before changing a canvas, `workspace_read` its `….canvas.md`. If the request changed, `workspace_write` that file, then `canvas.apply_source`. If that canvas is open in an editor, the editor marks itself dirty and recompiles the preview and does not save. If it is not open in an editor, the tool writes the file. Do not `workspace_write` a canvas that is already open.
 5. Optional: `canvas.capture_preview` to attach a screenshot (iframe contents may be blank).

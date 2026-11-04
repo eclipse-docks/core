@@ -31,5 +31,5 @@
     "url": "https://github.com/eclipse-docks/core"
   },
   "license": "EPL-2.0",
-  "description": "View and render Markdown (.md) files"
+  "description": "View, edit, and render Markdown (.md) files"
 }

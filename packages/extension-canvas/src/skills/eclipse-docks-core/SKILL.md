@@ -121,8 +121,7 @@ log.info("ready");
 
 ## Canvas notes
 
-- A canvas subclasses `CanvasView` from `docks/canvas`. Persist with `this.getState` / `this.setState` inside `onConnect` and later. `setState` creates a sidecar `canvas.json` for that canvas to persist its settings. Use `appSettings` only to share app-wide settings. A contributed canvas stores that state under its `settingsKey`.
-- Each canvas has its own spec sidecar: `notes.canvas.js` uses `notes.canvas.md`. Read and write it with `workspace_read` and `workspace_write`. The canvas does not import it. A contributed canvas has no spec file.
+- A canvas app consists of three files with the same stem: `….canvas.js`, `….canvas.json`, and `….canvas.md`. The `….canvas.md` file is the input that drives generation of the `….canvas.js` app. Persist with `this.getState` / `this.setState` inside `onConnect` and later. `setState` creates the `….canvas.json`. Use `appSettings` only to share app-wide settings. A contributed canvas stores that state under its `settingsKey` and has no `….canvas.md`.
 - `this.openFile(path)` opens a workspace path. Dialogs, toasts, and file contents stay on `docks/core`.
 - A canvas listens and publishes with `this.subscribe`, `this.unsubscribe`, and `this.publish`. It does not import those functions.
 - Cross-origin loads follow the canvas skill: CORS plus `Access-Control-Allow-Origin`, or `Cross-Origin-Resource-Policy: cross-origin`. An iframe `srcdoc` does not opt out.

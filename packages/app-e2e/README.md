@@ -62,7 +62,7 @@ This is the flow you described: prove **browser storage** round-trips through th
 
 **Default backend:** On startup, if no workspace roots are restored from persistence, `WorkspaceService` connects an IndexedDB root automatically (`connectFolder({ indexeddb: true, … })` in [`packages/core/src/core/filesys/common.ts`](../../packages/core/src/core/filesys/common.ts)). No extra “connect WebDAV” step is required for a first-run harness.
 
-**Why Monaco (not markdown):** [`@eclipse-docks/extension-md-editor`](../../packages/extension-md-editor/src/md-editor-extension.ts) renders Markdown as HTML and does **not** implement a save path for editing. For **type → save → reload**, add [`@eclipse-docks/extension-monaco-editor`](../../packages/extension-monaco-editor/src/monaco-editor-extension.ts) to the harness: it handles any `File`, and `docks-monaco-editor` calls `saveContents` from the global **`save`** command (`CTRL+S` — [`packages/core/src/commands/global.ts`](../../packages/core/src/commands/global.ts)).
+**Why Monaco for the persist spec:** [`@eclipse-docks/extension-md-editor`](../../packages/extension-md-editor/src/md-editor-extension.ts) opens `.md` files with a source/preview toggle and saves from that editor. The workspace persist spec uses [`@eclipse-docks/extension-monaco-editor`](../../packages/extension-monaco-editor/src/monaco-editor-extension.ts), which handles any `File`, and `docks-monaco-editor` calls `saveContents` from the global **`save`** command (`CTRL+S` — [`packages/core/src/commands/global.ts`](../../packages/core/src/commands/global.ts)).
 
 **Suggested E2E sequence (scoped to IndexedDB):**
 

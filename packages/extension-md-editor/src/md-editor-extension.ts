@@ -1,5 +1,5 @@
-import { css, html, nothing } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { css, html, nothing, type PropertyValues } from 'lit';
+import { customElement, property, query, state } from 'lit/decorators.js';
 import {
     DocksPart,
     EditorContentProvider,
@@ -10,6 +10,8 @@ import {
     parseMarkdownHtml,
 } from '@eclipse-docks/core';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import '@eclipse-docks/extension-monaco-editor/widget';
+import type { DocksMonacoWidget } from '@eclipse-docks/extension-monaco-editor/widget';
 
 editorRegistry.registerEditorInputHandler({
     editorId: 'system.md-editor',
@@ -45,13 +47,23 @@ export class DocksMDEditor extends DocksPart implements EditorContentProvider {
     @state()
     private rendered = '';
 
+    @query('docks-monaco-widget')
+    private widget?: DocksMonacoWidget;
+
     private sourceText = '';
+    private sourceUri = 'markdown.md';
 
     protected async doInitUI() {
         const data = this.input?.data;
-        if (data instanceof File) this.sourceText = String(await data.getContents() ?? '');
-        else if (typeof data === 'string' && data.startsWith('http')) this.sourceText = await (await fetch(data)).text();
-        else if (typeof data === 'string') this.sourceText = data;
+        if (data instanceof File) {
+            this.sourceText = String(await data.getContents() ?? '');
+            this.sourceUri = data.getWorkspacePath();
+        } else if (typeof data === 'string' && data.startsWith('http')) {
+            this.sourceText = await (await fetch(data)).text();
+            this.sourceUri = 'remote.md';
+        } else if (typeof data === 'string') {
+            this.sourceText = data;
+        }
         this.rendered = parseMarkdownHtml(this.sourceText);
         this.mode = this.input?.state?.mode === 'source' ? 'source' : 'preview';
         this.scrollMode = this.mode === 'source' ? 'none' : 'scroller';
@@ -59,14 +71,20 @@ export class DocksMDEditor extends DocksPart implements EditorContentProvider {
     }
 
     protected doClose() {
+        this.widget?.dispose();
         this.input = undefined;
         this.sourceText = '';
         this.rendered = '';
         this.ready = false;
     }
 
+    protected override updated(changed: PropertyValues) {
+        super.updated(changed);
+        if (this.mode === 'source') this.widget?.layout();
+    }
+
     override async save(): Promise<void> {
-        const value = this.readSource();
+        const value = this.getContent() ?? '';
         const data = this.input?.data;
         if (data instanceof File) await data.saveContents(value);
         this.rendered = parseMarkdownHtml(value);
@@ -74,34 +92,15 @@ export class DocksMDEditor extends DocksPart implements EditorContentProvider {
     }
 
     getContent(): string | null {
-        return this.readSource();
+        return this.widget?.getContent() ?? this.sourceText;
     }
 
     getSelection(): string | null {
-        const field = this.sourceField();
-        if (!field) return null;
-        const { selectionStart, selectionEnd, value } = field;
-        if (selectionStart === selectionEnd) return '';
-        return value.slice(selectionStart, selectionEnd);
+        return this.widget?.getSelection() ?? null;
     }
 
     getSnippet(lines = 5): { snippet: string; cursorLine: number } | null {
-        const field = this.sourceField();
-        const text = this.getContent();
-        if (!field || text == null) return null;
-        const rows = text.split('\n');
-        let cursorLine = 0;
-        let seen = 0;
-        for (let index = 0; index < rows.length; index++) {
-            seen += rows[index].length + 1;
-            if (seen > field.selectionStart) {
-                cursorLine = index;
-                break;
-            }
-        }
-        const start = Math.max(0, cursorLine - lines);
-        const end = Math.min(rows.length, cursorLine + lines + 1);
-        return { snippet: rows.slice(start, end).join('\n'), cursorLine };
+        return this.widget?.getSnippet(lines) ?? null;
     }
 
     getLanguage(): string | null {
@@ -118,7 +117,7 @@ export class DocksMDEditor extends DocksPart implements EditorContentProvider {
     }
 
     private toggleMode() {
-        this.readSource();
+        this.sourceText = this.widget?.getContent() ?? this.sourceText;
         const next = this.mode === 'preview' ? 'source' : 'preview';
         this.mode = next;
         if (this.input) this.input.state.mode = next;
@@ -126,24 +125,12 @@ export class DocksMDEditor extends DocksPart implements EditorContentProvider {
         if (next === 'preview') this.rendered = parseMarkdownHtml(this.sourceText);
     }
 
-    private onInput = (event: Event) => {
-        const control = event.currentTarget as HTMLElement & { value?: string };
-        const next = typeof control.value === 'string' ? control.value : this.sourceText;
+    private onContentChange = () => {
+        const next = this.widget?.getContent() ?? this.sourceText;
         if (next === this.sourceText) return;
         this.sourceText = next;
         if (this.input?.data instanceof File) this.markDirty(true);
     };
-
-    private readSource(): string {
-        const control = this.renderRoot.querySelector('wa-textarea') as (HTMLElement & { value?: string }) | null;
-        if (control && typeof control.value === 'string') this.sourceText = control.value;
-        return this.sourceText;
-    }
-
-    private sourceField(): HTMLTextAreaElement | null {
-        const host = this.renderRoot.querySelector('wa-textarea');
-        return host?.shadowRoot?.querySelector('textarea') ?? null;
-    }
 
     protected renderToolbar() {
         if (!this.ready) return nothing;
@@ -159,18 +146,18 @@ export class DocksMDEditor extends DocksPart implements EditorContentProvider {
 
     protected renderContent() {
         if (!this.ready) return html``;
-        if (this.mode === 'source') {
-            return html`
-                <wa-textarea
-                    class="md-source"
-                    resize="none"
-                    .value=${this.sourceText}
-                    ?readonly=${!(this.input?.data instanceof File)}
-                    @input=${this.onInput}>
-                </wa-textarea>
-            `;
-        }
-        return html`<div class="md-preview">${unsafeHTML(this.rendered)}</div>`;
+        const showPreview = this.mode === 'preview';
+        return html`
+            <div class="md-preview ${showPreview ? '' : 'md-hidden'}">${unsafeHTML(this.rendered)}</div>
+            <docks-monaco-widget
+                class=${showPreview ? 'md-hidden' : ''}
+                .value=${this.sourceText}
+                .language=${'markdown'}
+                .uri=${this.sourceUri}
+                .readOnly=${!(this.input?.data instanceof File)}
+                @content-change=${this.onContentChange}>
+            </docks-monaco-widget>
+        `;
     }
 
     static styles = css`
@@ -183,22 +170,8 @@ export class DocksMDEditor extends DocksPart implements EditorContentProvider {
             padding: var(--wa-space-m, 0.75rem);
             box-sizing: border-box;
         }
-        .md-source {
-            display: block;
-            width: 100%;
-            height: 100%;
-            min-height: 0;
-        }
-        .md-source::part(base) {
-            height: 100%;
-            min-height: 0;
-        }
-        .md-source::part(textarea) {
-            height: 100%;
-            min-height: 100%;
-            resize: none;
-            font-family: var(--wa-font-mono, ui-monospace, monospace);
-        }
+        .md-preview.md-hidden, docks-monaco-widget.md-hidden { display: none; }
+        docks-monaco-widget { display: block; height: 100%; min-height: 0; }
     `;
 }
 

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@eclipse-docks/core": "*",
+    "@eclipse-docks/extension-monaco-editor": "*",
     "marked": "^12.0.0 || ^16.4.1"
   },
   "devDependencies": {

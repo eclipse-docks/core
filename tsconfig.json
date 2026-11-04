@@ -4,11 +4,18 @@
     "module": "ESNext",
     "lib": ["ES2022", "DOM"],
     "moduleResolution": "bundler",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
     "noEmit": true,
     "strict": true,
     "skipLibCheck": true,
-    "typeRoots": ["./node_modules/@types"]
+    "typeRoots": ["./node_modules/@types"],
+    "paths": {
+      "@eclipse-docks/core": ["./packages/core/src/index.ts"],
+      "@eclipse-docks/core/*": ["./packages/core/src/*"],
+      "@eclipse-docks/extension-monaco-editor/widget": ["./packages/extension-monaco-editor/src/widget.ts"]
+    }
   },
   "include": ["packages/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/dist/**"]
 }

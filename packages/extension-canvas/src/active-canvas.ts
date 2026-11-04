@@ -42,7 +42,7 @@ export function connectedWorkspaceEditors(path?: string): ActiveCanvas[] {
 export function findOpenCanvas(): ActiveCanvas | null {
     const active = readActiveCanvas();
     if (active?.capturePreview) return active;
-    for (const node of document.querySelectorAll('docks-canvas-editor, docks-canvas-surface, docks-canvas-viewer')) {
+    for (const node of document.querySelectorAll('docks-canvas-editor, docks-canvas-viewer')) {
         const mapped = fromElement(node as unknown as CanvasElement);
         if (mapped?.capturePreview) return mapped;
     }
@@ -52,7 +52,7 @@ export function findOpenCanvas(): ActiveCanvas | null {
 function fromElement(active: CanvasElement | null): ActiveCanvas | null {
     if (!active) return null;
     const localName = active.localName;
-    if (localName !== 'docks-canvas-editor' && localName !== 'docks-canvas-surface' && localName !== 'docks-canvas-viewer') return null;
+    if (localName !== 'docks-canvas-editor' && localName !== 'docks-canvas-viewer') return null;
     return {
         kind: active.kind === 'registered' ? 'registered' : 'workspace',
         canvasName: active.canvasName,

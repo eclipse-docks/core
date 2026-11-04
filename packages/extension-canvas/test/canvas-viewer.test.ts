@@ -79,19 +79,19 @@ describe('CanvasView host helpers', () => {
         const seen: unknown[] = [];
         const token = element.subscribe('canvas-view-events', (data) => seen.push(data));
         element.publish('canvas-view-events', 1);
-        await new Promise((resolve) => queueMicrotask(resolve));
+        await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
         expect(seen).toEqual([1]);
 
         element.unsubscribe(token);
         element.publish('canvas-view-events', 2);
-        await new Promise((resolve) => queueMicrotask(resolve));
+        await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
         expect(seen).toEqual([1]);
 
         element.subscribe('canvas-view-events', (data) => seen.push(data));
         document.body.append(element);
         element.remove();
         element.publish('canvas-view-events', 3);
-        await new Promise((resolve) => queueMicrotask(resolve));
+        await new Promise<void>((resolve) => queueMicrotask(() => resolve()));
         expect(seen).toEqual([1]);
     });
 });

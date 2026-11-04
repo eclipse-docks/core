@@ -36,7 +36,7 @@ const {
 });
 
 vi.mock('@eclipse-docks/core', async () => {
-  const filesys = await import('../../core/src/core/filesys/index.ts');
+  const filesys = await import('../../core/src/core/filesys/index');
   return {
     registerAll: registerAllMock,
     toastError: toastErrorMock,
@@ -57,7 +57,7 @@ vi.mock('jszip', () => ({
 
 describe('unzip command', () => {
   async function setupWorkspace(name: string) {
-    const { workspaceService } = await import('../../core/src/core/filesys/index.ts');
+    const { workspaceService } = await import('../../core/src/core/filesys/index');
     await workspaceService.disconnectWorkspace();
     await workspaceService.connectFolder({ indexeddb: true, name });
     return workspaceService;
@@ -72,7 +72,7 @@ describe('unzip command', () => {
     const workspaceService = await setupWorkspace(folder);
     const workspace = await workspaceService.getWorkspace();
     const zipFile = await workspace?.getResource(`${folder}/archive.zip`, { create: true });
-    await (zipFile as { saveContents: (blob: Blob) => Promise<void> }).saveContents(new Blob(['x']));
+    await (zipFile as unknown as { saveContents: (blob: Blob) => Promise<void> }).saveContents(new Blob(['x']));
     activeSelectionSignalMock.get.mockReturnValue({ path: `${folder}/archive.zip` });
     jsZipLoadAsyncMock.mockResolvedValue({
       files: {

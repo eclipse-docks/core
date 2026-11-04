@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { getInMemoryRoot } from '@eclipse-docks/core';
+import { File, getInMemoryRoot } from '@eclipse-docks/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { estimateSessionContextUsage } from '../src/runtime/context/usage';
 import { emptyBuffers } from '../src/runtime/core/tick';
@@ -66,8 +66,8 @@ describe('tool result spill', () => {
     await publishSpilledToolResults(SESSION, [message]);
     const root = getInMemoryRoot();
     const file = await root.getResource(path.slice('in-memory/'.length));
-    expect(file).toBeTruthy();
-    const contents = await file!.getContents();
+    if (!(file instanceof File)) throw new Error('expected spilled file');
+    const contents = await file.getContents();
     expect(contents).toBe(JSON.stringify({ content: body }));
 
     await removeSessionWorkspaceFolder(SESSION);
@@ -75,7 +75,8 @@ describe('tool result spill', () => {
 
     await publishSpilledToolResults(SESSION, [message]);
     const restored = await root.getResource(path.slice('in-memory/'.length));
-    expect(await restored!.getContents()).toBe(JSON.stringify({ content: body }));
+    if (!(restored instanceof File)) throw new Error('expected spilled file');
+    expect(await restored.getContents()).toBe(JSON.stringify({ content: body }));
   });
 
   it('replaces large argument strings and republishes the original JSON', async () => {
@@ -97,7 +98,8 @@ describe('tool result spill', () => {
     await publishSpilledToolResults(SESSION, [message]);
     const root = getInMemoryRoot();
     const file = await root.getResource(path.slice('in-memory/'.length));
-    expect(await file!.getContents()).toBe(JSON.stringify(tool.args));
+    if (!(file instanceof File)) throw new Error('expected spilled file');
+    expect(await file.getContents()).toBe(JSON.stringify(tool.args));
   });
 
   it('estimates context from the transcript preview, not the stored body', () => {

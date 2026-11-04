@@ -55,8 +55,9 @@ test.describe('canvas editor', () => {
         await canvas.getByRole('button', { name: 'Source' }).click();
         const widget = canvas.locator('docks-monaco-widget');
         await expect(widget).toBeVisible({ timeout: UI_MS });
-        await widget.evaluate((el: { getEditor?: () => { setValue: (value: string) => void } }, source: string) => {
-            el.getEditor?.().setValue(source);
+        await widget.evaluate((el, source: string) => {
+            const editor = el as { getEditor?: () => { setValue: (value: string) => void } };
+            editor.getEditor?.().setValue(source);
         }, SOURCE);
         await canvas.getByRole('button', { name: 'Preview' }).click();
         await expect(canvas.getByRole('button', { name: 'Canvas Ready' })).toBeVisible({ timeout: UI_MS });
@@ -77,27 +78,30 @@ test.describe('canvas editor', () => {
         await canvas.locator('wa-scroller.canvas-scroll').evaluate((el) => { el.scrollTop = el.scrollHeight; });
         await expect(bottom).toBeVisible({ timeout: UI_MS });
 
-        await canvas.evaluate(async (el: { setSource: (value: string) => void; markDirty: (dirty: boolean) => void; updateComplete: Promise<unknown> }, source: string) => {
-            el.markDirty(false);
-            el.setSource(source);
-            await el.updateComplete;
-            el.markDirty(true);
+        await canvas.evaluate(async (el, source: string) => {
+            const editor = el as unknown as { setSource: (value: string) => void; markDirty: (dirty: boolean) => void; updateComplete: Promise<unknown> };
+            editor.markDirty(false);
+            editor.setSource(source);
+            await editor.updateComplete;
+            editor.markDirty(true);
         }, FROM_DIRTY);
         await expect(canvas.getByRole('button', { name: 'Canvas From Dirty' })).toBeVisible({ timeout: UI_MS });
 
         await canvas.getByRole('button', { name: 'Source' }).click();
-        await widget.evaluate((el: { getEditor?: () => { setValue: (value: string) => void } }, source: string) => {
-            el.getEditor?.().setValue(source);
+        await widget.evaluate((el, source: string) => {
+            const editor = el as { getEditor?: () => { setValue: (value: string) => void } };
+            editor.getEditor?.().setValue(source);
         }, UPDATED);
         await canvas.getByRole('button', { name: 'Preview' }).click();
         await expect(canvas.getByRole('button', { name: 'Canvas Updated' })).toBeVisible({ timeout: UI_MS });
 
-        await canvas.evaluate(async (el: { save: () => Promise<void>; executeCommand: (command: string, params: Record<string, string>) => Promise<void> }) => {
-            await el.save();
-            await el.executeCommand('canvas.show_as_view', { slot: 'sidebar-main' });
+        await canvas.evaluate(async (el) => {
+            const editor = el as unknown as { save: () => Promise<void>; executeCommand: (command: string, params: Record<string, string>) => Promise<void> };
+            await editor.save();
+            await editor.executeCommand('canvas.show_as_view', { slot: 'sidebar-main' });
         });
         const sidebar = page.locator('docks-tabs#sidebar-main');
         await sidebar.getByRole('tab', { name: FILE_NAME }).click();
-        await expect(sidebar.locator('docks-canvas-surface').getByRole('button', { name: 'Canvas Updated' })).toBeVisible({ timeout: UI_MS });
+        await expect(sidebar.locator('docks-canvas-editor').getByRole('button', { name: 'Canvas Updated' })).toBeVisible({ timeout: UI_MS });
     });
 });

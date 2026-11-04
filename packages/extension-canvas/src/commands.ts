@@ -65,7 +65,7 @@ export function showCanvasView(slot: string, path: string, source: string): stri
         label: path.split('/').pop() || path,
         icon: 'table-columns',
         closable: true,
-        component: (id: string) => html`<docks-canvas-surface id="${id}" .entryPath=${path} .source=${source}></docks-canvas-surface>`,
+        component: (id: string) => html`<docks-canvas-editor id="${id}" .entryPath=${path} .source=${source}></docks-canvas-editor>`,
     });
     return 'ready';
 }

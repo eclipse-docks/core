@@ -1,6 +1,6 @@
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { defineConfig } from 'vite';
+import { defineConfig, type PreviewServer } from 'vite';
 import crossOriginIsolation from 'vite-plugin-cross-origin-isolation';
 import mkcert from 'vite-plugin-mkcert';
 import { appSplashPlugin } from '../core/src/vite-plugin-app-splash';
@@ -16,7 +16,7 @@ const e2eHttpPreview = process.env.E2E_HTTP_PREVIEW === '1';
 function crossOriginIsolationPreviewPlugin() {
     return {
         name: 'cross-origin-isolation-preview',
-        configurePreviewServer(server) {
+        configurePreviewServer(server: PreviewServer) {
             server.middlewares.use((_req, res, next) => {
                 res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
                 res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');

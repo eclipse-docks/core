@@ -4,7 +4,7 @@ import {
     TOPIC_WORKSPACE_CHANGED,
     type EditorContentProvider,
 } from '@eclipse-docks/core';
-import { css, html, nothing, type PropertyValues } from '@eclipse-docks/core/externals/lit';
+import { css, html, nothing, type CSSResultGroup, type PropertyValues } from '@eclipse-docks/core/externals/lit';
 import { customElement, property, query, state } from '@eclipse-docks/core/externals/lit';
 import '@eclipse-docks/extension-monaco-editor/widget';
 import type { DocksMonacoWidget } from '@eclipse-docks/extension-monaco-editor/widget';
@@ -14,8 +14,8 @@ import { createContributionHost, createFileHost } from './host';
 import { attachPreviewShot, type PreviewShot } from './preview-image';
 import { readWorkspaceFile } from './workspace-file';
 
-@customElement('docks-canvas-surface')
-export class DocksCanvasSurface extends DocksCanvasPart implements EditorContentProvider {
+@customElement('docks-canvas-editor')
+export class DocksCanvasEditor extends DocksCanvasPart implements EditorContentProvider {
     @property() kind: 'workspace' | 'registered' = 'workspace';
     @property() entryPath = '';
     @property({ type: Boolean }) showSource = false;
@@ -297,7 +297,7 @@ export class DocksCanvasSurface extends DocksCanvasPart implements EditorContent
         `;
     }
 
-    static styles = [DocksCanvasPart.styles, css`
+    static styles = css`
         .canvas-preview.canvas-hidden, docks-monaco-widget.canvas-hidden { display: none; }
         .canvas-preview.canvas-capture {
             display: flex !important;
@@ -309,11 +309,13 @@ export class DocksCanvasSurface extends DocksCanvasPart implements EditorContent
             background: var(--wa-color-surface-default, #fff);
         }
         docks-monaco-widget { display: block; height: 100%; min-height: 0; }
-    `];
-}
+    `;
 
-@customElement('docks-canvas-editor')
-export class DocksCanvasEditor extends DocksCanvasSurface {
+    static finalizeStyles(styles?: CSSResultGroup) {
+        const group = styles === undefined ? DocksCanvasPart.styles : [DocksCanvasPart.styles, styles];
+        return super.finalizeStyles(group);
+    }
+
     override async save(): Promise<void> {
         const value = this.getContent() ?? '';
         const data = this.input?.data;
@@ -329,7 +331,6 @@ function nextFrame(): Promise<void> {
 
 declare global {
     interface HTMLElementTagNameMap {
-        'docks-canvas-surface': DocksCanvasSurface;
         'docks-canvas-editor': DocksCanvasEditor;
     }
 }

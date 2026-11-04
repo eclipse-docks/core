@@ -5,6 +5,7 @@ import path from 'path';
 import dts from 'vite-plugin-dts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const isExternal = (id: string): boolean => {
   if (
     id === 'monaco-editor' ||
@@ -17,7 +18,12 @@ const isExternal = (id: string): boolean => {
 };
 
 export default defineConfig({
-  plugins: [dts({ outDir: 'dist', entryRoot: 'src', rollupTypes: false, tsconfigPath: path.resolve(__dirname, 'tsconfig.build.json') })],
+  // Relative base so worker files are `new URL(..., import.meta.url)` and the app build copies them.
+  // An absolute `/assets/...` URL is left as a string and never emitted into the published app.
+  base: './',
+  plugins: [
+    dts({ outDir: 'dist', entryRoot: 'src', rollupTypes: false, tsconfigPath: path.resolve(__dirname, 'tsconfig.build.json') }),
+  ],
   build: {
     lib: {
       entry: {

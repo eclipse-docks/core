@@ -1,10 +1,50 @@
 import { createJsRuntime, type JsRuntime } from '@eclipse-docks/core';
-import type { TerminalBackend } from './terminal-api';
+import { terminalService } from './terminal-service';
+import type { Terminal, TerminalBackend, TerminalCreationOptions } from './terminal-api';
 import { LineInput } from './line-input';
 
 export const JS_REPL_PROFILE_ID = 'terminal.javascript-repl';
+export const JS_SESSION_PROFILE_ID = 'terminal.javascript-session';
 
 const PROMPT = '> ';
+
+const sessions = new Map<string, JsRuntime>();
+
+export function unbindJsSession(sessionId: string): void {
+  sessions.delete(sessionId);
+}
+
+export function createJsSessionBackend(options?: TerminalCreationOptions): JsReplBackend {
+  const sessionId = options?.env?.jsSessionId;
+  const runtime = sessionId ? sessions.get(sessionId) : undefined;
+  if (!runtime) throw new Error('JavaScript session is no longer available');
+  return new JsReplBackend({
+    runtime,
+    ownsRuntime: false,
+    sessionLabel: options?.env?.sessionLabel || 'session',
+  });
+}
+
+export function openJsSessionTerminal(
+  runtime: JsRuntime,
+  sessionId: string,
+  name: string,
+  sessionLabel = 'session',
+): Promise<Terminal | undefined> {
+  sessions.set(sessionId, runtime);
+  return terminalService.createTerminal({
+    profileId: JS_SESSION_PROFILE_ID,
+    name,
+    env: { jsSessionId: sessionId, sessionLabel },
+  });
+}
+
+interface JsReplBackendOptions {
+  runtime?: JsRuntime;
+  /** When false, closing the terminal leaves the runtime running. */
+  ownsRuntime?: boolean;
+  sessionLabel?: string;
+}
 
 function formatJsResult(value: unknown): string {
   if (value === undefined) return '';
@@ -16,11 +56,16 @@ function formatJsResult(value: unknown): string {
 export class JsReplBackend implements TerminalBackend {
   private writeCallbacks = new Set<(data: string) => void>();
   private lineInput: LineInput;
-  private runtime: JsRuntime | null = null;
+  private runtime: JsRuntime | null;
+  private ownsRuntime: boolean;
+  private sessionLabel: string;
   private running = false;
 
-  constructor() {
+  constructor(options?: JsReplBackendOptions) {
     this.lineInput = new LineInput((data) => this.emit(data));
+    this.runtime = options?.runtime ?? null;
+    this.ownsRuntime = options?.ownsRuntime ?? !options?.runtime;
+    this.sessionLabel = options?.sessionLabel ?? 'session';
   }
 
   onDidWrite(callback: (data: string) => void): () => void {
@@ -35,16 +80,23 @@ export class JsReplBackend implements TerminalBackend {
   private getRuntime(): JsRuntime {
     if (!this.runtime) {
       this.runtime = createJsRuntime();
+      this.ownsRuntime = true;
     }
     return this.runtime;
   }
 
   async open(): Promise<void> {
-    this.emit('JavaScript REPL\r\n\r\n' + PROMPT);
+    if (!this.runtime) {
+      this.runtime = createJsRuntime();
+      this.ownsRuntime = true;
+      this.emit('JavaScript REPL\r\n\r\n' + PROMPT);
+      return;
+    }
+    this.emit(`JavaScript (${this.sessionLabel})\r\n\r\n` + PROMPT);
   }
 
   close(): void {
-    this.runtime?.close();
+    if (this.ownsRuntime) this.runtime?.close();
     this.runtime = null;
     this.lineInput.reset();
   }

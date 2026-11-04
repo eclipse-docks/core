@@ -6,9 +6,11 @@ import { styleMap } from "lit/directives/style-map.js";
 import { EditorInput, EditorContentProvider } from "@eclipse-docks/core";
 import '@eclipse-docks/extension-monaco-editor/widget';
 import type { DocksMonacoWidget } from '@eclipse-docks/extension-monaco-editor/widget';
+import { toastError } from "@eclipse-docks/core";
+import { AttachedTerminal } from "@eclipse-docks/extension-terminal/api";
 import { PyEnv, pythonPackageManagerService } from "./api";
 import { parsePackagesFromContent, contentWithPackagesLine } from "./editor-python-run";
-import { toastError } from "@eclipse-docks/core";
+import { openEditorPythonTerminal, unbindEditorPythonSession } from "./python-terminal-backend";
 
 @customElement("docks-python-editor")
 export class DocksPythonEditor extends DocksPart implements EditorContentProvider {
@@ -32,6 +34,16 @@ export class DocksPythonEditor extends DocksPart implements EditorContentProvide
     private pyVersion?: string;
 
     private widgetRef = createRef<DocksMonacoWidget>();
+    private readonly sessionId = crypto.randomUUID();
+    private editorClosed = false;
+    private readonly attachedTerminal = new AttachedTerminal(
+        () => {
+            if (!this.pyenv) return Promise.resolve(undefined);
+            const name = this.input?.data?.getName?.() ?? "Python";
+            return openEditorPythonTerminal(this.pyenv, this.sessionId, name);
+        },
+        () => unbindEditorPythonSession(this.sessionId),
+    );
 
     protected async doInitUI() {
         const file = this.input!.data;
@@ -52,7 +64,9 @@ export class DocksPythonEditor extends DocksPart implements EditorContentProvide
     }
 
     protected doClose() {
+        this.editorClosed = true;
         this.widgetRef.value?.dispose();
+        this.attachedTerminal.release();
         if (this.pyenv) {
             this.pyenv.close();
             this.pyenv = undefined;
@@ -103,15 +117,26 @@ export class DocksPythonEditor extends DocksPart implements EditorContentProvide
     }
 
     async connectPython(): Promise<void> {
-        if (this.pyConnecting || this.pyConnected) return;
+        if (this.pyConnecting) return;
+        if (this.pyConnected) {
+            await this.showSessionTerminal();
+            return;
+        }
         try {
             this.pyConnecting = true;
             await this.initPyEnv();
+            await this.showSessionTerminal();
         } catch (err) {
             toastError(err instanceof Error ? err.message : String(err));
         } finally {
             this.pyConnecting = false;
         }
+    }
+
+    private async showSessionTerminal(): Promise<void> {
+        const opened = await this.attachedTerminal.show();
+        if (opened || this.editorClosed) return;
+        toastError("Could not open the Python terminal");
     }
 
     private async runScript(): Promise<void> {
@@ -162,8 +187,8 @@ export class DocksPythonEditor extends DocksPart implements EditorContentProvide
     protected renderToolbar() {
         const connectionTitle = this.pyConnecting
             ? "Connecting to Python..."
-            : this.pyConnected
-              ? "Python Connected"
+              : this.pyConnected
+              ? "Show Python terminal"
               : "Python Disconnected - Click to connect";
         const connectionText = this.pyConnecting
             ? "Connecting..."

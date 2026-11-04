@@ -13,6 +13,7 @@
     "@eclipse-docks/core": "*",
     "@eclipse-docks/extension-catalog": "*",
     "@eclipse-docks/extension-monaco-editor": "*",
+    "@eclipse-docks/extension-terminal": "*",
     "marked": "^12.0.0 || ^16.4.1"
   },
   "devDependencies": {

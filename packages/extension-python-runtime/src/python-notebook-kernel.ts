@@ -4,8 +4,10 @@ import type {
   NotebookKernelContribution,
 } from '@eclipse-docks/extension-notebook';
 import { TARGET_NOTEBOOK_KERNELS } from '@eclipse-docks/extension-notebook';
+import { AttachedTerminal } from '@eclipse-docks/extension-terminal/api';
 import { PyEnv } from './pyservice';
 import { pythonPackageManagerService } from './package-manager';
+import { openEditorPythonTerminal, unbindEditorPythonSession } from './python-terminal-backend';
 
 class PythonNotebookKernel implements NotebookKernel {
   readonly id = 'python';
@@ -16,6 +18,20 @@ class PythonNotebookKernel implements NotebookKernel {
   private requiredPackages: string[] = [];
   private loadedPackages = new Set<string>();
   private connectPromise: Promise<void> | null = null;
+  private terminalName = 'Python';
+  private readonly sessionId = crypto.randomUUID();
+  private readonly attachedTerminal = new AttachedTerminal(
+    () => {
+      if (!this.pyenv) return Promise.resolve(undefined);
+      return openEditorPythonTerminal(this.pyenv, this.sessionId, this.terminalName, 'notebook session');
+    },
+    () => unbindEditorPythonSession(this.sessionId),
+  );
+
+  async showSessionTerminal(name?: string): Promise<void> {
+    if (name) this.terminalName = name;
+    await this.attachedTerminal.show();
+  }
 
   async connect(options?: { requiredPackages?: string[] }): Promise<void> {
     if (this.connectPromise) {
@@ -162,6 +178,7 @@ except ImportError:
   }
 
   async restart(): Promise<void> {
+    this.attachedTerminal.reset();
     if (this.pyenv) {
       this.pyenv.close();
       this.pyenv = null;
@@ -187,6 +204,7 @@ except ImportError:
   }
 
   close(): void {
+    this.attachedTerminal.release();
     if (this.pyenv) {
       this.pyenv.close();
       this.pyenv = null;

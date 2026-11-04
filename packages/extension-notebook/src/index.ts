@@ -16,5 +16,5 @@ extensionRegistry.registerExtension({
   description: t.EXT_NOTEBOOK_DESC,
   loader: () => import("./notebook-extension"),
   icon: "docks jupyter",
-  dependencies: [],
+  dependencies: ["@eclipse-docks/extension-terminal"],
 });

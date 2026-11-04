@@ -1,8 +1,61 @@
-import type { TerminalBackend } from '@eclipse-docks/extension-terminal/api';
-import { LineInput } from '@eclipse-docks/extension-terminal/api';
+import {
+  LineInput,
+  terminalService,
+  type Terminal,
+  type TerminalBackend,
+  type TerminalCreationOptions,
+} from '@eclipse-docks/extension-terminal/api';
 import { PyEnv } from './pyservice';
 
 const PROMPT = '>>> ';
+
+/** Editor sessions keyed so a terminal profile can attach without owning the worker. */
+const editorSessions = new Map<string, PyEnv>();
+
+export const PYTHON_REPL_PROFILE_ID = 'terminal.python-repl';
+export const PYTHON_SESSION_PROFILE_ID = 'terminal.python-session';
+
+function bindEditorPythonSession(sessionId: string, pyenv: PyEnv): void {
+  editorSessions.set(sessionId, pyenv);
+}
+
+export function unbindEditorPythonSession(sessionId: string): void {
+  editorSessions.delete(sessionId);
+}
+
+export function createEditorPythonSessionBackend(options?: TerminalCreationOptions): PythonReplBackend {
+  const sessionId = options?.env?.pythonSessionId;
+  const pyenv = sessionId ? editorSessions.get(sessionId) : undefined;
+  if (!pyenv) {
+    throw new Error('Python session is no longer available');
+  }
+  return new PythonReplBackend({
+    pyenv,
+    ownsEnv: false,
+    sessionLabel: options?.env?.sessionLabel || 'editor session',
+  });
+}
+
+export function openEditorPythonTerminal(
+  pyenv: PyEnv,
+  sessionId: string,
+  name: string,
+  sessionLabel = 'editor session',
+): Promise<Terminal | undefined> {
+  bindEditorPythonSession(sessionId, pyenv);
+  return terminalService.createTerminal({
+    profileId: PYTHON_SESSION_PROFILE_ID,
+    name,
+    env: { pythonSessionId: sessionId, sessionLabel },
+  });
+}
+
+interface PythonReplBackendOptions {
+  pyenv?: PyEnv;
+  /** When false, closing the terminal leaves the Python worker running. */
+  ownsEnv?: boolean;
+  sessionLabel?: string;
+}
 
 function formatExecResult(response: unknown): string {
   const result =
@@ -23,11 +76,16 @@ export class PythonReplBackend implements TerminalBackend {
   private writeCallbacks = new Set<(data: string) => void>();
   private lineInput: LineInput;
   private pyenv: PyEnv | null = null;
+  private ownsEnv: boolean;
+  private sessionLabel: string;
   private running = false;
   private atLineStart = true;
 
-  constructor() {
+  constructor(options?: PythonReplBackendOptions) {
     this.lineInput = new LineInput((data: string) => this.emit(data));
+    this.pyenv = options?.pyenv ?? null;
+    this.ownsEnv = options?.ownsEnv ?? !options?.pyenv;
+    this.sessionLabel = options?.sessionLabel ?? 'editor session';
   }
 
   onDidWrite(callback: (data: string) => void): () => void {
@@ -48,11 +106,13 @@ export class PythonReplBackend implements TerminalBackend {
   }
 
   async open(): Promise<void> {
-    this.emit('Initializing Python...\r\n');
-    this.pyenv = new PyEnv();
-    await this.pyenv.init();
-    this.pyenv.setStdoutCallback((text) => this.emit(text));
-    this.pyenv.setStderrCallback((text) => this.emit(`\x1b[31m${text}\x1b[0m`));
+    if (!this.pyenv) {
+      this.emit('Initializing Python...\r\n');
+      this.pyenv = new PyEnv();
+      await this.pyenv.init();
+      this.ownsEnv = true;
+    }
+    this.attachStreams();
 
     let version = '';
     try {
@@ -61,14 +121,23 @@ export class PythonReplBackend implements TerminalBackend {
       version = '';
     }
 
-    this.emit(`Python ${version} REPL (Pyodide)\r\n\r\n`);
+    const label = version ? `Python ${version}` : 'Python';
+    const banner = this.ownsEnv ? `${label} REPL (Pyodide)` : `${label} (${this.sessionLabel})`;
+    this.emit(`${banner}\r\n\r\n`);
     this.emitPrompt();
   }
 
   close(): void {
-    this.pyenv?.close();
+    this.pyenv?.setStdoutCallback(undefined);
+    this.pyenv?.setStderrCallback(undefined);
+    if (this.ownsEnv) this.pyenv?.close();
     this.pyenv = null;
     this.lineInput.reset();
+  }
+
+  private attachStreams(): void {
+    this.pyenv?.setStdoutCallback((text) => this.emit(text));
+    this.pyenv?.setStderrCallback((text) => this.emit(`\x1b[31m${text}\x1b[0m`));
   }
 
   setDimensions(_dimensions: { cols: number; rows: number }): void {}
@@ -104,7 +173,5 @@ export class PythonReplBackend implements TerminalBackend {
       this.running = false;
       this.emitPrompt();
     }
-  }
+    }
 }
-
-export const PYTHON_REPL_PROFILE_ID = 'terminal.python-repl';

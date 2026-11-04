@@ -14,7 +14,12 @@ import { html } from "@eclipse-docks/core/externals/lit";
 type EditorWithLanguage = { isLanguage?(lang: string): boolean };
 import { PyEnv } from "./pyservice";
 import { pythonNotebookKernelContribution } from "./python-notebook-kernel";
-import { PythonReplBackend, PYTHON_REPL_PROFILE_ID } from "./python-terminal-backend";
+import {
+    PythonReplBackend,
+    PYTHON_REPL_PROFILE_ID,
+    PYTHON_SESSION_PROFILE_ID,
+    createEditorPythonSessionBackend,
+} from "./python-terminal-backend";
 
 contributionRegistry.registerContribution(TARGET_NOTEBOOK_KERNELS, pythonNotebookKernelContribution);
 
@@ -23,6 +28,15 @@ registerTerminalProfile({
   label: "Python REPL",
   icon: "docks python",
   create: async () => new PythonReplBackend(),
+});
+
+registerTerminalProfile({
+  id: PYTHON_SESSION_PROFILE_ID,
+  label: "Python",
+  icon: "docks python",
+  hidden: true,
+  persist: false,
+  create: async (options) => createEditorPythonSessionBackend(options),
 });
 
 import { parsePackagesFromContent } from "./editor-python-run";

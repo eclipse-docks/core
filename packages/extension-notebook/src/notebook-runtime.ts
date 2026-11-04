@@ -162,7 +162,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
         const connectionTitle = this.kernelConnecting
             ? 'Connecting...'
             : this.kernelConnected
-                ? 'Kernel connected'
+                ? (this.kernel?.showSessionTerminal ? 'Show kernel terminal' : 'Kernel connected')
                 : 'Kernel disconnected';
         const connectionText = this.kernelConnecting
             ? 'Connecting...'
@@ -249,13 +249,13 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
                     Packages
                 </wa-button>
             ` : ''}
-            ${this.kernel ? (this.kernel.connect ? html`
+            ${this.kernel ? (this.kernel.showSessionTerminal || this.kernel.connect ? html`
                 <wa-button
                     appearance="plain"
                     size="s"
                     style="display: flex; align-items: center; gap: 0.5rem;"
                     ?disabled=${this.kernelConnecting}
-                    @click=${() => void this.connectKernel()}
+                    @click=${() => void this.onKernelStatusClick()}
                     title=${connectionTitle}
                 >
                     <wa-icon name="circle" label="Kernel status" style=${styleMap({ color: iconColor })}></wa-icon>
@@ -270,6 +270,23 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
         `;
     }
 
+    private kernelTerminalName(): string {
+        return this.input?.data?.getName?.() ?? this.kernel?.label ?? 'Notebook';
+    }
+
+    private async revealKernelTerminal(): Promise<void> {
+        await this.kernel?.showSessionTerminal?.(this.kernelTerminalName());
+    }
+
+    private async onKernelStatusClick(): Promise<void> {
+        if (this.kernelConnecting) return;
+        if (this.kernelConnected && this.kernel?.showSessionTerminal) {
+            await this.revealKernelTerminal();
+            return;
+        }
+        await this.connectKernel();
+    }
+
     private async connectKernel(): Promise<void> {
         if (this.kernelConnecting || !this.kernel?.connect) return;
         try {
@@ -277,6 +294,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             this.requestUpdate();
             await this.connectKernelWithRequiredPackages(this.kernel);
             this.kernelConnected = true;
+            await this.revealKernelTerminal();
             if (this.kernel.getVersion) this.kernelVersion = await this.kernel.getVersion();
         } catch (err) {
             logger.error('Failed to connect kernel', err);
@@ -359,10 +377,10 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             if (k.connect) {
                 await this.connectKernelWithRequiredPackages(k);
             }
+            if (this.selectedKernelId !== id || this.kernel !== k) return;
             this.kernelConnected = true;
-            if (k.getVersion) {
-                this.kernelVersion = await k.getVersion();
-            }
+            await this.revealKernelTerminal();
+            if (k.getVersion) this.kernelVersion = await k.getVersion();
         } catch (err) {
             logger.error('Failed to load kernel', id, err);
         } finally {
@@ -610,6 +628,7 @@ export class DocksNotebookEditor extends DocksPart implements NotebookEditorLike
             this.requestUpdate();
             await this.kernel.restart();
             this.kernelConnected = true;
+            await this.revealKernelTerminal();
             if (this.kernel.getVersion) this.kernelVersion = await this.kernel.getVersion();
         } catch (error) {
             logger.error('Failed to restart kernel', error);

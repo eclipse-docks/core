@@ -63,7 +63,7 @@ export interface Terminal {
   sendText(text: string, addNewLine?: boolean): void;
   show(preserveFocus?: boolean): void;
   hide(): void;
-  dispose(): Promise<void>;
+  dispose(options?: { confirm?: boolean }): Promise<void>;
   clear?(): void;
 }
 

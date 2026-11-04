@@ -61,6 +61,7 @@ class TerminalInstance implements TerminalRuntime {
   hidden = false;
   backend: TerminalBackend | null = null;
   clearScreen?: () => void;
+  private skipCloseConfirm = false;
 
   constructor(
     id: string,
@@ -91,8 +92,13 @@ class TerminalInstance implements TerminalRuntime {
     this.hidden = true;
   }
 
-  async dispose(): Promise<void> {
+  async dispose(options?: { confirm?: boolean }): Promise<void> {
+    if (options?.confirm === false) this.skipCloseConfirm = true;
     await terminalService.disposeTerminal(this.id);
+  }
+
+  shouldConfirmClose(): boolean {
+    return !this.skipCloseConfirm;
   }
 
   clear(): void {
@@ -238,9 +244,13 @@ class TerminalService implements TerminalTaskRunner {
     terminal.hidden = options.hidden ?? false;
 
     this.terminals.set(id, terminal);
+    if (!terminal.hidden) {
+      this.focusTerminalPanel();
+      await this.whenTabsHostReady();
+    }
     this.openTerminalTab(terminal, profile.icon);
 
-    if (!options.hidden) {
+    if (!terminal.hidden) {
       this.focusTerminalPanel();
       this.activateTerminal(id);
     }
@@ -248,6 +258,22 @@ class TerminalService implements TerminalTaskRunner {
     publish(TOPIC_TERMINAL_OPENED, terminal);
     void this.persistState();
     return terminal;
+  }
+
+  /** The panel binds its tab host after the bottom panel is shown. */
+  private whenTabsHostReady(): Promise<void> {
+    if (this.instanceTabsHost) return Promise.resolve();
+    const started = performance.now();
+    return new Promise((resolve) => {
+      const check = () => {
+        if (this.instanceTabsHost || performance.now() - started > 1000) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    });
   }
 
   private openTerminalTab(terminal: TerminalInstance, icon?: string): void {
@@ -260,7 +286,7 @@ class TerminalService implements TerminalTaskRunner {
       icon: icon ?? 'terminal',
       closable: true,
       toolbar: false,
-      beforeClose: async () => confirmKillTerminal(terminal.name),
+      beforeClose: async () => terminal.shouldConfirmClose() ? confirmKillTerminal(terminal.name) : true,
       component: (tabId: string) =>
         html`<docks-terminal-view id="${tabId}" .terminal=${terminal}></docks-terminal-view>`,
     };

@@ -263,11 +263,11 @@ export class PyEnv {
         });
     }
 
-    public setStdoutCallback(callback: (text: string) => void) {
+    public setStdoutCallback(callback?: (text: string) => void) {
         this.stdoutCallback = callback;
     }
 
-    public setStderrCallback(callback: (text: string) => void) {
+    public setStderrCallback(callback?: (text: string) => void) {
         this.stderrCallback = callback;
     }
 

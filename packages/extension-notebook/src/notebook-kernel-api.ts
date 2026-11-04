@@ -17,6 +17,8 @@ export interface NotebookKernel {
   restart?(): Promise<void>;
   interrupt?(): void;
   getVersion?(): Promise<string | undefined>;
+  /** Open the terminal bound to this kernel's session. `name` is the tab label. */
+  showSessionTerminal?(name?: string): Promise<void>;
   openPackageManager?(
     context?: {
       requiredPackages: string[];

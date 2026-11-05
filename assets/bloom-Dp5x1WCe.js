@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`bloom`,setup:async(e,t)=>({bundlePath:new URL(`/assets/bloom.tar-DD74yvvS.gz`,``+import.meta.url)})};export{t as bloom};

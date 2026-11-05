@@ -1,1 +1,0 @@
-import{l as e}from"./chunk-QY3QWFKW--Q_mGPOy.js";e();var t={name:`isn`,setup:async(e,t)=>({bundlePath:new URL(`/assets/isn.tar-CRIU4EEO.gz`,``+import.meta.url)})};export{t as isn};

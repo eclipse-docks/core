@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`tablefunc`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/tablefunc.tar-CNl_zl2R-CNl_zl2R.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as tablefunc};

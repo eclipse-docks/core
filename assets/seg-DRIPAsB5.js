@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`seg`,setup:async(e,t)=>({bundlePath:new URL(`/assets/seg.tar-Sog15Hzf.gz`,``+import.meta.url)})};export{t as seg};

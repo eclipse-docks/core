@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`ltree`,setup:async(e,t)=>({bundlePath:new URL(`/assets/ltree.tar-BmGkjCCk.gz`,``+import.meta.url)})};export{t as ltree};

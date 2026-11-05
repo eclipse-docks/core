@@ -1,1 +1,0 @@
-import{f as e}from"./pglite-opfs-worker-BR5YL-9f-C6JE7Lgk.js";e();var t={name:`bloom`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/bloom.tar-DGGnUI4S-DGGnUI4S.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as bloom};

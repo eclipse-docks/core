@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`auto_explain`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/auto_explain.tar-JUIdwrad-JUIdwrad.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as auto_explain};

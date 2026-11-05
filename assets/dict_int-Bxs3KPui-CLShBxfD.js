@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`dict_int`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/dict_int.tar-CY3FUMx1-CY3FUMx1.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as dict_int};

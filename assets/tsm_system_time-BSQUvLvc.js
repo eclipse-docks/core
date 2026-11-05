@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`tsm_system_time`,setup:async(e,t)=>({bundlePath:new URL(`/assets/tsm_system_time.tar-CO285bFo.gz`,``+import.meta.url)})};export{t as tsm_system_time};

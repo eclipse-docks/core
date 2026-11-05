@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`file_fdw`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/file_fdw.tar-BJxG1_db-BJxG1_db.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as file_fdw};

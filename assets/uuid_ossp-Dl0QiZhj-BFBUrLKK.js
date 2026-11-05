@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`uuid-ossp`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/uuid-ossp.tar-CHcyiYlF-CHcyiYlF.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as uuid_ossp};

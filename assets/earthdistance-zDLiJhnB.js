@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`earthdistance`,setup:async(e,t)=>({bundlePath:new URL(`/assets/earthdistance.tar-Br7bSUz2.gz`,``+import.meta.url)})};export{t as earthdistance};

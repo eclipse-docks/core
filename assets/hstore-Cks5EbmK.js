@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`hstore`,setup:async(e,t)=>({bundlePath:new URL(`/assets/hstore.tar-C639sGIZ.gz`,``+import.meta.url)})};export{t as hstore};

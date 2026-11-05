@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`lo`,setup:async(e,t)=>({bundlePath:new URL(`/assets/lo.tar-DqTNEmkv.gz`,``+import.meta.url)})};export{t as lo};

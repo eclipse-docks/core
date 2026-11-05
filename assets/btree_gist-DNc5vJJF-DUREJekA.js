@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`btree_gist`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/btree_gist.tar-Dek6EVwa-Dek6EVwa.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as btree_gist};

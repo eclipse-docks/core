@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`file_fdw`,setup:async(e,t)=>({bundlePath:new URL(`/assets/file_fdw.tar-BJxG1_db.gz`,``+import.meta.url)})};export{t as file_fdw};

@@ -1,0 +1,1 @@
+import{m as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";var t=/* @__PURE__ */ e(((e,t)=>{t.exports={}})),n=t();export{n as default,t};

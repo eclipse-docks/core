@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`unaccent`,setup:async(e,t)=>({bundlePath:new URL(`/assets/unaccent.tar-CeU7oPun.gz`,``+import.meta.url)})};export{t as unaccent};

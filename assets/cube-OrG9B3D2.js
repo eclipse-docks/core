@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`cube`,setup:async(e,t)=>({bundlePath:new URL(`/assets/cube.tar-CD-oAlpp.gz`,``+import.meta.url)})};export{t as cube};

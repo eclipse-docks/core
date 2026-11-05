@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`pg_trgm`,setup:async(e,t)=>({bundlePath:new URL(`/assets/pg_trgm.tar-Cowb8BYT.gz`,``+import.meta.url)})};export{t as pg_trgm};

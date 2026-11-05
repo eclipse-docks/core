@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`ltree`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/ltree.tar-BmGkjCCk-BmGkjCCk.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as ltree};

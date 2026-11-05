@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`pg_walinspect`,setup:async(e,t)=>({bundlePath:new URL(`/assets/pg_walinspect.tar-CfnbLHdd.gz`,``+import.meta.url)})};export{t as pg_walinspect};

@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`unaccent`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/unaccent.tar-CeU7oPun-CeU7oPun.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as unaccent};

@@ -1,0 +1,133 @@
+import{n as e,t}from"./chunk-VWL4HZH5-DwNY8L3k.js";import"./chunk-7WWLJV32-B_ZqmSgB.js";import{t as n}from"./chunk-BD5WXLQO-CCKdJQiQ.js";import{l as r}from"./chunk-ZSOCVAT7--Q_mGPOy.js";r();var i=5,a={name:`Live Queries`,setup:async(r,a)=>{let u=new Set,d={async query(a,l,d){let f,p,m;if(typeof a!=`string`&&(f=a.signal,l=a.params,d=a.callback,p=a.offset,m=a.limit,a=a.query),p===void 0!=(m===void 0))throw Error(`offset and limit must be provided together`);let h=p!==void 0&&m!==void 0,g;if(h&&(typeof p!=`number`||isNaN(p)||typeof m!=`number`||isNaN(m)))throw Error(`offset and limit must be numbers`);let _=d?[d]:[],v=n.uuid().replace(/-/g,``),y=!1,b,x,S=async()=>{await r.transaction(async e=>{let n=l&&l.length>0?await t(r,a,l,e):a;await e.exec(`CREATE OR REPLACE TEMP VIEW live_query_${v}_view AS ${n}`);let i=await o(e,`live_query_${v}_view`);await s(e,i,u),h?(await e.exec(`
+              PREPARE live_query_${v}_get(int, int) AS
+              SELECT * FROM live_query_${v}_view
+              LIMIT $1 OFFSET $2;
+            `),await e.exec(`
+              PREPARE live_query_${v}_get_total_count AS
+              SELECT COUNT(*) FROM live_query_${v}_view;
+            `),g=(await e.query(`EXECUTE live_query_${v}_get_total_count;`)).rows[0].count,b={...await e.query(`EXECUTE live_query_${v}_get(${m}, ${p});`),offset:p,limit:m,totalCount:g}):(await e.exec(`
+              PREPARE live_query_${v}_get AS
+              SELECT * FROM live_query_${v}_view;
+            `),b=await e.query(`EXECUTE live_query_${v}_get;`)),x=await Promise.all(i.map(t=>e.listen(`"table_change__${t.schema_oid}__${t.table_oid}"`,async()=>{C()})))})};await S();let C=e(async({offset:e,limit:t}={})=>{if(!h&&(e!==void 0||t!==void 0))throw Error(`offset and limit cannot be provided for non-windowed queries`);if(e&&(typeof e!=`number`||isNaN(e))||t&&(typeof t!=`number`||isNaN(t)))throw Error(`offset and limit must be numbers`);p=e??p,m=t??m;let n=async(e=0)=>{if(_.length!==0){try{b=h?{...await r.query(`EXECUTE live_query_${v}_get(${m}, ${p});`),offset:p,limit:m,totalCount:g}:await r.query(`EXECUTE live_query_${v}_get;`)}catch(t){let r=t.message;if(r.startsWith(`prepared statement "live_query_${v}`)&&r.endsWith(`does not exist`)){if(e>i)throw t;await S(),n(e+1)}else throw t}if(c(_,b),h){let e=(await r.query(`EXECUTE live_query_${v}_get_total_count;`)).rows[0].count;e!==g&&(g=e,C())}}};await n()}),w=e=>{if(y)throw Error(`Live query is no longer active and cannot be subscribed to`);_.push(e)},T=async e=>{_=e?_.filter(t=>t!==e):[],_.length===0&&!y&&(y=!0,await r.transaction(async e=>{await Promise.all(x.map(t=>t(e))),await e.exec(`
+              DROP VIEW IF EXISTS live_query_${v}_view;
+              DEALLOCATE live_query_${v}_get;
+              ${h?`DEALLOCATE live_query_${v}_get_total_count;`:``}
+            `)}))};return f?.aborted?await T():f?.addEventListener(`abort`,()=>{T()},{once:!0}),c(_,b),{initialResults:b,subscribe:w,unsubscribe:T,refresh:C}},async changes(i,a,c,d){let f;if(typeof i!=`string`&&(f=i.signal,a=i.params,c=i.key,d=i.callback,i=i.query),!c)throw Error(`key is required for changes queries`);let p=d?[d]:[],m=n.uuid().replace(/-/g,``),h=!1,g=1,_,v,y=async()=>{await r.transaction(async e=>{let n=await t(r,i,a,e);await e.query(`CREATE OR REPLACE TEMP VIEW live_query_${m}_view AS ${n}`);let l=await o(e,`live_query_${m}_view`);await s(e,l,u);let d=[...(await e.query(`
+                SELECT column_name, data_type, udt_name
+                FROM information_schema.columns 
+                WHERE table_name = 'live_query_${m}_view'
+              `)).rows,{column_name:`__after__`,data_type:`integer`}];await e.exec(`
+            CREATE TEMP TABLE live_query_${m}_state1 (LIKE live_query_${m}_view INCLUDING ALL);
+            CREATE TEMP TABLE live_query_${m}_state2 (LIKE live_query_${m}_view INCLUDING ALL);
+          `);for(let t of[1,2]){let n=t===1?2:1;await e.exec(`
+              PREPARE live_query_${m}_diff${t} AS
+              WITH
+                prev AS (SELECT LAG("${c}") OVER () as __after__, * FROM live_query_${m}_state${n}),
+                curr AS (SELECT LAG("${c}") OVER () as __after__, * FROM live_query_${m}_state${t}),
+                data_diff AS (
+                  -- INSERT operations: Include all columns
+                  SELECT 
+                    'INSERT' AS __op__,
+                    ${d.map(({column_name:e})=>`curr."${e}" AS "${e}"`).join(`,
+`)},
+                    ARRAY[]::text[] AS __changed_columns__
+                  FROM curr
+                  LEFT JOIN prev ON curr.${c} = prev.${c}
+                  WHERE prev.${c} IS NULL
+                UNION ALL
+                  -- DELETE operations: Include only the primary key
+                  SELECT 
+                    'DELETE' AS __op__,
+                    ${d.map(({column_name:e,data_type:t,udt_name:n})=>e===c?`prev."${e}" AS "${e}"`:`NULL${t===`USER-DEFINED`?`::${n}`:``} AS "${e}"`).join(`,
+`)},
+                      ARRAY[]::text[] AS __changed_columns__
+                  FROM prev
+                  LEFT JOIN curr ON prev.${c} = curr.${c}
+                  WHERE curr.${c} IS NULL
+                UNION ALL
+                  -- UPDATE operations: Include only changed columns
+                  SELECT 
+                    'UPDATE' AS __op__,
+                    ${d.map(({column_name:e,data_type:t,udt_name:n})=>e===c?`curr."${e}" AS "${e}"`:`CASE 
+                              WHEN curr."${e}" IS DISTINCT FROM prev."${e}" 
+                              THEN curr."${e}"
+                              ELSE NULL${t===`USER-DEFINED`?`::${n}`:``}
+                              END AS "${e}"`).join(`,
+`)},
+                      ARRAY(SELECT unnest FROM unnest(ARRAY[${d.filter(({column_name:e})=>e!==c).map(({column_name:e})=>`CASE
+                              WHEN curr."${e}" IS DISTINCT FROM prev."${e}" 
+                              THEN '${e}' 
+                              ELSE NULL 
+                              END`).join(`, `)}]) WHERE unnest IS NOT NULL) AS __changed_columns__
+                  FROM curr
+                  INNER JOIN prev ON curr.${c} = prev.${c}
+                  WHERE NOT (curr IS NOT DISTINCT FROM prev)
+                )
+              SELECT * FROM data_diff;
+            `)}v=await Promise.all(l.map(t=>e.listen(`"table_change__${t.schema_oid}__${t.table_oid}"`,async()=>{b()})))})};await y();let b=e(async()=>{if(p.length===0&&_)return;let e=!1;for(let t=0;t<5;t++)try{await r.transaction(async e=>{await e.exec(`
+                INSERT INTO live_query_${m}_state${g} 
+                  SELECT * FROM live_query_${m}_view;
+              `),_=await e.query(`EXECUTE live_query_${m}_diff${g};`),g=g===1?2:1,await e.exec(`
+                TRUNCATE live_query_${m}_state${g};
+              `)});break}catch(t){if(t.message===`relation "live_query_${m}_state${g}" does not exist`){e=!0,await y();continue}throw t}l(p,[...e?[{__op__:`RESET`}]:[],..._.rows])}),x=e=>{if(h)throw Error(`Live query is no longer active and cannot be subscribed to`);p.push(e)},S=async e=>{p=e?p.filter(t=>t!==e):[],p.length===0&&!h&&(h=!0,await r.transaction(async e=>{await Promise.all(v.map(t=>t(e))),await e.exec(`
+              DROP VIEW IF EXISTS live_query_${m}_view;
+              DROP TABLE IF EXISTS live_query_${m}_state1;
+              DROP TABLE IF EXISTS live_query_${m}_state2;
+              DEALLOCATE live_query_${m}_diff1;
+              DEALLOCATE live_query_${m}_diff2;
+            `)}))};return f?.aborted?await S():f?.addEventListener(`abort`,()=>{S()},{once:!0}),await b(),{fields:_.fields.filter(e=>![`__after__`,`__op__`,`__changed_columns__`].includes(e.name)),initialChanges:_.rows,subscribe:x,unsubscribe:S,refresh:b}},async incrementalQuery(e,t,n,r){let i;if(typeof e!=`string`&&(i=e.signal,t=e.params,n=e.key,r=e.callback,e=e.query),!n)throw Error(`key is required for incremental queries`);let a=r?[r]:[],o=new Map,s=new Map,l=[],u=!0,{fields:f,unsubscribe:p,refresh:m}=await d.changes(e,t,n,e=>{for(let t of e){let{__op__:e,__changed_columns__:r,...i}=t;switch(e){case`RESET`:o.clear(),s.clear();break;case`INSERT`:o.set(i[n],i),s.set(i.__after__,i[n]);break;case`DELETE`:{let e=o.get(i[n]);o.delete(i[n]),e.__after__!==null&&s.delete(e.__after__);break}case`UPDATE`:{let e={...o.get(i[n])??{}};for(let t of r)e[t]=i[t],t===`__after__`&&s.set(i.__after__,i[n]);o.set(i[n],e);break}}}let t=[],r=null;for(let e=0;e<o.size;e++){let e=s.get(r),n=o.get(e);if(!n)break;let i={...n};delete i.__after__,t.push(i),r=e}l=t,u||c(a,{rows:t,fields:f})});u=!1,c(a,{rows:l,fields:f});let h=e=>{a.push(e)},g=async e=>{a=e?a.filter(t=>t!==e):[],a.length===0&&await p()};return i?.aborted?await g():i?.addEventListener(`abort`,()=>{g()},{once:!0}),{initialResults:{rows:l,fields:f},subscribe:h,unsubscribe:g,refresh:m}}};return{namespaceObj:d}}};async function o(e,t){return(await e.query(`
+      WITH RECURSIVE view_dependencies AS (
+        -- Base case: Get the initial view's dependencies
+        SELECT DISTINCT
+          cl.relname AS dependent_name,
+          n.nspname AS schema_name,
+          cl.oid AS dependent_oid,
+          n.oid AS schema_oid,
+          cl.relkind = 'v' AS is_view
+        FROM pg_rewrite r
+        JOIN pg_depend d ON r.oid = d.objid
+        JOIN pg_class cl ON d.refobjid = cl.oid
+        JOIN pg_namespace n ON cl.relnamespace = n.oid
+        WHERE
+          r.ev_class = (
+              SELECT oid FROM pg_class WHERE relname = $1 AND relkind = 'v'
+          )
+          AND d.deptype = 'n'
+
+        UNION ALL
+
+        -- Recursive case: Traverse dependencies for views
+        SELECT DISTINCT
+          cl.relname AS dependent_name,
+          n.nspname AS schema_name,
+          cl.oid AS dependent_oid,
+          n.oid AS schema_oid,
+          cl.relkind = 'v' AS is_view
+        FROM view_dependencies vd
+        JOIN pg_rewrite r ON vd.dependent_name = (
+          SELECT relname FROM pg_class WHERE oid = r.ev_class AND relkind = 'v'
+        )
+        JOIN pg_depend d ON r.oid = d.objid
+        JOIN pg_class cl ON d.refobjid = cl.oid
+        JOIN pg_namespace n ON cl.relnamespace = n.oid
+        WHERE d.deptype = 'n'
+      )
+      SELECT DISTINCT
+        dependent_name AS table_name,
+        schema_name,
+        dependent_oid AS table_oid,
+        schema_oid
+      FROM view_dependencies
+      WHERE NOT is_view; -- Exclude intermediate views
+    `,[t])).rows.map(e=>({table_name:e.table_name,schema_name:e.schema_name,table_oid:e.table_oid,schema_oid:e.schema_oid}))}async function s(e,t,n){let r=t.filter(e=>!n.has(`${e.schema_oid}_${e.table_oid}`)).map(e=>`
+      CREATE OR REPLACE FUNCTION "_notify_${e.schema_oid}_${e.table_oid}"() RETURNS TRIGGER AS $$
+      BEGIN
+        PERFORM pg_notify('table_change__${e.schema_oid}__${e.table_oid}', '');
+        RETURN NULL;
+      END;
+      $$ LANGUAGE plpgsql;
+      CREATE OR REPLACE TRIGGER "_notify_trigger_${e.schema_oid}_${e.table_oid}"
+      AFTER INSERT OR UPDATE OR DELETE ON "${e.schema_name}"."${e.table_name}"
+      FOR EACH STATEMENT EXECUTE FUNCTION "_notify_${e.schema_oid}_${e.table_oid}"();
+      `).join(`
+`);r.trim()!==``&&await e.exec(r),t.map(e=>n.add(`${e.schema_oid}_${e.table_oid}`))}var c=(e,t)=>{for(let n of e)n(t)},l=(e,t)=>{for(let n of e)n(t)};export{a as live};

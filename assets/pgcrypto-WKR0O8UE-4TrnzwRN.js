@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`pgcrypto`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/pgcrypto.tar-Bj_U8Jc4-Bj_U8Jc4.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as pgcrypto};

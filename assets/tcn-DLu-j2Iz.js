@@ -1,0 +1,1 @@
+import{l as e}from"./chunk-ZSOCVAT7--Q_mGPOy.js";e();var t={name:`tcn`,setup:async(e,t)=>({bundlePath:new URL(`/assets/tcn.tar-Cuz900Da.gz`,``+import.meta.url)})};export{t as tcn};

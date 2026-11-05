@@ -1,0 +1,1 @@
+function e(e){return new Worker(new URL(`/assets/pglite-opfs-worker-DY7c0tns-QGIOR0my.js`,``+import.meta.url).href,{type:`module`,name:e?.name})}export{e as default};

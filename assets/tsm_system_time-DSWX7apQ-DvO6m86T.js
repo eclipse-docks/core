@@ -1,0 +1,1 @@
+import{f as e}from"./pglite-opfs-worker-DY7c0tns-QGIOR0my.js";e();var t={name:`tsm_system_time`,setup:async(e,t)=>({bundlePath:new URL(new URL(`/assets/tsm_system_time.tar-CO285bFo-CO285bFo.gz`,``+import.meta.url).href,``+import.meta.url)})};export{t as tsm_system_time};

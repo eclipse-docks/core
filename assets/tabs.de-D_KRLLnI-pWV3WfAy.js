@@ -1,0 +1,1 @@
+var e=`Schließen`,t=`Andere schließen`,n=`Alle schließen`,r=`In Panel öffnen`,i={CLOSE:e,CLOSE_OTHERS:t,CLOSE_ALL:n,POP_OUT:r};export{e as CLOSE,n as CLOSE_ALL,t as CLOSE_OTHERS,r as POP_OUT,i as default};

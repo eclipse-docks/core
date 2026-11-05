@@ -1,1 +1,0 @@
-import{d as e}from"./runtime-BJlEES2l-DUe1qmxI.js";import"./api-Dsa-NrxT.js";export{e as cognitiveRuntime};

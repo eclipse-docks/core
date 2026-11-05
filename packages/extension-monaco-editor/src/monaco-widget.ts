@@ -35,6 +35,8 @@ export class DocksMonacoWidget extends LitElement {
     private model?: monaco.editor.ITextModel;
     private themeObserver?: MutationObserver;
     private resizeObserver?: ResizeObserver;
+    /** Bumped on disconnect and reconnect so a move does not dispose the editor. */
+    private detachEpoch = 0;
 
     private getMonacoTheme(): string {
         const root = document.documentElement;
@@ -96,6 +98,19 @@ export class DocksMonacoWidget extends LitElement {
         this.setupThemeObserver();
     }
 
+    override connectedCallback(): void {
+        const moved = this.detachEpoch > 0;
+        this.detachEpoch++;
+        super.connectedCallback();
+        if (!moved) return;
+        if (this.editor) {
+            this.layout();
+            requestAnimationFrame(() => this.layout());
+            return;
+        }
+        this.ensureEditor();
+    }
+
     protected firstUpdated(_changedProperties: PropertyValues) {
         super.firstUpdated(_changedProperties);
         this.ensureEditor();
@@ -109,8 +124,12 @@ export class DocksMonacoWidget extends LitElement {
     }
 
     disconnectedCallback() {
-        this.dispose();
         super.disconnectedCallback();
+        const epoch = ++this.detachEpoch;
+        queueMicrotask(() => {
+            if (this.detachEpoch !== epoch || this.isConnected) return;
+            this.dispose();
+        });
     }
 
     public dispose() {

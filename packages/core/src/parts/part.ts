@@ -31,6 +31,8 @@ export abstract class DocksPart extends DocksContainer {
     /** Quiet period before an auto-save runs. Each {@link markDirty} restarts it. */
     protected autoSaveDelay = 1000;
 
+    protected override releaseOnDisconnect = false;
+
     private autoSaveTimer?: ReturnType<typeof setTimeout>;
     private autoSaveRunning = false;
     private autoSaveEpoch = 0;

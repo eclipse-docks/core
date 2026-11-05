@@ -53,6 +53,11 @@ export {
     type SettingsCategoryInfo,
 } from '../core/settingsservice';
 export { dialogService } from '../core/dialogservice';
+export {
+    floatingPanelService,
+    FLOATING_PANEL_CONTRIBUTION_TARGET,
+    type FloatingPanelContribution,
+} from '../core/floatingpanelservice';
 export { 
     infoDialog,
     navigableInfoDialog,

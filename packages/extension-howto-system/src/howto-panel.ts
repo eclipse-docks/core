@@ -1,14 +1,11 @@
 import { css, html, nothing } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
-import { PropertyValues } from 'lit';
-import { styleMap } from 'lit/directives/style-map.js';
-import { DocksWidget } from '@eclipse-docks/core';
+import { customElement, query, state } from 'lit/decorators.js';
+import { DocksWidget, type DocksFloatingPanel } from '@eclipse-docks/core';
 import { howToService } from './howto-service';
 import { HowToContribution, HowToStep } from './howto-contribution';
 import { subscribe } from '@eclipse-docks/core';
 import { commandRegistry } from '@eclipse-docks/core';
-import { toastError, toastInfo } from '@eclipse-docks/core';
-import { createRef, ref, Ref } from 'lit/directives/ref.js';
+import { toastError } from '@eclipse-docks/core';
 import { TOPIC_CONTRIBUTEIONS_CHANGED } from '@eclipse-docks/core';
 import { HOWTO_CONTRIBUTION_TARGET } from './howto-service';
 import { appSettings } from '@eclipse-docks/core';
@@ -20,8 +17,6 @@ export const TOPIC_TOGGLE_HOWTO_PANEL = 'howto/toggle-panel';
 
 // Constants
 const SETTINGS_KEY = 'howto-panel';
-const DEFAULT_POSITION = { x: 100, y: 100 };
-const DEFAULT_PANEL_SIZE = { width: 400, height: 300 };
 
 interface StepState {
     step: HowToStep;
@@ -42,25 +37,11 @@ export class DocksHowToPanel extends DocksWidget {
     private stepStates: Map<string, StepState[]> = new Map();
 
     @state()
-    private isMinimized: boolean = false;
-
-    @state()
     private isVisible: boolean = false;
 
-    @state()
-    private positionX: number = DEFAULT_POSITION.x;
+    @query('docks-floating-panel')
+    private floatingPanel?: DocksFloatingPanel;
 
-    @state()
-    private positionY: number = DEFAULT_POSITION.y;
-
-    private isDragging: boolean = false;
-
-    @state()
-    private dragPreviewPosition: { x: number; y: number } | null = null;
-
-    private dragStartPosition: { x: number; y: number } = { x: 0, y: 0 };
-
-    private panelRef: Ref<HTMLElement> = createRef();
     private howtoCleanup?: () => void;
 
     protected async doBeforeUI() {
@@ -106,105 +87,29 @@ export class DocksHowToPanel extends DocksWidget {
         });
     }
 
-    private boundHandleDragMove?: (e: MouseEvent) => void;
-    private boundHandleDragEnd?: () => void;
-
-    protected doInitUI() {
-        // Setup document-level drag handlers (these are always available)
-        this.boundHandleDragMove = this.handleDragMove.bind(this);
-        this.boundHandleDragEnd = this.handleDragEnd.bind(this);
-        document.addEventListener('mousemove', this.boundHandleDragMove);
-        document.addEventListener('mouseup', this.boundHandleDragEnd);
-    }
-
-    protected firstUpdated(_changedProperties: PropertyValues) {
-        super.firstUpdated(_changedProperties);
-    }
-
     private loadContributions() {
         this.contributions = howToService.getAllContributions();
     }
 
     private async loadSettings() {
         const settings = await appSettings.getDialogSetting(SETTINGS_KEY);
-        if (settings) {
-            if (settings.position) {
-                this.positionX = settings.position.x || DEFAULT_POSITION.x;
-                this.positionY = settings.position.y || DEFAULT_POSITION.y;
-            }
-            if (settings.visible !== undefined) {
-                this.isVisible = settings.visible;
-            }
+        if (settings && settings.visible !== undefined) {
+            this.isVisible = settings.visible;
         }
     }
 
     private async saveSettings() {
+        const current = await appSettings.getDialogSetting(SETTINGS_KEY);
+        const base = current !== null && typeof current === 'object' ? current : {};
         await appSettings.setDialogSetting(SETTINGS_KEY, {
-            position: { x: this.positionX, y: this.positionY },
-            visible: this.isVisible
+            ...base,
+            visible: this.isVisible,
         });
     }
 
-    private handleDragStart = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (this.isDragTarget(target) || !this.panelRef.value) {
-            return;
-        }
-        
-        const rect = this.panelRef.value.getBoundingClientRect();
-        this.dragStartPosition = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        };
-        this.isDragging = true;
-        this.dragPreviewPosition = { x: this.positionX, y: this.positionY };
-        this.requestUpdate();
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    private isDragTarget(target: HTMLElement): boolean {
-        return !!(target.closest('.header-actions') || target.closest('wa-button'));
-    }
-
-    private getViewportBounds() {
-        const panelWidth = this.panelRef.value?.offsetWidth || DEFAULT_PANEL_SIZE.width;
-        const panelHeight = this.panelRef.value?.offsetHeight || DEFAULT_PANEL_SIZE.height;
-        return {
-            maxX: window.innerWidth - panelWidth,
-            maxY: window.innerHeight - panelHeight
-        };
-    }
-
-    private handleDragMove = (e: MouseEvent) => {
-        if (!this.isDragging || !this.dragPreviewPosition) {
-            return;
-        }
-        
-        const bounds = this.getViewportBounds();
-        const newX = Math.max(0, Math.min(e.clientX - this.dragStartPosition.x, bounds.maxX));
-        const newY = Math.max(0, Math.min(e.clientY - this.dragStartPosition.y, bounds.maxY));
-        
-        if (this.dragPreviewPosition.x !== newX || this.dragPreviewPosition.y !== newY) {
-            this.dragPreviewPosition = { x: newX, y: newY };
-            this.requestUpdate();
-        }
-    }
-
-    private handleDragEnd = async () => {
-        if (!this.isDragging || !this.dragPreviewPosition) {
-            return;
-        }
-        
-        this.isDragging = false;
-        const previewPos = this.dragPreviewPosition;
-        this.dragPreviewPosition = null;
-        
-        this.positionX = previewPos.x;
-        this.positionY = previewPos.y;
-        
-        await this.saveSettings();
-        this.requestUpdate();
+    private expandPanel(): void {
+        if (!this.floatingPanel) return;
+        this.floatingPanel.minimized = false;
     }
 
     private async startHowTo(contributionId: string) {
@@ -218,7 +123,7 @@ export class DocksHowToPanel extends DocksWidget {
         this.cleanupHowTo();
 
         this.activeContributionId = contributionId;
-        this.isMinimized = false;
+        this.expandPanel();
 
         // Initialize step states
         const states: StepState[] = contribution.steps.map(step => ({
@@ -456,16 +361,12 @@ export class DocksHowToPanel extends DocksWidget {
         this.requestUpdate();
     }
 
-    private toggleMinimize() {
-        this.isMinimized = !this.isMinimized;
-        this.requestUpdate();
-    }
-
     private async showPanel() {
         this.isVisible = true;
-        this.isMinimized = false;
         await this.saveSettings();
         this.requestUpdate();
+        await this.updateComplete;
+        this.expandPanel();
     }
 
     private async hidePanel() {
@@ -555,54 +456,12 @@ export class DocksHowToPanel extends DocksWidget {
             : [];
 
         return html`
-            ${this.dragPreviewPosition ? html`
-                <div 
-                    class="howto-panel-drag-preview"
-                style=${styleMap({
-                    left: `${this.dragPreviewPosition.x}px`,
-                    top: `${this.dragPreviewPosition.y}px`,
-                    width: `${this.panelRef.value?.offsetWidth || DEFAULT_PANEL_SIZE.width}px`,
-                    height: `${this.panelRef.value?.offsetHeight || DEFAULT_PANEL_SIZE.height}px`,
-                    display: 'block',
-                    visibility: 'visible'
-                })}
-                ></div>
-            ` : nothing}
-            <div 
-                class="howto-panel ${this.isMinimized ? 'minimized' : ''} ${this.dragPreviewPosition ? 'dragging' : ''}"
-                style=${styleMap({
-                    left: `${this.positionX}px`,
-                    top: `${this.positionY}px`,
-                    transform: 'translateZ(0)'
-                })}
-                ${ref(this.panelRef)}
+            <docks-floating-panel
+                label="HowTo Workflows"
+                icon="list-check"
+                .persistKey=${SETTINGS_KEY}
+                @floating-close=${() => { void this.hidePanel(); }}
             >
-                <div class="panel-header" @mousedown=${this.handleDragStart}>
-                    <div class="header-title">
-                        <wa-icon name="list-check"></wa-icon>
-                        <span>HowTo Workflows</span>
-                    </div>
-                    <div class="header-actions" @mousedown=${(e: MouseEvent) => e.stopPropagation()}>
-                        <wa-button 
-                            size="s" 
-                            appearance="plain" 
-                            @click=${this.toggleMinimize}
-                            title="${this.isMinimized ? 'Expand' : 'Minimize'}"
-                        >
-                            <wa-icon name="${this.isMinimized ? 'chevron-up' : 'chevron-down'}"></wa-icon>
-                        </wa-button>
-                        <wa-button 
-                            size="s" 
-                            appearance="plain" 
-                            @click=${this.hidePanel}
-                            title="Hide Panel"
-                        >
-                            <wa-icon name="xmark"></wa-icon>
-                        </wa-button>
-                    </div>
-                </div>
-                
-                ${!this.isMinimized ? html`
                     <div class="panel-content">
                         ${activeContribution ? html`
                             <div class="active-workflow">
@@ -665,102 +524,19 @@ export class DocksHowToPanel extends DocksWidget {
                             </div>
                         `}
                     </div>
-                ` : nothing}
-            </div>
+            </docks-floating-panel>
         `;
     }
 
     static styles = css`
         :host {
-            display: block;
-            position: fixed;
-            z-index: 10000;
-            pointer-events: none;
-        }
-
-        .howto-panel-drag-preview {
-            position: fixed !important;
-            border: 3px dashed var(--wa-color-primary-50, #0066cc) !important;
-            background: var(--wa-color-primary-05, rgba(0, 102, 204, 0.05)) !important;
-            border-radius: var(--wa-border-radius-medium, 8px);
-            z-index: 10001 !important;
-            pointer-events: none !important;
-            opacity: 0.8 !important;
-            box-sizing: border-box;
-            display: block !important;
-            visibility: visible !important;
-            min-width: 100px;
-            min-height: 100px;
-        }
-
-        :host-context(.wa-light) .howto-panel-drag-preview {
-            background: var(--wa-color-primary-95);
-            border-color: var(--wa-color-primary-50);
-        }
-
-        .howto-panel {
-            position: fixed !important;
-            width: 400px;
-            max-height: 600px;
-            background: var(--wa-color-surface-raised, var(--wa-color-neutral-05));
-            border: var(--wa-border-width-s, 1px) solid var(--wa-color-neutral-border-loud, var(--wa-color-neutral-25));
-            border-radius: var(--wa-border-radius-medium, 8px);
-            box-shadow: var(--wa-shadow-large, 0 8px 24px rgba(0, 0, 0, 0.8));
-            pointer-events: all;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        :host-context(.wa-light) .howto-panel {
-            background: var(--wa-color-surface-raised, var(--wa-color-neutral-95));
-            border-color: var(--wa-color-neutral-border-loud, var(--wa-color-neutral-75));
-            box-shadow: var(--wa-shadow-large, 0 8px 24px rgba(0, 0, 0, 0.2));
-        }
-
-        .howto-panel.minimized {
-            max-height: auto;
-        }
-
-        .howto-panel.dragging {
-            opacity: 0.5;
-        }
-
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: var(--wa-spacing-medium, 12px) var(--wa-spacing-large, 16px);
-            background: var(--wa-color-surface-lowered, var(--wa-color-neutral-10));
-            border-bottom: var(--wa-border-width-s, 1px) solid var(--wa-color-neutral-border-loud, var(--wa-color-neutral-25));
-            cursor: move;
-            user-select: none;
-        }
-
-        :host-context(.wa-light) .panel-header {
-            background: var(--wa-color-surface-lowered, var(--wa-color-neutral-90));
-            border-bottom-color: var(--wa-color-neutral-border-loud, var(--wa-color-neutral-75));
-        }
-
-        .header-title {
-            display: flex;
-            align-items: center;
-            gap: var(--wa-spacing-small, 8px);
-            font-weight: 600;
-            color: var(--wa-color-text-normal, var(--wa-color-neutral-90));
-        }
-
-        :host-context(.wa-light) .header-title {
-            color: var(--wa-color-text-normal, var(--wa-color-neutral-10));
-        }
-
-        .header-actions {
-            display: flex;
-            gap: var(--wa-spacing-x-small, 4px);
+            display: contents;
         }
 
         .panel-content {
-            flex: 1;
+            width: 400px;
+            max-height: 600px;
+            box-sizing: border-box;
             overflow-y: auto;
             padding: var(--wa-spacing-large, 16px);
         }

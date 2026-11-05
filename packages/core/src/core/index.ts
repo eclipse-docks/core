@@ -34,6 +34,7 @@ import './extensionregistry';
 // 5. UI and workspace services
 import './keybindings';
 import './dialogservice';
+import './floatingpanelservice';
 import './editorregistry';
 import './filesys';
 

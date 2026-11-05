@@ -251,6 +251,10 @@ export class DocksContextMenu extends DocksElement {
         popup.reposition();
     }
 
+    close(): void {
+        this.onClose();
+    }
+
     private onClose() {
         if (!this.isOpen) return;
         this.isOpen = false;

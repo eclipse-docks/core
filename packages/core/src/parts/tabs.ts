@@ -9,11 +9,18 @@ import {createRef, ref} from "lit/directives/ref.js";
 import { icon } from "../core/icon-utils";
 import {subscribe} from "../core/events";
 import { DocksPart } from "./part";
-import { EDITOR_AREA_MAIN } from "../core/contribution-targets";
+import { EDITOR_AREA_MAIN, tabsMenuTarget } from "../core/contribution-targets";
 import { MouseButton } from "../core/constants";
 import {activePartSignal, activeEditorSignal, partDirtySignal} from "../core/appstate";
 import {watchSignal} from "../core/signals";
 import {confirmDialog} from "../dialogs";
+import "./contextmenu";
+import type {DocksContextMenu} from "./contextmenu";
+import {renderDropdownItem} from "../core/dropdown-item";
+import {floatingPanelService} from "../core/floatingpanelservice";
+import {i18n} from "../core/i18n";
+
+const t = await i18n(import.meta.glob('./tabs*.json'));
 /**
  * DocksTabs - A dynamic tab container component
  * 
@@ -70,6 +77,16 @@ export class DocksTabs extends DocksContainer {
     private tabGroupListenersAttached = false;
 
     private dirtySignalCleanup?: () => void;
+
+    private tabTitleMenu = createRef<DocksContextMenu>();
+
+    private tabMenuPart: DocksPart | null = null;
+
+    /** Tabs removed while their part is in a floating panel. */
+    private floatedTabs = new Map<string, TabContribution>();
+
+    /** Parts that must stay the tab body after they return from a floating panel. */
+    private hostedParts = new Map<string, DocksPart>();
 
     // ============= Lifecycle Methods =============
 
@@ -172,6 +189,87 @@ export class DocksTabs extends DocksContainer {
         }
     }
 
+    private handleTabContextMenu(event: MouseEvent, contribution: TabContribution): void {
+        const panel = this.getTabPanel(contribution.name);
+        const part = panel ? this.getPartFromPanel(panel) : null;
+        if (!part) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        part.tabContribution ??= contribution;
+        this.tabMenuPart = part;
+        void this.tabTitleMenu.value?.show({ x: event.clientX, y: event.clientY });
+    }
+
+    private renderTabTitleMenu() {
+        const part = this.tabMenuPart;
+        const contribution = part?.tabContribution;
+        if (!part || !contribution) return nothing;
+
+        const closable = this.contributions.filter((item) => item.closable);
+        const others = closable.filter((item) => item.name !== contribution.name);
+
+        return html`
+            ${closable.length === 0 ? nothing : html`
+                ${this.renderCloseItem(t.CLOSE, !contribution.closable, () => {
+                    void this.tryCloseTab(contribution.name, true);
+                })}
+                ${this.renderCloseItem(t.CLOSE_OTHERS, others.length === 0, () => {
+                    void this.closeNamedTabs(others.map((item) => item.name));
+                })}
+                ${this.renderCloseItem(t.CLOSE_ALL, false, () => {
+                    void this.closeNamedTabs(closable.map((item) => item.name));
+                })}
+                <wa-divider></wa-divider>
+            `}
+            ${renderDropdownItem({
+                icon: 'up-right-from-square',
+                label: t.POP_OUT,
+                action: () => {
+                    this.popOut(part, contribution);
+                    this.tabTitleMenu.value?.close();
+                },
+            })}
+        `;
+    }
+
+    private renderCloseItem(label: string, disabled: boolean, close: () => void) {
+        return renderDropdownItem({
+            icon: 'xmark',
+            label,
+            disabled,
+            action: () => {
+                this.tabTitleMenu.value?.close();
+                close();
+            },
+        });
+    }
+
+    /** Closes the named tabs. Stops when a dirty tab is kept open. */
+    private async closeNamedTabs(names: string[]): Promise<void> {
+        for (const name of names) {
+            const ok = await this.tryCloseTab(name, true);
+            if (!ok) return;
+        }
+    }
+
+    private popOut(part: DocksPart, contribution: TabContribution): void {
+        this.floatedTabs.set(contribution.name, contribution);
+        this.contributions = this.contributions.filter((item) => item.name !== contribution.name);
+        floatingPanelService.toPanel(part, () => this.restorePoppedOut(contribution.name, part));
+        void this.updateComplete.then(() => this.activateNextAvailableTab());
+    }
+
+    private async restorePoppedOut(name: string, part: DocksPart): Promise<void> {
+        const contribution = this.floatedTabs.get(name);
+        this.floatedTabs.delete(name);
+        if (!contribution) return;
+        this.hostedParts.set(name, part);
+        this.open(contribution);
+        await this.updateComplete;
+        if (part.isDirty()) this.markDirty(name, true);
+    }
+
     async closeTab(event: Event, tabName: string): Promise<void> {
         event.stopPropagation();
         await this.tryCloseTab(tabName, true);
@@ -218,6 +316,8 @@ export class DocksTabs extends DocksContainer {
             if (!ok) return false;
         }
 
+        this.hostedParts.delete(tabName);
+        this.floatedTabs.delete(tabName);
         this.cleanupTabInstance(tabPanel);
         this.clearActiveSignalsIfPartInPanel(tabPanel);
 
@@ -252,7 +352,15 @@ export class DocksTabs extends DocksContainer {
      */
     private loadAndResolveContributions(): void {
         if (!this.containerId) return;
-        this.contributions = contributionRegistry.getContributions(this.containerId) as TabContribution[];
+        const loaded = contributionRegistry.getContributions(this.containerId) as TabContribution[];
+        const loadedNames = new Set(loaded.map((contribution) => contribution.name));
+        const opened = this.contributions.filter((contribution) =>
+            !loadedNames.has(contribution.name) && !this.floatedTabs.has(contribution.name)
+        );
+        this.contributions = [
+            ...loaded.filter((contribution) => !this.floatedTabs.has(contribution.name)),
+            ...opened,
+        ];
         this.requestUpdate();
     }
 
@@ -413,6 +521,12 @@ export class DocksTabs extends DocksContainer {
         `;
     }
 
+    private renderTabBody(contribution: TabContribution) {
+        const hosted = this.hostedParts.get(contribution.name);
+        if (hosted) return html`${hosted}`;
+        return contribution.component ? contribution.component(contribution.name) : nothing;
+    }
+
     private renderEmptyState() {
         const currentApp = appLoaderService.getCurrentApp();
         return html`
@@ -462,7 +576,8 @@ export class DocksTabs extends DocksContainer {
                         return html`
                         <wa-tab panel="${c.name}"
                                 title="${fullLabel}"
-                                @auxclick="${(e: MouseEvent) => this.handleTabAuxClick(e, c)}">
+                                @auxclick="${(e: MouseEvent) => this.handleTabAuxClick(e, c)}"
+                                @contextmenu="${(e: MouseEvent) => this.handleTabContextMenu(e, c)}">
                             ${icon(c.icon, { label: fullLabel })}
                             ${this.iconOnly ? nothing : shortLabel}
                             ${when(c.closable, () => html`
@@ -470,13 +585,18 @@ export class DocksTabs extends DocksContainer {
                             `)}
                         </wa-tab>
                         <wa-tab-panel name="${c.name}">
-                            ${c.component ? c.component(c.name) : nothing}
+                            ${this.renderTabBody(c)}
                         </wa-tab-panel>
                     `;
                     }
                 )}
                 ${this.renderNavToolbar(navToolbarId)}
             </wa-tab-group>
+            <docks-contextmenu
+                ${ref(this.tabTitleMenu)}
+                id=${containerId ? tabsMenuTarget(containerId) : nothing}
+                .partContextMenuRenderer=${() => this.renderTabTitleMenu()}>
+            </docks-contextmenu>
         `;
     }
 

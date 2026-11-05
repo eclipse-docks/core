@@ -22,13 +22,16 @@ export abstract class DocksWidget extends DocksWidgetBase {
     private signalCleanups = new Set<() => void>();
     private eventSubscriptions = new Set<SubscriptionToken>();
 
+    /** False when disconnect can be a move and an explicit close releases the widget. */
+    protected releaseOnDisconnect = true;
+
     connectedCallback() {
         super.connectedCallback();
         this.doBeforeUI()
     }
 
     disconnectedCallback() {
-        this.doClose();
+        if (this.releaseOnDisconnect) this.doClose();
         super.disconnectedCallback();
         this.eventSubscriptions.forEach(token => event_unsubscribe(token));
         this.eventSubscriptions.clear();
@@ -91,9 +94,7 @@ export abstract class DocksWidget extends DocksWidgetBase {
     protected doInitUI() {
     }
 
-    /**
-     * Override to release resources when the element is disconnected (called from {@link disconnectedCallback}).
-     */
+    /** Release resources. Skipped on disconnect when {@link releaseOnDisconnect} is false. */
     protected doClose() {
     }
 

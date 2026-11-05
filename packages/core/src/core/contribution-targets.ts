@@ -18,6 +18,11 @@ export const SYSTEM_ATTRIBUTIONS = "system.attributions"
 export const ABOUT_TABS = "about.tabs"
 
 export const EDITOR_AREA_MAIN = "editor-area-main"
+
+/** Tab-title context menu for a docks-tabs container (`tabsmenu:<containerId>`). */
+export function tabsMenuTarget(containerId: string): string {
+    return `tabsmenu:${containerId}`;
+}
 export const SIDEBAR_MAIN = "sidebar-main"
 export const SIDEBAR_MAIN_BOTTOM = "sidebar-main-bottom"
 export const SIDEBAR_AUXILIARY = "sidebar-auxiliary"

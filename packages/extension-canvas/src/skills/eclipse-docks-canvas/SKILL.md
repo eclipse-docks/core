@@ -35,6 +35,8 @@ The host attaches after construction and before `onConnect`. From `constructor`,
 
 A canvas app consists of three files with the same stem: `….canvas.js`, `….canvas.json`, and `….canvas.md`. The `….canvas.md` file is the input that drives generation of the `….canvas.js` app. `setState` creates the `….canvas.json`. The canvas does not import either sidecar.
 
+Write `….canvas.md` in this order. `# Requirements` is the user's request. `# Spec` is the behavior contract the module must satisfy. `# State` and `# Interface` are what generation needs and the behavior contract leaves out.
+
 ```md
 # Requirements
 
@@ -42,8 +44,41 @@ What the user asked for, in their words.
 
 # Spec
 
-Behavior, the data stored in canvas.json, and the UI.
+## Purpose
+
+One or two sentences on what this canvas is for.
+
+## Requirements
+
+### Requirement: Add an item
+
+The canvas SHALL append a non-empty draft to the list and clear the draft.
+
+#### Scenario: Submit a non-empty draft
+
+- WHEN the user submits a non-empty draft
+- THEN the list gains one item with that text and the draft is empty
+
+#### Scenario: Empty draft
+
+- WHEN the user submits an empty draft
+- THEN the list is unchanged
+
+# State
+
+Keys stored through `setState`, and the shape of each value.
+
+# Interface
+
+Controls and layout the behavior depends on.
 ```
+
+Spec rules:
+
+- One behavior per `### Requirement:`. State it with SHALL or MUST.
+- Every requirement has at least one `#### Scenario:`. Every scenario has a WHEN line and a THEN line. Add AND lines for further outcomes.
+- A scenario states observable behavior: what the user does, what the canvas shows, and what it stores. Class names, Lit details, and component choices stay out of `# Spec`.
+- `# State` names each `setState` key and the shape of its value. `# Interface` names the controls and layout a scenario depends on. It is not a widget catalog.
 
 ## Hard rules
 
@@ -51,7 +86,7 @@ Behavior, the data stored in canvas.json, and the UI.
 2. Build controls and chrome with Web Awesome (`wa-button`, `wa-input`, `wa-checkbox`, `wa-card`, `wa-callout`, `wa-spinner`). A raw `<button>` or `<input>` is not a substitute. Load `eclipse-docks-webawesome` before a non-trivial UI, and use `--wa-color-*` tokens instead of hardcoded colors.
 3. Emit complete, valid JavaScript — no truncated objects or unfinished strings.
 4. The page uses `Cross-Origin-Embedder-Policy: require-corp`. A cross-origin response loads only when the request is CORS and the server sends `Access-Control-Allow-Origin`, or when the server sends `Cross-Origin-Resource-Policy: cross-origin`. An `<iframe srcdoc>` inherits this policy; `sandbox="allow-same-origin"` does not exempt it.
-5. The `….canvas.md` file is the input that drives the `….canvas.js` app. When the request changes, update the markdown, then regenerate the module.
+5. The `….canvas.md` file is the input that drives the `….canvas.js` app. When the request changes, update the requirement and its scenarios first, and `# State` or `# Interface` when those change, then regenerate the module so each scenario still holds.
 
 ## Code
 
@@ -154,10 +189,10 @@ Before non-trivial UI or shell integration, load companion skills as needed:
 
 ## Workflow
 
-1. `workspace_write` the `<root>/….canvas.md` input (qualify with a root from `workspace_list`).
-2. `workspace_write` the `<root>/….canvas.js` app that this markdown drives, with the same stem in the same folder.
+1. `workspace_write` the `<root>/….canvas.md` input in the structure above (qualify with a root from `workspace_list`).
+2. `workspace_write` the `<root>/….canvas.js` app that this markdown drives, with the same stem in the same folder. Each scenario in `# Spec` holds in the module.
 3. `canvas.open` with that path — returns `ready` or the compile/runtime error.
-4. Before changing a canvas, `workspace_read` its `….canvas.md`. If the request changed, `workspace_write` that file, then `canvas.apply_source`. If that canvas is open in an editor, the editor marks itself dirty and recompiles the preview and does not save. If it is not open in an editor, the tool writes the file. Do not `workspace_write` a canvas that is already open.
+4. Before changing a canvas, `workspace_read` its `….canvas.md`. If the request changed, update the requirement and its scenarios in that file, then `canvas.apply_source`. If that canvas is open in an editor, the editor marks itself dirty and recompiles the preview and does not save. If it is not open in an editor, the tool writes the file. Do not `workspace_write` a canvas that is already open.
 5. Optional: `canvas.capture_preview` to attach a screenshot (iframe contents may be blank).
 
 Extension-registered canvases live on `system.canvases` and open by name via `canvas.open`. That opens a read-only viewer. Do not edit it: `canvas.apply_source`, `canvas.get_source`, `canvas.set_state`, and any tools declared by that canvas are not available while it is active.

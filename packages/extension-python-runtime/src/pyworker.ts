@@ -163,11 +163,11 @@ function createDocksBridge() {
     };
 }
 
-// Initialize Pyodide
-async function initPyodide(payload: { vars?: any }) {
+// Initialize Pyodide. An explicit indexURL is for tests; otherwise use the matching jsDelivr build.
+async function initPyodide(payload: { vars?: any; indexURL?: string } = {}) {
     const poVersion = pyoPackageJson.version;
     pyodide = await loadPyodide({
-        indexURL: `https://cdn.jsdelivr.net/pyodide/v${poVersion}/full/`
+        indexURL: payload.indexURL ?? `https://cdn.jsdelivr.net/pyodide/v${poVersion}/full/`,
     });
     
     // Set up interrupt buffer for cancellation support (if available)

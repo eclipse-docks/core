@@ -12,6 +12,7 @@ const SKIP = new Set([
   'disconnect_workspace',
   'disconnect_folder',
   'open_editor',
+  'build_plan',
   'list_extensions',
   'enable_extension',
   'disable_extension',

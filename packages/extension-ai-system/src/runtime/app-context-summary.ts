@@ -42,7 +42,6 @@ export function summarizeExecutionContext(context: ExecutionContext): Record<str
   const editor = context.activeEditor as {
     localName?: string;
     kind?: string;
-    canvasName?: string;
     input?: { title?: string; key?: string; icon?: string };
   } | null;
 
@@ -60,7 +59,6 @@ export function summarizeExecutionContext(context: ExecutionContext): Record<str
         ? {
             element: editor.localName,
             kind: editor.kind,
-            canvasName: editor.canvasName,
             title: editor.input?.title,
             key: editor.input?.key,
             filePath: callString(editor, 'getFilePath'),

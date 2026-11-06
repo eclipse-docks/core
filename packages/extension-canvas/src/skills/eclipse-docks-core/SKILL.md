@@ -121,7 +121,7 @@ log.info("ready");
 
 ## Canvas notes
 
-- A canvas app consists of three files with the same stem: `….canvas.js`, `….canvas.json`, and `….canvas.md`. The `….canvas.md` file is the input that drives generation of the `….canvas.js` app. Persist with `this.getState` / `this.setState` inside `onConnect` and later. `setState` creates the `….canvas.json`. Use `appSettings` only to share app-wide settings. A contributed canvas stores that state under its `settingsKey` and has no `….canvas.md`.
+- A canvas app consists of `….canvas.js` and `….canvas.json`. Its behavior contract is a `plan-….plan.md` file, the same plan document used for every other task. Plan mode writes the plan; Build generates the `….canvas.js` from it. A later change revises that same plan, then the module. Persist with `this.getState` / `this.setState` inside `onConnect` and later. `setState` creates the `….canvas.json`. Use `appSettings` only to share app-wide settings. A contributed canvas stores that state under its `settingsKey` and has no plan file.
 - `this.openFile(path)` opens a workspace path. Dialogs, toasts, and file contents stay on `docks/core`.
 - A canvas listens and publishes with `this.subscribe`, `this.unsubscribe`, and `this.publish`. It does not import those functions.
 - Cross-origin loads follow the canvas skill: CORS plus `Access-Control-Allow-Origin`, or `Cross-Origin-Resource-Policy: cross-origin`. An iframe `srcdoc` does not opt out.

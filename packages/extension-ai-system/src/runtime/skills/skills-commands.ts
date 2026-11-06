@@ -36,7 +36,7 @@ export function registerSkillCommands(): void {
       parameters: [
         {
           name: 'name',
-          description: 'Skill name (e.g. eclipse-docks-canvas)',
+          description: 'Skill name returned by skills.list',
           required: true,
         },
       ],

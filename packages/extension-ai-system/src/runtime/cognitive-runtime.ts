@@ -162,6 +162,15 @@ export class CognitiveRuntime {
     return this.approvalMode;
   }
 
+  setSpecialistMode(mode: SpecialistRole, sessionId?: string): void {
+    if (mode !== 'build' && mode !== 'plan' && mode !== 'explore') return;
+    const id = this.ensureSessionId(sessionId);
+    const session = this.sessions.get(id);
+    if (!session || session.specialistMode === mode) return;
+    this.sessions.update(id, { specialistMode: mode });
+    this.commitSessions();
+  }
+
   setApprovalMode(mode: ToolApprovalMode): void {
     const changed = this.approvalMode !== mode;
     this.approvalMode = mode;

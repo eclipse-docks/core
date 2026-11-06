@@ -5,6 +5,7 @@ import {
     EditorContentProvider,
     EditorInput,
     File,
+    commandRegistry,
     editorRegistry,
     icon,
     parseMarkdownHtml,
@@ -116,6 +117,31 @@ export class DocksMDEditor extends DocksPart implements EditorContentProvider {
         return data instanceof File ? data.getWorkspacePath() : null;
     }
 
+    /** Replace the open buffer after the plan file was rewritten on disk. */
+    async reloadFromFile(): Promise<void> {
+        const data = this.input?.data;
+        if (!(data instanceof File)) return;
+        const text = String((await data.getContents()) ?? '');
+        this.sourceText = text;
+        this.rendered = parseMarkdownHtml(text);
+        this.widget?.getModel()?.setValue(text);
+        this.markDirty(false);
+    }
+
+    private isPlanFile(): boolean {
+        const path = this.getFilePath();
+        if (!path) return false;
+        const name = path.split(/[/\\]/).pop() ?? '';
+        return /^plan-.+\.plan\.md$/i.test(name);
+    }
+
+    private async buildPlan(): Promise<void> {
+        const path = this.getFilePath();
+        if (!path || !commandRegistry.hasCommand('build_plan')) return;
+        if (this.isDirty()) await this.save();
+        await commandRegistry.execute('build_plan', commandRegistry.createExecutionContext({ path }));
+    }
+
     private toggleMode() {
         this.sourceText = this.widget?.getContent() ?? this.sourceText;
         const next = this.mode === 'preview' ? 'source' : 'preview';
@@ -136,7 +162,16 @@ export class DocksMDEditor extends DocksPart implements EditorContentProvider {
         if (!this.ready) return nothing;
         const toSource = this.mode === 'preview';
         const label = toSource ? 'Source' : 'Preview';
+        const showBuild = this.isPlanFile() && commandRegistry.hasCommand('build_plan');
         return html`
+            ${showBuild
+                ? html`
+                    <wa-button appearance="plain" size="s" title="Build this plan" @click=${() => void this.buildPlan()}>
+                        ${icon('play', { slot: 'start' })}
+                        Build
+                    </wa-button>
+                `
+                : nothing}
             <wa-button appearance="plain" size="s" title=${label} @click=${() => this.toggleMode()}>
                 ${icon(toSource ? 'code' : 'eye', { slot: 'start' })}
                 ${label}

@@ -1,4 +1,5 @@
 import type { SpecialistRole } from '../types';
+import { planDocumentGuide } from '../tools/plan-file';
 
 export * from './loop';
 export * from './classify-risk';
@@ -36,11 +37,11 @@ export function systemPromptFor(
     : `${base} ${replyRule} ${attachmentRule} ${pathRule} ${spillRule} ${skillRule}`;
   switch (role) {
     case 'plan':
-      return `${preamble}\nMode: PLAN (read-only). Analyze and propose a plan for: ${goal}`;
+      return `${preamble}\nMode: PLAN. You may read the workspace. The only write is create_plan, once this turn. Do not implement. ${planDocumentGuide()} After the file is written, answer in chat with one short sentence that names the file and do not restate the plan. Goal: ${goal}`;
     case 'explore':
-      return `${preamble}\nMode: EXPLORE (read-only). Search and report findings for: ${goal}`;
+      return `${preamble}\nMode: EXPLORE (read-only). Search and report findings. Do not create, edit, or delete files. Goal: ${goal}`;
     case 'build':
-      return `${preamble}\nMode: BUILD. Implement the goal using tools when needed: ${goal}`;
+      return `${preamble}\nMode: BUILD. Implement the goal using tools when needed. When this work already has a plan-*.plan.md file, that file stays the ground truth. A requested change revises that same file first, including the requirement and its scenarios, paraphrased in correct language with typos fixed, then updates the implementation so the plan still holds. Do not create a different plan file, and do not leave the plan describing the old behavior. Goal: ${goal}`;
     default:
       return `${preamble}\nGoal: ${goal}`;
   }

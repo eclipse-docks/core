@@ -1,3 +1,4 @@
+import { CREATE_PLAN_TOOL } from '../constants';
 import type { PermissionAction, SpecialistRole, ToolApprovalMode } from '../types';
 import type { ToolDefinition } from '../models/types';
 
@@ -79,10 +80,12 @@ export class ToolBroker {
   }
 
   listDefinitions(role: SpecialistRole): ToolDefinition[] {
-    if (role === 'plan' || role === 'explore') {
-      return this.definitions.filter((d) => !isMutatingName(d.name));
-    }
-    return [...this.definitions];
+    const readOnly = role === 'plan' || role === 'explore';
+    return this.definitions.filter((definition) => {
+      if (definition.name === CREATE_PLAN_TOOL) return role === 'plan';
+      if (readOnly && isMutatingName(definition.name)) return false;
+      return true;
+    });
   }
 
   resolveAction(toolName: string, risk?: 'safe' | 'critical'): PermissionAction {
@@ -118,11 +121,21 @@ export class ToolBroker {
     role: SpecialistRole,
     opts: ExecuteOptions = {},
   ): Promise<ToolResult> {
-    if ((role === 'plan' || role === 'explore') && isMutatingName(call.name)) {
+    const planWrite = call.name === CREATE_PLAN_TOOL;
+    if (planWrite && role !== 'plan') {
+      return {
+        id: call.id,
+        name: call.name,
+        ok: false,
+        output: null,
+        error: 'create_plan is only available in plan mode',
+      };
+    }
+    if (!planWrite && (role === 'plan' || role === 'explore') && isMutatingName(call.name)) {
       return { id: call.id, name: call.name, ok: false, output: null, error: 'Tool denied in plan/explore mode' };
     }
 
-    let action = this.resolveAction(call.name, opts.risk);
+    let action = planWrite ? 'allow' : this.resolveAction(call.name, opts.risk);
     if (action === 'ask' && this.permissionHandler) {
       action = await this.permissionHandler({ toolName: call.name, args: call.arguments, sessionId });
     }

@@ -13,6 +13,23 @@ describe('specialist skill prompt', () => {
     expect(prompt).toContain('Before a complex task, call skills.list');
     expect(prompt).toContain('eclipse-docks-canvas: Create interactive .canvas.js apps');
     expect(prompt).toContain('implement the app defined in the specs file');
+    expect(prompt).toContain('revises that same file first');
+    expect(prompt).toContain('do not leave the plan describing the old behavior');
+  });
+
+  it('tells a plan turn to stay read-only and propose steps', () => {
+    const prompt = systemPromptFor('plan', 'add a status bar');
+    expect(prompt).toContain('Mode: PLAN');
+    expect(prompt).toContain('create_plan');
+    expect(prompt).toContain('# Spec');
+    expect(prompt).toContain('WHEN');
+    expect(prompt).toContain('plan-<short-description>.plan.md');
+    expect(prompt).toContain('Do not create a second plan file');
+    expect(prompt).toContain('paraphrased in correct language');
+    expect(prompt).toContain('Do not copy the user\'s text');
+    expect(prompt).toContain('Do not implement');
+    expect(prompt).toContain('one short sentence');
+    expect(prompt).toContain('add a status bar');
   });
 
   it('tells an attachment turn where to read files', () => {

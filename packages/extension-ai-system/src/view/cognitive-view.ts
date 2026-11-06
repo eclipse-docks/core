@@ -12,6 +12,7 @@ import {
 import {
   DocksPart,
   File as WorkspaceFile,
+  commandRegistry,
   FileContentType,
   filebrowserDialog,
   parseMarkdownHtml,
@@ -26,7 +27,9 @@ import {
   MAX_ATTACHMENTS,
   OPEN_AI_SETTINGS_COMMAND,
   TOPIC,
+  buildPlanPrompt,
   cognitiveRuntime,
+  isPlanFilePath,
   detectEffortCapability,
   estimateSessionContextUsage,
   formatBucketDetail,
@@ -44,6 +47,7 @@ import type {
   PermissionAction,
   PromptAttachment,
   SessionAttachment,
+  SpecialistRole,
   ToolApprovalMode,
 } from '../runtime';
 import {
@@ -325,10 +329,31 @@ export class DocksCognitiveView extends DocksPart {
       margin-bottom: var(--wa-space-2xs);
     }
 
+    .composer-meter wa-button.composer-pick {
+      flex: 0 1 auto;
+      min-width: 0;
+      max-width: 8rem;
+      --wa-form-control-height: 1.5rem;
+      --wa-form-control-padding-inline: var(--wa-space-2xs);
+      margin: 0;
+    }
+
+    .composer-meter wa-button.composer-pick::part(label) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    wa-dropdown.mode-menu::part(menu),
+    wa-dropdown.model-menu::part(menu) {
+      min-width: 14rem;
+      max-width: min(22rem, 92vw);
+    }
+
     .context-bar {
       --track-height: 1rem;
       flex: 1 1 auto;
-      min-width: 0;
+      min-width: 2.5rem;
       cursor: pointer;
     }
 
@@ -817,6 +842,7 @@ export class DocksCognitiveView extends DocksPart {
         const { sessionId, part } = payload as { sessionId: string; part: MessagePart };
         if (sessionId !== this.focusedId) return;
         this.streamingParts = mergePart(this.streamingParts, part);
+        this.openCreatedPlan(part);
         this.scheduleScrollToBottom();
       }),
       subscribe(TOPIC.messageDone, () => {
@@ -993,6 +1019,17 @@ export class DocksCognitiveView extends DocksPart {
     if (this.policyMode === 'auto') return `Auto · ${capitalize(this.optimizeFor)}`;
     if (!this.modelIds.length) return 'No models';
     return shortModelLabel(this.manualModel || this.modelIds[0]!);
+  }
+
+  private modelTriggerLabel(): string {
+    const base = this.routerLabel();
+    if (this.policyMode !== 'manual' || this.manualEffort === 'auto') return base;
+    return `${base} · ${capitalize(this.manualEffort)}`;
+  }
+
+  private chatMode(): ChatMode {
+    const mode = this.focusedSession()?.specialistMode;
+    return CHAT_MODES.some((option) => option.value === mode) ? (mode as ChatMode) : 'build';
   }
 
   private activeModelRef(): string {
@@ -1278,6 +1315,41 @@ export class DocksCognitiveView extends DocksPart {
     this.pendingAttachmentIds = [];
     if (this.fileInput) this.fileInput.value = '';
     await this.setComposerText('');
+  }
+
+  async buildFromPlan(path: string): Promise<void> {
+    const planPath = path.trim();
+    if (!isPlanFilePath(planPath)) return;
+    if (this.busy) {
+      toastInfo('Wait for the current turn to finish');
+      return;
+    }
+    cognitiveRuntime.setSpecialistMode('build', this.focusedId ?? undefined);
+    this.syncSessions();
+    await this.setComposerText(buildPlanPrompt(planPath));
+    await this.send();
+  }
+
+  private openCreatedPlan(part: MessagePart): void {
+    if (part.type !== 'tool' || part.status !== 'done') return;
+    if (part.name !== 'create_plan' && part.name !== 'workspace_write') return;
+    const result = part.result;
+    if (!result || typeof result !== 'object' || !('path' in result)) return;
+    const path = String((result as { path: unknown }).path ?? '').trim();
+    if (!isPlanFilePath(path)) return;
+    void this.showCreatedPlan(path, part.name === 'create_plan');
+  }
+
+  private async showCreatedPlan(path: string, open: boolean): Promise<void> {
+    if (open) await commandRegistry.execute('open_editor', commandRegistry.createExecutionContext({ path }));
+    for (const editor of elementsNamed('docks-md-editor')) {
+      const planEditor = editor as HTMLElement & {
+        getFilePath?: () => string | null;
+        reloadFromFile?: () => Promise<void>;
+      };
+      if (planEditor.getFilePath?.() !== path || !planEditor.reloadFromFile) continue;
+      await planEditor.reloadFromFile();
+    }
   }
 
   private async send(): Promise<void> {
@@ -1710,6 +1782,8 @@ export class DocksCognitiveView extends DocksPart {
             </div>
           </div>
           <div class="composer-meter">
+            ${this.renderChatModeDropdown()}
+            ${this.renderModelDropdown()}
             ${this.renderContextDropdown()}
             ${this.renderAttachmentDropdown()}
           </div>
@@ -1859,6 +1933,13 @@ export class DocksCognitiveView extends DocksPart {
       void this.executeCommand(OPEN_AI_SETTINGS_COMMAND, {});
       return;
     }
+    if (value.startsWith('mode:')) {
+      const mode = value.slice('mode:'.length);
+      if (mode === 'build' || mode === 'plan' || mode === 'explore') {
+        cognitiveRuntime.setSpecialistMode(mode);
+      }
+      return;
+    }
     if (value.startsWith('approval:')) {
       const mode = value.slice('approval:'.length);
       if (mode === 'manual' || mode === 'auto_safe' || mode === 'auto_all') {
@@ -1875,7 +1956,48 @@ export class DocksCognitiveView extends DocksPart {
     this.onRouterSelect(value);
   }
 
-  private renderSettingsDropdown() {
+  private renderChatModeDropdown() {
+    const mode = this.chatMode();
+    const current = CHAT_MODES.find((option) => option.value === mode) ?? CHAT_MODES[0]!;
+    return html`
+      <wa-dropdown
+        class="mode-menu"
+        size="s"
+        placement="top-start"
+        distance="4"
+        @wa-select=${(e: CustomEvent<{ item?: { value?: string } }>) => {
+          const value = e.detail?.item?.value;
+          if (value != null) this.onSettingsSelect(value);
+        }}
+      >
+        <wa-button
+          slot="trigger"
+          class="composer-pick"
+          appearance="plain"
+          size="s"
+          with-caret
+          title=${`${current.label}: ${current.detail}`}
+        >
+          ${current.label}
+        </wa-button>
+        <h3>Mode</h3>
+        ${CHAT_MODES.map(
+          (option) => html`
+            <wa-dropdown-item
+              value=${`mode:${option.value}`}
+              type="checkbox"
+              .checked=${mode === option.value}
+            >
+              ${option.label}
+              <span slot="details">${option.detail}</span>
+            </wa-dropdown-item>
+          `,
+        )}
+      </wa-dropdown>
+    `;
+  }
+
+  private renderModelDropdown() {
     const selected = this.routerValue();
     const autoOptions = [
       { value: 'auto:cost', label: 'Auto · Cost' },
@@ -1886,9 +2008,9 @@ export class DocksCognitiveView extends DocksPart {
 
     return html`
       <wa-dropdown
-        class="settings-menu"
+        class="model-menu"
         size="s"
-        placement="bottom-end"
+        placement="top-start"
         distance="4"
         @wa-select=${(e: CustomEvent<{ item?: { value?: string } }>) => {
           const value = e.detail?.item?.value;
@@ -1897,14 +2019,14 @@ export class DocksCognitiveView extends DocksPart {
       >
         <wa-button
           slot="trigger"
+          class="composer-pick"
           appearance="plain"
           size="s"
           with-caret
-          title=${`AI · ${this.routerLabel()}`}
+          title=${`Model: ${this.modelTriggerLabel()}`}
         >
-          <wa-icon name="gear" label="AI settings"></wa-icon>
+          ${this.modelTriggerLabel()}
         </wa-button>
-
         <h3>Auto</h3>
         ${autoOptions.map(
           (option) => html`
@@ -1917,7 +2039,6 @@ export class DocksCognitiveView extends DocksPart {
             </wa-dropdown-item>
           `,
         )}
-
         <wa-divider></wa-divider>
         <h3>Models</h3>
         ${this.modelIds.length
@@ -1933,7 +2054,6 @@ export class DocksCognitiveView extends DocksPart {
               `,
             )
           : html`<wa-dropdown-item disabled>No models configured</wa-dropdown-item>`}
-
         ${this.policyMode === 'manual'
           ? html`
               <wa-divider></wa-divider>
@@ -1951,8 +2071,25 @@ export class DocksCognitiveView extends DocksPart {
               )}
             `
           : nothing}
+      </wa-dropdown>
+    `;
+  }
 
-        <wa-divider></wa-divider>
+  private renderSettingsDropdown() {
+    return html`
+      <wa-dropdown
+        class="settings-menu"
+        size="s"
+        placement="bottom-end"
+        distance="4"
+        @wa-select=${(e: CustomEvent<{ item?: { value?: string } }>) => {
+          const value = e.detail?.item?.value;
+          if (value != null) this.onSettingsSelect(value);
+        }}
+      >
+        <wa-button slot="trigger" appearance="plain" size="s" title="AI settings">
+          <wa-icon name="gear" label="AI settings"></wa-icon>
+        </wa-button>
         <h3>Tool approvals</h3>
         ${APPROVAL_OPTIONS.map(
           (option) => html`
@@ -1965,7 +2102,6 @@ export class DocksCognitiveView extends DocksPart {
             </wa-dropdown-item>
           `,
         )}
-
         <wa-divider></wa-divider>
         <wa-dropdown-item value="settings">
           <wa-icon slot="icon" name="sliders"></wa-icon>
@@ -2135,6 +2271,14 @@ export class DocksCognitiveView extends DocksPart {
     return nothing;
   }
 }
+
+type ChatMode = Extract<SpecialistRole, 'build' | 'plan' | 'explore'>;
+
+const CHAT_MODES: Array<{ value: ChatMode; label: string; detail: string }> = [
+  { value: 'build', label: 'Agent', detail: 'Implement with tools' },
+  { value: 'plan', label: 'Plan', detail: 'Read the workspace and propose a plan' },
+  { value: 'explore', label: 'Explore', detail: 'Search and report, without edits' },
+];
 
 const APPROVAL_OPTIONS: Array<{ value: ToolApprovalMode; label: string }> = [
   { value: 'auto_safe', label: 'Auto-approve non-critical' },
@@ -2350,6 +2494,18 @@ function mergePart(parts: MessagePart[], part: MessagePart): MessagePart[] {
   }
   next.push(part);
   return next;
+}
+
+function elementsNamed(name: string, root: ParentNode = document): Element[] {
+  const found: Element[] = [];
+  const visit = (node: ParentNode) => {
+    for (const el of node.querySelectorAll(name)) found.push(el);
+    for (const el of node.querySelectorAll('*')) {
+      if (el.shadowRoot) visit(el.shadowRoot);
+    }
+  };
+  visit(root);
+  return found;
 }
 
 declare global {

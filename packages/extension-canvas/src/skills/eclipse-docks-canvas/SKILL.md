@@ -1,11 +1,11 @@
 ---
 name: eclipse-docks-canvas
 description: >-
-  Create or edit interactive Eclipse Docks canvases (.canvas.js and the matching
-  .canvas.md spec): CanvasView UIs, dashboards, todo apps, widgets, maps, and
-  previewable tools. Use when the user wants an interactive view, canvas, widget,
-  or .canvas.js file, or when a .canvas.md spec is open — even if they do not say
-  "canvas".
+  Implement Eclipse Docks canvases (.canvas.js) from a plan-*.plan.md file:
+  CanvasView UIs, dashboards, todo apps, widgets, maps, and previewable tools.
+  Use when the user wants an interactive view, canvas, widget, or .canvas.js
+  file, or when a plan file is open — even if they do not say "canvas".
+  Plan mode writes the plan. This skill implements the module.
 ---
 
 # Eclipse Docks canvas
@@ -33,14 +33,14 @@ import { CanvasView, html, css, nothing } from "docks/canvas";
 
 The host attaches after construction and before `onConnect`. From `constructor`, `getState` returns the fallback, and `setState` and `openFile` do nothing. Leave `connectedCallback` and `disconnectedCallback` on `CanvasView`. The subclass still owns `render`, `static properties`, and `static styles`.
 
-A canvas app consists of three files with the same stem: `….canvas.js`, `….canvas.json`, and `….canvas.md`. The `….canvas.md` file is the input that drives generation of the `….canvas.js` app. `setState` creates the `….canvas.json`. The canvas does not import either sidecar.
+A canvas app consists of `….canvas.js` and `….canvas.json`. The plan is a separate `plan-<short-description>.plan.md`, the same document used for every other task. Plan mode writes it with `create_plan`. It is the ground truth that drives the `….canvas.js` app. `setState` creates the `….canvas.json`. The canvas does not import the plan or the json file.
 
-Write `….canvas.md` in this order. `# Requirements` is the user's request. `# Spec` is the behavior contract the module must satisfy. `# State` and `# Interface` are what generation needs and the behavior contract leaves out.
+The plan uses this order. `# Requirements` is the user's request, paraphrased in correct language. Fix typos and unclear wording, and do not copy the user's text into the plan. `# Spec` is the behavior contract the module must satisfy. `# State` and `# Interface` are what generation needs and the behavior contract leaves out. `# Files` names the module and any other file Build will change.
 
 ```md
 # Requirements
 
-What the user asked for, in their words.
+A clean paraphrase of what the user asked for. Typos are corrected here.
 
 # Spec
 
@@ -71,6 +71,10 @@ Keys stored through `setState`, and the shape of each value.
 # Interface
 
 Controls and layout the behavior depends on.
+
+# Files
+
+- `<stem>.canvas.js` — the module Build writes
 ```
 
 Spec rules:
@@ -78,7 +82,7 @@ Spec rules:
 - One behavior per `### Requirement:`. State it with SHALL or MUST.
 - Every requirement has at least one `#### Scenario:`. Every scenario has a WHEN line and a THEN line. Add AND lines for further outcomes.
 - A scenario states observable behavior: what the user does, what the canvas shows, and what it stores. Class names, Lit details, and component choices stay out of `# Spec`.
-- `# State` names each `setState` key and the shape of its value. `# Interface` names the controls and layout a scenario depends on. It is not a widget catalog.
+- `# State` names each `setState` key and the shape of its value. `# Interface` names the controls and layout a scenario depends on. It is not a widget catalog. `# Files` names the module Build will write.
 
 ## Hard rules
 
@@ -86,7 +90,7 @@ Spec rules:
 2. Build controls and chrome with Web Awesome (`wa-button`, `wa-input`, `wa-checkbox`, `wa-card`, `wa-callout`, `wa-spinner`). A raw `<button>` or `<input>` is not a substitute. Load `eclipse-docks-webawesome` before a non-trivial UI, and use `--wa-color-*` tokens instead of hardcoded colors.
 3. Emit complete, valid JavaScript — no truncated objects or unfinished strings.
 4. The page uses `Cross-Origin-Embedder-Policy: require-corp`. A cross-origin response loads only when the request is CORS and the server sends `Access-Control-Allow-Origin`, or when the server sends `Cross-Origin-Resource-Policy: cross-origin`. An `<iframe srcdoc>` inherits this policy; `sandbox="allow-same-origin"` does not exempt it.
-5. The `….canvas.md` file is the input that drives the `….canvas.js` app. When the request changes, update the requirement and its scenarios first, and `# State` or `# Interface` when those change, then regenerate the module so each scenario still holds.
+5. The `plan-….plan.md` file drives the `….canvas.js` app. When the request changes, `workspace_read` that plan and `workspace_write` the same file so `# Spec`, and `# State` or `# Interface` when those change, match the request. Then update the module so each scenario still holds. Do not create a different plan file, and do not leave the plan describing the old behavior. Do not generate the module during plan mode.
 
 ## Code
 
@@ -189,10 +193,11 @@ Before non-trivial UI or shell integration, load companion skills as needed:
 
 ## Workflow
 
-1. `workspace_write` the `<root>/….canvas.md` input in the structure above (qualify with a root from `workspace_list`).
-2. `workspace_write` the `<root>/….canvas.js` app that this markdown drives, with the same stem in the same folder. Each scenario in `# Spec` holds in the module.
-3. `canvas.open` with that path — returns `ready` or the compile/runtime error.
-4. Before changing a canvas, `workspace_read` its `….canvas.md`. If the request changed, update the requirement and its scenarios in that file, then `canvas.apply_source`. If that canvas is open in an editor, the editor marks itself dirty and recompiles the preview and does not save. If it is not open in an editor, the tool writes the file. Do not `workspace_write` a canvas that is already open.
-5. Optional: `canvas.capture_preview` to attach a screenshot (iframe contents may be blank).
+Plan mode owns the spec. This skill owns the module.
+
+1. In plan mode, call `create_plan` once this turn. The first call writes `plan-<short-description>.plan.md` and lists the `<stem>.canvas.js` under `# Files`. A later change passes that file as `path` and rewrites it. Do not create a second plan for the same app, and do not write the module in plan mode.
+2. Build reads that plan and writes the `<stem>.canvas.js` so every scenario in `# Spec` holds, then `canvas.open` with that path. `canvas.open` returns `ready` or the compile/runtime error.
+3. Before changing a canvas, `workspace_read` its `plan-….plan.md`. If the request changed, `workspace_write` that same plan so the requirement and its scenarios match, then update the module. Then `canvas.apply_source`. If that canvas is open in an editor, the editor marks itself dirty and recompiles the preview and does not save. If it is not open in an editor, the tool writes the file. Do not `workspace_write` a canvas that is already open.
+4. Optional: `canvas.capture_preview` to attach a screenshot (iframe contents may be blank).
 
 Extension-registered canvases live on `system.canvases` and open by name via `canvas.open`. That opens a read-only viewer. Do not edit it: `canvas.apply_source`, `canvas.get_source`, `canvas.set_state`, and any tools declared by that canvas are not available while it is active.

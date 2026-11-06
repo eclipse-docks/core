@@ -1,0 +1,1 @@
+export{Wt as FileSysDirHandleResource}from"./canvas-bridge-core.js-By6utgn9.js";

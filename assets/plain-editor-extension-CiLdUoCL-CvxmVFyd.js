@@ -1,4 +1,0 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/plain-editor-DubLU1M5-CQOK940x.js","assets/canvas-bridge-core.js-Bffj0Hc4.js","assets/rolldown-runtime-COiEfhsA.js","assets/canvas-bridge-canvas.js-D2E74L6t.js","assets/canvas-bridge-canvas-DBq2RCBQ.css"])))=>i.map(i=>d[i]);
-import{Ht as e,c as t,zt as n}from"./canvas-bridge-core.js-Bffj0Hc4.js";import{C as r}from"./canvas-bridge-canvas.js-D2E74L6t.js";t.registerEditorInputHandler({editorId:`system.plain-editor`,label:`Text`,icon:`file-lines`,ranking:1,lazyInit:async()=>{await n(()=>import(`./plain-editor-DubLU1M5-CQOK940x.js`),__vite__mapDeps([0,1,2,3,4]))},canHandle:t=>t instanceof e,handle:async e=>{let n={title:e.getWorkspacePath(),data:e,key:e.getWorkspacePath(),icon:t.getFileIcon(e.getName()),state:{}};return n.component=e=>r`
-      <docks-plain-editor id=${e} .input=${n}></docks-plain-editor>
-    `,n}});

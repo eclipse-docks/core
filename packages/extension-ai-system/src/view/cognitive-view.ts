@@ -59,6 +59,39 @@ interface PermissionRequest {
   sessionId: string;
 }
 
+const WORKSPACE_FILE_DRAG_TYPE = 'application/x-workspace-file';
+
+function transferHasType(transfer: DataTransfer, type: string): boolean {
+  return Array.from(transfer.types ?? []).includes(type);
+}
+
+function workspaceDragPaths(payload: string): string[] {
+  return payload
+    .split(/\r?\n/)
+    .map((path) => path.trim())
+    .filter(Boolean);
+}
+
+function browserFileFromContents(contents: unknown, name: string): File | null {
+  if (contents instanceof File) {
+    return contents.name === name ? contents : new File([contents], name, { type: contents.type });
+  }
+  if (contents instanceof Blob) {
+    return new File([contents], name, { type: contents.type || 'application/octet-stream' });
+  }
+  if (typeof contents === 'string') {
+    return new File([contents], name, { type: 'text/plain' });
+  }
+  if (contents instanceof ArrayBuffer) {
+    return new File([contents], name);
+  }
+  if (ArrayBuffer.isView(contents)) {
+    const bytes = new Uint8Array(contents.buffer, contents.byteOffset, contents.byteLength);
+    return new File([bytes], name);
+  }
+  return null;
+}
+
 @customElement('docks-cognitive-view')
 export class DocksCognitiveView extends DocksPart {
   protected scrollMode: 'scroller' | 'native' | 'none' = 'none';
@@ -86,6 +119,12 @@ export class DocksCognitiveView extends DocksPart {
       overflow: hidden;
       /* Establish a definite containing block for wa-scroller's height: 100%. */
       position: relative;
+    }
+
+    .cognitive-shell.drag-over {
+      outline: 2px dashed var(--wa-color-brand-border-normal);
+      outline-offset: -2px;
+      background: color-mix(in srgb, var(--wa-color-brand-fill-quiet) 35%, transparent);
     }
 
     wa-dropdown.history-menu::part(menu) {
@@ -263,7 +302,7 @@ export class DocksCognitiveView extends DocksPart {
       display: flex;
       flex-direction: column;
       gap: var(--wa-space-s);
-      padding: var(--wa-space-s) var(--wa-space-m) var(--wa-space-m);
+      padding-inline: var(--wa-space-2xs);
       border-top: var(--wa-border-width-s) solid var(--wa-color-border-normal);
       flex-shrink: 0;
     }
@@ -279,11 +318,27 @@ export class DocksCognitiveView extends DocksPart {
       padding: var(--wa-space-s);
     }
 
-    .context-ring {
-      --size: 1.35rem;
-      --track-width: 2.5px;
-      --indicator-width: 2.5px;
-      font-size: 0;
+    .composer-meter {
+      display: flex;
+      align-items: center;
+      gap: var(--wa-space-2xs);
+      margin-bottom: var(--wa-space-2xs);
+    }
+
+    .context-bar {
+      --track-height: 1rem;
+      flex: 1 1 auto;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .context-bar::part(progress-bar) {
+      border-radius: 0;
+    }
+
+    .context-bar:focus-visible::part(progress-bar) {
+      outline: var(--wa-focus-ring-width, 2px) solid var(--wa-color-focus, #3b82f6);
+      outline-offset: -2px;
     }
 
     .context-panel {
@@ -417,6 +472,19 @@ export class DocksCognitiveView extends DocksPart {
     .composer wa-textarea {
       flex: 1;
       min-width: 0;
+      margin: 0;
+    }
+
+    .composer wa-textarea[appearance='plain']::part(textarea-wrapper) {
+      background-color: transparent;
+      border-color: transparent;
+      margin: 0;
+      padding: 0;
+    }
+
+    .composer wa-textarea[appearance='plain']::part(textarea) {
+      margin: 0;
+      padding: var(--wa-space-2xs);
     }
 
     .composer-actions {
@@ -426,10 +494,37 @@ export class DocksCognitiveView extends DocksPart {
       flex-shrink: 0;
     }
 
-    .composer-shell.drag-over {
-      outline: 2px dashed var(--wa-color-brand-border-normal);
-      outline-offset: -2px;
-      background: color-mix(in srgb, var(--wa-color-brand-fill-quiet) 35%, transparent);
+    .composer-meter wa-button.attach-count {
+      display: flex;
+      align-items: center;
+      flex: 0 0 auto;
+      height: 1rem;
+      --wa-form-control-height: 1rem;
+      --wa-form-control-padding-inline: 0;
+      margin: 0;
+      line-height: 1;
+      overflow: visible;
+    }
+
+    .composer-meter wa-button.attach-count::part(label) {
+      display: flex;
+      align-items: center;
+      line-height: 1;
+    }
+
+    .attach-count-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-width: 1rem;
+      height: 1rem;
+      padding-inline: var(--wa-space-2xs);
+      border-radius: var(--wa-border-radius-s);
+      background-color: var(--wa-color-brand-fill-loud);
+      color: var(--wa-color-brand-on-loud);
+      font-size: 0.75rem;
+      line-height: 1;
     }
 
     wa-dropdown.attach-menu::part(menu) {
@@ -654,6 +749,7 @@ export class DocksCognitiveView extends DocksPart {
   @state() private draft = '';
   /** Session attachment ids to publish with the next user turn. */
   @state() private pendingAttachmentIds: string[] = [];
+  @state() private attachmentLanded = false;
   @state() private dragOver = false;
   @state() private previewAttachmentId: string | null = null;
   @state() private toolDetail: Extract<MessagePart, { type: 'tool' }> | null = null;
@@ -1064,8 +1160,21 @@ export class DocksCognitiveView extends DocksPart {
         ...this.pendingAttachmentIds,
         ...stored.map((a) => a.id).filter((id) => !this.pendingAttachmentIds.includes(id)),
       ];
+      this.playAttachmentLanded();
     }
     this.syncSessions();
+  }
+
+  private playAttachmentLanded(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!this.attachmentLanded) {
+      this.attachmentLanded = true;
+      return;
+    }
+    this.attachmentLanded = false;
+    void this.updateComplete.then(() => {
+      this.attachmentLanded = true;
+    });
   }
 
   private openFilePicker(): void {
@@ -1078,20 +1187,72 @@ export class DocksCognitiveView extends DocksPart {
     input.value = '';
   }
 
-  private onComposerDragOver(e: DragEvent): void {
-    if (!e.dataTransfer?.types.includes('Files')) return;
+  private acceptsAttachmentDrag(transfer: DataTransfer | null): boolean {
+    if (!transfer) return false;
+    return transferHasType(transfer, 'Files') || transferHasType(transfer, WORKSPACE_FILE_DRAG_TYPE);
+  }
+
+  private onViewDragOver(e: DragEvent): void {
+    if (!this.acceptsAttachmentDrag(e.dataTransfer)) return;
     e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
     this.dragOver = true;
   }
 
-  private onComposerDragLeave(e: DragEvent): void {
-    if (e.currentTarget === e.target) this.dragOver = false;
+  private onViewDragLeave(e: DragEvent): void {
+    const shell = e.currentTarget as HTMLElement;
+    const next = e.relatedTarget as Node | null;
+    if (next && shell.contains(next)) return;
+    this.dragOver = false;
   }
 
-  private async onComposerDrop(e: DragEvent): Promise<void> {
+  private async onViewDrop(e: DragEvent): Promise<void> {
     e.preventDefault();
     this.dragOver = false;
-    if (e.dataTransfer?.files?.length) await this.addFiles(e.dataTransfer.files);
+    const transfer = e.dataTransfer;
+    if (!transfer) return;
+    if (transfer.files?.length) {
+      await this.addFiles(transfer.files);
+      return;
+    }
+    if (transferHasType(transfer, WORKSPACE_FILE_DRAG_TYPE)) {
+      await this.addWorkspaceFiles(transfer.getData(WORKSPACE_FILE_DRAG_TYPE));
+    }
+  }
+
+  private async addWorkspaceFiles(payload: string): Promise<void> {
+    const paths = workspaceDragPaths(payload);
+    if (!paths.length) return;
+
+    const workspace = await workspaceService.getWorkspace();
+    if (!workspace) {
+      toastError('No workspace connected');
+      return;
+    }
+
+    const files: File[] = [];
+    let skippedFolder = false;
+    for (const path of paths) {
+      const resource = await workspace.getResource(path);
+      if (!resource) {
+        toastError(`Not found: ${path}`);
+        continue;
+      }
+      if (!(resource instanceof WorkspaceFile)) {
+        skippedFolder = true;
+        continue;
+      }
+      const contents = await resource.getContents({ blob: true });
+      const file = browserFileFromContents(contents, resource.getName());
+      if (!file) {
+        toastError(`Couldn't read ${resource.getName()}`);
+        continue;
+      }
+      files.push(file);
+    }
+
+    if (skippedFolder) toastInfo('Only files can be attached');
+    if (files.length) await this.addFiles(files);
   }
 
   /** Attach clipboard files/images (e.g. Ctrl+V screenshot) when focused in the prompt. */
@@ -1174,12 +1335,27 @@ export class DocksCognitiveView extends DocksPart {
       <wa-dropdown class="attach-menu" size="s" placement="top-end" distance="4">
         <wa-button
           slot="trigger"
+          class="attach-count"
           size="s"
           appearance="plain"
           title=${count ? `${count} attachment${count === 1 ? '' : 's'}` : 'Attachments'}
+          aria-label=${count ? `${count} attachment${count === 1 ? '' : 's'}` : 'Attachments'}
         >
-          <wa-icon name="paperclip" label="Attachments"></wa-icon>
-          ${count > 0 ? html`<wa-badge pill>${count}</wa-badge>` : nothing}
+          <wa-animation
+            name="bounce"
+            duration="2000"
+            iterations="1"
+            ?play=${this.attachmentLanded}
+            @wa-finish=${() => {
+              this.attachmentLanded = false;
+            }}
+          >
+            <span class="attach-count-mark">
+              ${count > 0
+                ? count
+                : html`<wa-icon name="paperclip" label="Attachments"></wa-icon>`}
+            </span>
+          </wa-animation>
         </wa-button>
         <div
           class="attach-panel"
@@ -1347,9 +1523,14 @@ export class DocksCognitiveView extends DocksPart {
     `;
   }
 
-  private contextRingStyle(level: ContextUsage['level']): string {
+  private activateOnKey(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    (event.currentTarget as HTMLElement).click();
+  }
+
+  private contextMeterStyle(level: ContextUsage['level']): string {
     const tone = level === 'critical' ? 'danger' : level === 'warn' ? 'warning' : 'success';
-    // Match Web Awesome docs: quiet track + loud indicator.
     return [
       `--track-color: var(--wa-color-${tone}-fill-quiet)`,
       `--indicator-color: var(--wa-color-${tone}-fill-loud)`,
@@ -1361,7 +1542,7 @@ export class DocksCognitiveView extends DocksPart {
     const canCompact = (this.focusedSession()?.history.length ?? 0) > 12;
     const percentLabel = formatContextPercent(usage.percent);
     const title = `Context window ${percentLabel} · ~${formatTokenCount(usage.used)} / ${formatTokenCount(usage.limit)}`;
-    const ringValue = Math.min(100, Math.max(usage.percent, usage.used > 0 ? 1 : 0));
+    const meterValue = Math.min(100, Math.max(usage.percent, usage.used > 0 ? 1 : 0));
 
     return html`
       <wa-dropdown
@@ -1370,19 +1551,16 @@ export class DocksCognitiveView extends DocksPart {
         placement="top-end"
         distance="4"
       >
-        <wa-button
+        <wa-progress-bar
           slot="trigger"
-          appearance="plain"
-          size="s"
+          class="context-bar"
+          style=${this.contextMeterStyle(usage.level)}
+          value=${meterValue}
+          label=${title}
           title=${title}
-        >
-          <wa-progress-ring
-            class="context-ring"
-            style=${this.contextRingStyle(usage.level)}
-            value=${ringValue}
-            label=${title}
-          ></wa-progress-ring>
-        </wa-button>
+          tabindex="0"
+          @keydown=${(e: KeyboardEvent) => this.activateOnKey(e)}
+        ></wa-progress-bar>
 
         <div
           class="context-panel"
@@ -1450,7 +1628,12 @@ export class DocksCognitiveView extends DocksPart {
   protected renderContent() {
     const session = this.focusedSession();
     return html`
-      <div class="cognitive-shell">
+      <div
+        class="cognitive-shell ${this.dragOver ? 'drag-over' : ''}"
+        @dragover=${(e: DragEvent) => this.onViewDragOver(e)}
+        @dragleave=${(e: DragEvent) => this.onViewDragLeave(e)}
+        @drop=${(e: DragEvent) => void this.onViewDrop(e)}
+      >
         <wa-scroller class="transcript" orientation="vertical">
           <div class="transcript-inner">
             <div class="transcript-spacer" aria-hidden="true"></div>
@@ -1458,12 +1641,7 @@ export class DocksCognitiveView extends DocksPart {
           </div>
         </wa-scroller>
 
-        <div
-          class="composer-shell ${this.dragOver ? 'drag-over' : ''}"
-          @dragover=${(e: DragEvent) => this.onComposerDragOver(e)}
-          @dragleave=${(e: DragEvent) => this.onComposerDragLeave(e)}
-          @drop=${(e: DragEvent) => void this.onComposerDrop(e)}
-        >
+        <div class="composer-shell">
           <input
             id="attach-file-input"
             type="file"
@@ -1493,8 +1671,9 @@ export class DocksCognitiveView extends DocksPart {
               : nothing}
             <div class="composer-row">
               <wa-textarea
-                placeholder=${this.busy ? 'Add a follow-up…' : 'Enter your message here…'}
+                placeholder=${this.busy ? 'Add a follow-up…' : 'Prompt...'}
                 size="s"
+                appearance="plain"
                 resize="auto"
                 rows="1"
                 .value=${this.draft}
@@ -1513,9 +1692,9 @@ export class DocksCognitiveView extends DocksPart {
                   }
                 }}
               ></wa-textarea>
-              <div class="composer-actions">
-                ${this.busy
-                  ? html`
+              ${this.busy
+                ? html`
+                    <div class="composer-actions">
                       <wa-button
                         size="s"
                         appearance="plain"
@@ -1525,12 +1704,14 @@ export class DocksCognitiveView extends DocksPart {
                       >
                         <wa-icon name="stop" label="Stop"></wa-icon>
                       </wa-button>
-                    `
-                  : nothing}
-                ${this.renderAttachmentDropdown()}
-                ${this.renderContextDropdown()}
-              </div>
+                    </div>
+                  `
+                : nothing}
             </div>
+          </div>
+          <div class="composer-meter">
+            ${this.renderContextDropdown()}
+            ${this.renderAttachmentDropdown()}
           </div>
         </div>
         ${this.renderAttachmentDialog()}

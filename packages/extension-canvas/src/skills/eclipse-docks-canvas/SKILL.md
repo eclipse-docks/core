@@ -10,7 +10,13 @@ description: >-
 
 # Eclipse Docks canvas
 
-Write a workspace file ending in `.canvas.js`. Default-export a `CanvasView` subclass from `docks/canvas`. The host registers the tag.
+Write a workspace file ending in `.canvas.js`. The file default-exports one `CanvasView` subclass from `docks/canvas`:
+
+```js
+export default class App extends CanvasView {}
+```
+
+Do not use `export class` without `default`, and do not call `customElements.define`. The host registers the tag. A module without a default export does not load.
 
 ```js
 import { CanvasView, html, css, nothing } from "docks/canvas";
@@ -86,7 +92,7 @@ Spec rules:
 
 ## Hard rules
 
-1. Pure JavaScript only — no TypeScript, no decorators. Declare reactive fields with `static properties = { … }`. Initialize plain defaults in `constructor`; hydrate with `getState` in `onConnect`.
+1. Pure JavaScript only — no TypeScript, no decorators. The module default-exports the view (`export default class … extends CanvasView`). Do not call `customElements.define`, and do not leave the class as a named `export class` without `default`. Declare reactive fields with `static properties = { … }`. Initialize plain defaults in `constructor`; hydrate with `getState` in `onConnect`.
 2. Build controls and chrome with Web Awesome (`wa-button`, `wa-input`, `wa-checkbox`, `wa-card`, `wa-callout`, `wa-spinner`). A raw `<button>` or `<input>` is not a substitute. Load `eclipse-docks-webawesome` before a non-trivial UI, and use `--wa-color-*` tokens instead of hardcoded colors.
 3. Emit complete, valid JavaScript — no truncated objects or unfinished strings.
 4. The page uses `Cross-Origin-Embedder-Policy: require-corp`. A cross-origin response loads only when the request is CORS and the server sends `Access-Control-Allow-Origin`, or when the server sends `Cross-Origin-Resource-Policy: cross-origin`. An `<iframe srcdoc>` inherits this policy; `sandbox="allow-same-origin"` does not exempt it.
@@ -185,7 +191,7 @@ this.shadowRoot.adoptedStyleSheets = [...this.shadowRoot.adoptedStyleSheets, she
 - `docks/core` — workspace files, dialogs, toasts, and commands. `openFile` does not need this import.
 - Relative imports → workspace files (compiler inlines them: JSON → value, text/CSS → string, binaries → data URL)
 
-Before non-trivial UI or shell integration, load companion skills as needed:
+Load a companion skill only when the plan depends on a component or API this skill does not already specify. Do not load every companion before writing the module:
 
 - `skills.load` `eclipse-docks-lit` — reactive properties, templates, directives (pure JS)
 - `skills.load` `eclipse-docks-webawesome` — `wa-*` components and layout utilities
@@ -196,7 +202,7 @@ Before non-trivial UI or shell integration, load companion skills as needed:
 Plan mode owns the spec. This skill owns the module.
 
 1. In plan mode, call `create_plan` once this turn. The first call writes `plan-<short-description>.plan.md` and lists the `<stem>.canvas.js` under `# Files`. A later change passes that file as `path` and rewrites it. Do not create a second plan for the same app, and do not write the module in plan mode.
-2. Build reads that plan and writes the `<stem>.canvas.js` so every scenario in `# Spec` holds, then `canvas.open` with that path. `canvas.open` returns `ready` or the compile/runtime error.
+2. Build reads that plan once and writes the `<stem>.canvas.js` so every scenario in `# Spec` holds, then `canvas.open` with that path. The module default-exports the `CanvasView` subclass and does not call `customElements.define`. Do not list the workspace again or read the plan again. `canvas.open` returns `ready` or the compile/runtime error.
 3. Before changing a canvas, `workspace_read` its `plan-….plan.md`. If the request changed, `workspace_write` that same plan so the requirement and its scenarios match, then update the module. Then `canvas.apply_source`. If that canvas is open in an editor, the editor marks itself dirty and recompiles the preview and does not save. If it is not open in an editor, the tool writes the file. Do not `workspace_write` a canvas that is already open.
 4. Optional: `canvas.capture_preview` to attach a screenshot (iframe contents may be blank).
 

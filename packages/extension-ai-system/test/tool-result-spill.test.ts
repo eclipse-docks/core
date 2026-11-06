@@ -5,7 +5,9 @@ import { File, getInMemoryRoot } from '@eclipse-docks/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { estimateSessionContextUsage } from '../src/runtime/context/usage';
 import { emptyBuffers } from '../src/runtime/core/tick';
-import { historyToProviderMessages } from '../src/runtime/specialists/loop';
+import { historyToProviderMessages, runSpecialistLoop } from '../src/runtime/specialists/loop';
+import { ToolBroker } from '../src/runtime/tools/broker';
+import type { ModelProvider, StreamChunk, StreamParams } from '../src/runtime/models/types';
 import { removeSessionWorkspaceFolder } from '../src/runtime/attachments/session-workspace';
 import {
   TOOL_RESULT_SPILL_CHARS,
@@ -118,5 +120,98 @@ describe('tool result spill', () => {
     const usage = estimateSessionContextUsage(session, 'openai/gpt-4o');
     const tools = usage.buckets.find((b) => b.id === 'tools');
     expect(tools?.tokens ?? 0).toBeLessThan(body.length / 4);
+  });
+
+  it('shows a large tool body once, then spills it on the following step', async () => {
+    const body = 'q'.repeat(TOOL_RESULT_SPILL_CHARS + 200);
+    const toolContents: string[][] = [];
+    const provider: ModelProvider = {
+      id: 'test',
+      listModels: () => [],
+      async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
+        toolContents.push(
+          params.messages.filter((message) => message.role === 'tool').map((message) => String(message.content)),
+        );
+        if (toolContents.length === 1) {
+          yield {
+            type: 'tool_call_delta',
+            toolCall: { id: 'call-live', name: 'workspace_read', arguments: JSON.stringify({ path: 'a.txt' }) },
+          };
+        } else if (toolContents.length === 2) {
+          yield {
+            type: 'tool_call_delta',
+            toolCall: { id: 'call-next', name: 'workspace_read', arguments: JSON.stringify({ path: 'b.txt' }) },
+          };
+        } else {
+          yield { type: 'text', text: 'ok' };
+        }
+        yield { type: 'done' };
+      },
+    };
+    const broker = new ToolBroker();
+    broker.setApprovalMode('auto_all');
+    broker.register(
+      { name: 'workspace_read', description: 'read', parameters: { type: 'object', properties: {} } },
+      async (call) => ({ id: call.id, name: call.name, ok: true, output: { content: body } }),
+    );
+
+    await runSpecialistLoop({
+      role: 'build',
+      systemPrompt: 'sys',
+      history: [],
+      resolved: { model: 'm', providerId: 'test', effort: 'none', providerOptions: {}, reason: '' },
+      provider,
+      broker,
+      sessionId: SESSION,
+    });
+
+    expect(toolContents[1]?.[0]).toContain(body);
+    const path = toolResultSpillPath(SESSION, 'call-live');
+    expect(toolContents[2]?.[0]).toContain(`workspace_read path="${path}"`);
+    expect(toolContents[2]?.[0]).not.toContain(body);
+    expect(toolContents[2]?.[1]).toContain(body);
+    const root = getInMemoryRoot();
+    const file = await root.getResource(path.slice('in-memory/'.length));
+    if (!(file instanceof File)) throw new Error('expected spilled file');
+    expect(await file.getContents()).toBe(JSON.stringify({ content: body }));
+  });
+
+  it('tells a build turn to write after several read-only steps', async () => {
+    const seen: string[] = [];
+    const provider: ModelProvider = {
+      id: 'test',
+      listModels: () => [],
+      async *stream(params: StreamParams): AsyncIterable<StreamChunk> {
+        seen.push(params.messages.map((message) => (typeof message.content === 'string' ? message.content : '')).join('\n'));
+        if (seen.length < 5) {
+          yield {
+            type: 'tool_call_delta',
+            toolCall: { id: `read-${seen.length}`, name: 'workspace_read', arguments: JSON.stringify({ path: 'a.txt' }) },
+          };
+        } else {
+          yield { type: 'text', text: 'ok' };
+        }
+        yield { type: 'done' };
+      },
+    };
+    const broker = new ToolBroker();
+    broker.setApprovalMode('auto_all');
+    broker.register(
+      { name: 'workspace_read', description: 'read', parameters: { type: 'object', properties: {} } },
+      async (call) => ({ id: call.id, name: call.name, ok: true, output: { content: 'short' } }),
+    );
+
+    await runSpecialistLoop({
+      role: 'build',
+      systemPrompt: 'sys',
+      history: [],
+      resolved: { model: 'm', providerId: 'test', effort: 'none', providerOptions: {}, reason: '' },
+      provider,
+      broker,
+      sessionId: SESSION,
+    });
+
+    expect(seen[3]).not.toContain('Stop reading and listing');
+    expect(seen[4]).toContain('Stop reading and listing');
   });
 });

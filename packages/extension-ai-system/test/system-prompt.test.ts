@@ -13,7 +13,8 @@ describe('specialist skill prompt', () => {
     expect(prompt).toContain('Before a complex task, call skills.list');
     expect(prompt).toContain('eclipse-docks-canvas: Create interactive .canvas.js apps');
     expect(prompt).toContain('implement the app defined in the specs file');
-    expect(prompt).toContain('revises that same file first');
+    expect(prompt).toContain('create or update each file under # Files');
+    expect(prompt).toContain('revise that same plan file first');
     expect(prompt).toContain('do not leave the plan describing the old behavior');
   });
 

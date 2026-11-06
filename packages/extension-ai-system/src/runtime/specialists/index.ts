@@ -28,7 +28,7 @@ export function systemPromptFor(
   const pathRule =
     'Workspace paths use a connected root prefix from workspace_list (never write bare names at the composite root unless a single durable folder can auto-qualify them).';
   const spillRule =
-    'Large tool results from earlier turns are files under in-memory/<sessionId>/tool-results/. The transcript keeps a preview and a workspace_read path; read the file when the preview is not enough. Large tool arguments are the sibling .args.txt file.';
+    'Large tool results from earlier turns are files under in-memory/<sessionId>/tool-results/. The transcript keeps a preview and a workspace_read path; read the file only when the preview is not enough. Do not read a path again when this turn already returned its full contents. Large tool arguments are the sibling .args.txt file.';
   const skillRule =
     'Before a complex task, call skills.list, then skills.load the matching skill and follow it.';
   const skillsSection = opts.skillsSection?.trim();
@@ -41,7 +41,7 @@ export function systemPromptFor(
     case 'explore':
       return `${preamble}\nMode: EXPLORE (read-only). Search and report findings. Do not create, edit, or delete files. Goal: ${goal}`;
     case 'build':
-      return `${preamble}\nMode: BUILD. Implement the goal using tools when needed. When this work already has a plan-*.plan.md file, that file stays the ground truth. A requested change revises that same file first, including the requirement and its scenarios, paraphrased in correct language with typos fixed, then updates the implementation so the plan still holds. Do not create a different plan file, and do not leave the plan describing the old behavior. Goal: ${goal}`;
+      return `${preamble}\nMode: BUILD. Implement the goal using tools when needed. When the goal is to implement a plan-*.plan.md file, read that plan once, load the one skill those files need, then create or update each file under # Files in this turn. Do not revise the plan, and do not list or re-read once you have it. When the user instead asks to change behavior, revise that same plan file first, paraphrased in correct language with typos fixed, then update the implementation so the plan still holds. Do not create a different plan file, and do not leave the plan describing the old behavior. Goal: ${goal}`;
     default:
       return `${preamble}\nGoal: ${goal}`;
   }

@@ -8,10 +8,18 @@ import {
   userContentFromParts,
 } from '../attachments/attachments';
 import { compactionContextMessage } from '../compact/compaction';
-import { publishSpilledToolResults, toolArgsTranscript, toolResultTranscript } from '../compact/tool-result-spill';
+import {
+  TOOL_RESULT_SPILL_CHARS,
+  publishSpilledTool,
+  publishSpilledToolResults,
+  toolArgsTranscript,
+  toolResultTranscript,
+} from '../compact/tool-result-spill';
 import { classifyToolRisks } from './classify-risk';
 
-const MAX_TOOL_ITERATIONS = 8;
+const MAX_TOOL_ITERATIONS = 16;
+const WRITE_NUDGE_AFTER = 4;
+const WRITE_NUDGE = 'Stop reading and listing. Create or update the files the goal requires now.';
 
 export interface SpecialistLoopInput {
   role: SpecialistRole;
@@ -109,7 +117,11 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
   );
   let success = true;
   let cancelled = false;
+  let nudged = false;
+  let extended = false;
+  const transcriptStart = messages.length;
   const usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+  let budget = MAX_TOOL_ITERATIONS;
 
   const markCancelled = () => {
     if (cancelled) return;
@@ -120,7 +132,17 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
     }
   };
 
-  for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
+  for (let iter = 0; iter < budget; iter++) {
+    await spillStaleToolTurns(messages, input.sessionId);
+    if (
+      input.role === 'build' &&
+      !nudged &&
+      iter >= WRITE_NUDGE_AFTER &&
+      !implementedSince(messages, transcriptStart)
+    ) {
+      nudged = true;
+      messages.push({ role: 'user', content: WRITE_NUDGE });
+    }
     if (isAborted(input.signal)) {
       markCancelled();
       break;
@@ -293,6 +315,14 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
         ],
       });
     }
+    if (!extended && iter === budget - 1 && !implementedSince(messages, transcriptStart)) {
+      extended = true;
+      budget += 1;
+      if (!nudged) {
+        nudged = true;
+        messages.push({ role: 'user', content: WRITE_NUDGE });
+      }
+    }
   }
 
   const message: ChatMessage = {
@@ -306,6 +336,67 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
   };
 
   return { message, success };
+}
+
+function implementedSince(messages: ProviderChatMessage[], start: number): boolean {
+  for (const message of messages.slice(start)) {
+    if (message.role !== 'assistant') continue;
+    for (const call of message.toolCalls ?? []) {
+      if (/write|apply|save|delete|edit/i.test(call.name)) return true;
+    }
+  }
+  return false;
+}
+
+/** Keep the latest tool round intact. Older rounds become previews so they are not re-sent in full. */
+async function spillStaleToolTurns(messages: ProviderChatMessage[], sessionId: string): Promise<void> {
+  if (!sessionId) return;
+  let latest = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message?.role === 'assistant' && message.toolCalls?.length) {
+      latest = i;
+      break;
+    }
+  }
+  if (latest < 0) return;
+
+  for (let i = 0; i < latest; i++) {
+    const message = messages[i];
+    if (!message) continue;
+    if (message.role === 'assistant' && message.toolCalls?.length) {
+      for (const call of message.toolCalls) {
+        if (call.arguments.length <= TOOL_RESULT_SPILL_CHARS) continue;
+        let args: unknown = call.arguments;
+        try {
+          args = JSON.parse(call.arguments);
+        } catch {
+          args = { raw: call.arguments };
+        }
+        const next = toolArgsTranscript(sessionId, { id: call.id, args });
+        if (next === call.arguments) continue;
+        call.arguments = next;
+        await publishSpilledTool(sessionId, { id: call.id, args });
+      }
+      continue;
+    }
+    if (message.role !== 'tool' || typeof message.content !== 'string') continue;
+    if (message.content.length <= TOOL_RESULT_SPILL_CHARS) continue;
+    let result: unknown = message.content;
+    try {
+      result = JSON.parse(message.content);
+    } catch {
+      result = message.content;
+    }
+    const next = toolResultTranscript(sessionId, {
+      id: message.toolCallId ?? '',
+      name: message.name ?? 'tool',
+      result,
+    });
+    if (next === message.content) continue;
+    message.content = next;
+    await publishSpilledTool(sessionId, { id: message.toolCallId ?? '', result });
+  }
 }
 
 function coalesceParts(parts: MessagePart[]): MessagePart[] {

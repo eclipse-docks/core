@@ -1,8 +1,11 @@
 import type { ChatMessage } from '../types';
 import { IN_MEMORY_ROOT_NAME } from '../attachments/attachment-paths';
 
-/** Tool results longer than this are replaced by a path in the model transcript. */
-export const TOOL_RESULT_SPILL_CHARS = 512;
+/**
+ * Tool results longer than this are replaced by a path in the model transcript.
+ * Plans and skill bodies stay inline so a later step does not read them again.
+ */
+export const TOOL_RESULT_SPILL_CHARS = 32_000;
 
 /** Short head kept in the transcript so the model can recognize the result before re-reading it. */
 export const TOOL_RESULT_PREVIEW_CHARS = 64;
@@ -92,6 +95,42 @@ export function toolResultTranscript(
   ].join('\n');
 }
 
+function spilledBodies(
+  sessionId: string,
+  tool: { id: string; args?: unknown; result?: unknown },
+): Array<{ relative: string; body: string }> {
+  const spilled: Array<{ relative: string; body: string }> = [];
+  const resultBody = toolResultBody(tool.result);
+  if (resultBody.length > TOOL_RESULT_SPILL_CHARS) {
+    spilled.push({ relative: relativeSpillPath(sessionId, tool.id), body: resultBody });
+  }
+  const argsBody = toolArgsBody(tool.args);
+  if (argsBody.length > TOOL_RESULT_SPILL_CHARS) {
+    spilled.push({ relative: relativeArgsPath(sessionId, tool.id), body: argsBody });
+  }
+  return spilled;
+}
+
+async function writeSpilled(spilled: Array<{ relative: string; body: string }>): Promise<void> {
+  if (!spilled.length) return;
+  const { File, getInMemoryRoot } = await import('@eclipse-docks/core');
+  const root = getInMemoryRoot();
+  for (const item of spilled) {
+    const resource = await root.getResource(item.relative, { create: true });
+    if (!(resource instanceof File)) continue;
+    await resource.saveContents(item.body);
+  }
+}
+
+/** Write one tool's large args and result so a later step in the same turn can read them. */
+export async function publishSpilledTool(
+  sessionId: string,
+  tool: { id: string; args?: unknown; result?: unknown },
+): Promise<void> {
+  if (!sessionId) return;
+  await writeSpilled(spilledBodies(sessionId, tool));
+}
+
 /** Write spilled tool bodies under `in-memory/<sessionId>/tool-results/` from intact history. */
 export async function publishSpilledToolResults(
   sessionId: string,
@@ -102,23 +141,8 @@ export async function publishSpilledToolResults(
   for (const message of history) {
     for (const part of message.parts) {
       if (part.type !== 'tool') continue;
-      const resultBody = toolResultBody(part.result);
-      if (resultBody.length > TOOL_RESULT_SPILL_CHARS) {
-        spilled.push({ relative: relativeSpillPath(sessionId, part.id), body: resultBody });
-      }
-      const argsBody = toolArgsBody(part.args);
-      if (argsBody.length > TOOL_RESULT_SPILL_CHARS) {
-        spilled.push({ relative: relativeArgsPath(sessionId, part.id), body: argsBody });
-      }
+      spilled.push(...spilledBodies(sessionId, part));
     }
   }
-  if (!spilled.length) return;
-
-  const { File, getInMemoryRoot } = await import('@eclipse-docks/core');
-  const root = getInMemoryRoot();
-  for (const item of spilled) {
-    const resource = await root.getResource(item.relative, { create: true });
-    if (!(resource instanceof File)) continue;
-    await resource.saveContents(item.body);
-  }
+  await writeSpilled(spilled);
 }

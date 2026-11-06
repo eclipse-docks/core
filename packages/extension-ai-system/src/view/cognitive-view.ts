@@ -90,8 +90,9 @@ function browserFileFromContents(contents: unknown, name: string): File | null {
     return new File([contents], name);
   }
   if (ArrayBuffer.isView(contents)) {
-    const bytes = new Uint8Array(contents.buffer, contents.byteOffset, contents.byteLength);
-    return new File([bytes], name);
+    const copy = new Uint8Array(contents.byteLength);
+    copy.set(new Uint8Array(contents.buffer, contents.byteOffset, contents.byteLength));
+    return new File([copy], name);
   }
   return null;
 }

@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const promptDialog = vi.fn(async () => undefined);
-const confirmDialog = vi.fn(async () => false);
+const promptDialog = vi.fn(async (..._args: unknown[]) => undefined);
+const confirmDialog = vi.fn(async (..._args: unknown[]) => false);
 
 vi.mock('../../src/dialogs', () => ({
   promptDialog: (...args: unknown[]) => promptDialog(...args),

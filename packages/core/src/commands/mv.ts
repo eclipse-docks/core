@@ -1,7 +1,7 @@
-import { registerAll } from "../core/commandregistry";
+import { COMMAND_TAG_SHELL, registerAll } from "../core/commandregistry";
 import { activeSelectionSignal } from "../core/appstate";
 import { workspaceService } from "../core/filesys";
-import { promptDialog } from "../dialogs";
+import { askText } from "./prompt";
 import { toastError, toastInfo } from "../core/toast";
 
 registerAll({
@@ -10,6 +10,8 @@ registerAll({
         name: "mv - Rename a resource (file or directory)",
         description: "Renames a resource (file or directory)",
         keyBinding: "F2",
+        tags: [COMMAND_TAG_SHELL],
+        grants: ["w"],
         parameters: [
             {
                 name: "path",
@@ -46,7 +48,7 @@ registerAll({
             }
 
             const currentName = resource.getName();
-            const newName = context.params?.newName ?? await promptDialog(`Enter new name for "${currentName}":`, currentName);
+            const newName = context.params?.newName ?? await askText(context, `Enter new name for "${currentName}":`, currentName);
             if (!newName || newName === currentName) return;
 
             try {

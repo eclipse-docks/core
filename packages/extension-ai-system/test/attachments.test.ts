@@ -34,7 +34,7 @@ describe('attachments', () => {
     expect(ref.path).toBe(withPath.path);
     expect(ref.kind).toBe('text');
     expect(formatAttachmentRefForModel(ref)).toContain(withPath.path);
-    expect(formatAttachmentRefForModel(ref)).toContain('workspace_read');
+    expect(formatAttachmentRefForModel(ref)).toContain('shell cat');
     expect(formatAttachmentRefForModel(ref)).not.toContain('export const');
   });
 
@@ -61,7 +61,7 @@ describe('attachments', () => {
     expect(typeof content).toBe('string');
     expect(content as string).toContain('Please review');
     expect(content as string).toContain(withPath.path);
-    expect(content as string).toContain('workspace_read');
+    expect(content as string).toContain('shell');
     expect(content as string).not.toContain('const a = 1;');
   });
 

@@ -1,4 +1,5 @@
-import { registerAll } from "../core/commandregistry";
+import { COMMAND_TAG_SHELL, registerAll } from "../core/commandregistry";
+import { askChoice, askText } from "./prompt";
 import { File, FileContentType, workspaceService } from "../core/filesys";
 import { taskService } from "../core/taskservice";
 import { toastError, toastInfo } from "../core/toast";
@@ -27,6 +28,8 @@ registerAll({
         id: "wget",
         name: "wget",
         description: "Download a file from a URL to the workspace",
+        tags: [COMMAND_TAG_SHELL],
+        grants: ["w"],
         parameters: [
             { name: "url", description: "the URL of the file to download", required: true },
             { name: "filename", description: "optional filename to save as (will be auto-detected if not provided)", required: false },
@@ -73,6 +76,15 @@ registerAll({
                 savePath = lastSegment.includes(".") && lastSegment !== resolved
                     ? resolved
                     : `${resolved.replace(/\/$/, "")}/${defaultFileName}`;
+            } else if (context.readLine || context.ask) {
+                const folders = await workspaceService.getFolders();
+                const cwd = typeof context.cwd === "string" ? context.cwd.replace(/^\/+|\/+$/g, "") : "";
+                const choices = [...new Set([cwd, ...folders.map((folder) => folder.name)].filter(Boolean))];
+                const chosenDir = choices.length
+                    ? await askChoice(context, "Workspace directory to save into:", choices, cwd || choices[0])
+                    : await askText(context, "Workspace directory to save into:");
+                if (!chosenDir) return;
+                savePath = `${chosenDir.replace(/^\/+|\/+$/g, "")}/${defaultFileName}`;
             } else {
                 const chosenDir = await filebrowserDialog("directory");
                 if (chosenDir == null) return;

@@ -39,7 +39,7 @@ function relativeArgsPath(sessionId: string, toolCallId: string): string {
 
 /**
  * Model-facing tool-call arguments. Stored `tool.args` is unchanged.
- * Large string fields are replaced with a workspace_read pointer; small fields stay.
+ * Large string fields are replaced with a shell cat pointer; small fields stay.
  * The string is always JSON so providers can parse `function.arguments`.
  */
 export function toolArgsTranscript(
@@ -62,7 +62,7 @@ export function toolArgsTranscript(
   for (const [key, value] of Object.entries(args)) {
     compact[key] =
       typeof value === 'string' && value.length > TOOL_RESULT_PREVIEW_CHARS
-        ? `[published chars=${value.length}] → workspace_read path="${path}"`
+        ? `[published chars=${value.length}] → shell cat path="${path}"`
         : value;
   }
   const encoded = JSON.stringify(compact);
@@ -89,7 +89,7 @@ export function toolResultTranscript(
   const path = toolResultSpillPath(sessionId, tool.id);
   const preview = body.slice(0, TOOL_RESULT_PREVIEW_CHARS);
   return [
-    `[Tool result published: ${tool.name} chars=${body.length}] → workspace_read path="${path}"`,
+    `[Tool result published: ${tool.name} chars=${body.length}] → shell cat path="${path}"`,
     'Preview:',
     preview,
   ].join('\n');

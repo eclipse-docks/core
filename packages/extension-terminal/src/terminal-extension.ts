@@ -3,18 +3,20 @@ import { contributionRegistry, PANEL_BOTTOM, registerAll } from '@eclipse-docks/
 import { VIEW_TERMINAL } from './terminal-api';
 import { CommandsBackend } from './commands-backend';
 import { createJsSessionBackend, JsReplBackend, JS_REPL_PROFILE_ID, JS_SESSION_PROFILE_ID } from './js-terminal-backend';
-import { registerTerminalProfile, terminalService } from './terminal-service';
+import { openShellHere, selectedDirectory, SHELL_PROFILE_ID } from './shell-here';
+import { registerTerminalProfile } from './terminal-service';
+import './shell-command';
 import './terminal-panel';
 
-const COMMANDS_PROFILE_ID = 'terminal.javascript-shell';
+export { openShellHere, selectedDirectory, SHELL_PROFILE_ID };
 
 export default async function activate() {
   registerTerminalProfile({
-    id: COMMANDS_PROFILE_ID,
-    label: 'Commands',
+    id: SHELL_PROFILE_ID,
+    label: 'Shell',
     icon: 'terminal',
     isDefault: true,
-    create: async () => new CommandsBackend(),
+    create: async (options) => new CommandsBackend(options),
   });
 
   registerTerminalProfile({
@@ -31,6 +33,26 @@ export default async function activate() {
     hidden: true,
     persist: false,
     create: async (options) => createJsSessionBackend(options),
+  });
+
+  registerAll({
+    command: {
+      id: 'open_shell_here',
+      name: 'Open Shell Here',
+      description: 'Opens a shell in the selected folder',
+    },
+    handler: {
+      execute: async () => {
+        openShellHere();
+      },
+    },
+    contribution: {
+      target: 'contextmenu:view.filebrowser',
+      name: 'contextmenu.filebrowser.open-shell',
+      label: 'Open Shell Here',
+      icon: 'terminal',
+      visible: () => selectedDirectory() !== undefined,
+    },
   });
 
   contributionRegistry.registerContribution(PANEL_BOTTOM, {

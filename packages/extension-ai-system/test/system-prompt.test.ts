@@ -10,7 +10,6 @@ describe('specialist skill prompt', () => {
     const prompt = systemPromptFor('build', 'implement the app defined in the specs file', {
       skillsSection: '- eclipse-docks-canvas: Create interactive .canvas.js apps even if the user does not say canvas.',
     });
-    expect(prompt).toContain('Before a complex task, call skills.list');
     expect(prompt).toContain('eclipse-docks-canvas: Create interactive .canvas.js apps');
     expect(prompt).toContain('implement the app defined in the specs file');
     expect(prompt).toContain('create or update each file under # Files');
@@ -28,18 +27,16 @@ describe('specialist skill prompt', () => {
     expect(prompt).toContain('Do not create a second plan file');
     expect(prompt).toContain('paraphrased in correct language');
     expect(prompt).toContain('Do not copy the user\'s text');
-    expect(prompt).toContain('Do not implement');
+    expect(prompt).toContain('Do not write the implementation during plan mode');
     expect(prompt).toContain('one short sentence');
     expect(prompt).toContain('add a status bar');
   });
 
   it('tells an attachment turn where to read files', () => {
     const prompt = systemPromptFor('build', 'rebuild this screenshot', { hasAttachments: true });
-    expect(prompt).toContain('in-memory/<sessionId>/');
-    expect(prompt).toContain('workspace_read');
+    expect(prompt).toContain('Do not connect a folder to find attachments');
     expect(prompt).not.toContain('eclipse-docks-canvas');
     expect(prompt).not.toContain('canvas.open');
-    expect(prompt).toContain('Before a complex task, call skills.list');
   });
 
   it('puts a lazy skill description into the catalog', async () => {

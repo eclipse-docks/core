@@ -14,6 +14,7 @@ const extensionRegistryMock = {
 };
 
 vi.mock('../../src/core/commandregistry', () => ({
+  COMMAND_TAG_SHELL: 'shell',
   registerAll: harness.registerAllMock,
 }));
 vi.mock('../../src/core/editorregistry', () => ({

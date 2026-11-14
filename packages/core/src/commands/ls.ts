@@ -1,13 +1,15 @@
-import { registerAll } from "../core/commandregistry";
+import { COMMAND_TAG_SHELL, registerAll } from "../core/commandregistry";
 import { Directory, File, workspaceService } from "../core/filesys";
 import { toastError } from "../core/toast";
-import { collectFilesRecursive } from "./shared";
+import { collectFilesRecursive, resolveWorkspaceResource } from "./shared";
 
 registerAll({
     command: {
         id: "ls",
         name: "List files",
         description: "Lists files from a directory. If recursive is provided, it traverses from the provided directory down to all leaves. If no directory is provided, it will traverse from the workspace root.",
+        tags: [COMMAND_TAG_SHELL],
+        grants: ["r"],
         parameters: [
             {
                 name: "path",
@@ -30,19 +32,13 @@ registerAll({
     },
     handler: {
         execute: async ({ params }: any) => {
-            const workspace = await workspaceService.getWorkspace();
-            if (!workspace) {
-                toastError("No workspace available");
-                return [];
-            }
-
             const path = params?.path as string | undefined;
             const recursive = params?.recursive === true || params?.recursive === "true";
 
             try {
-                let targetDir: Directory = workspace;
+                let targetDir: Directory;
                 if (path) {
-                    const resource = await workspace.getResource(path);
+                    const resource = await resolveWorkspaceResource(path);
                     if (!resource) {
                         toastError(`Path not found: ${path}`);
                         return [];
@@ -52,13 +48,20 @@ registerAll({
                         return [];
                     }
                     targetDir = resource;
+                } else {
+                    const workspace = await workspaceService.getWorkspace();
+                    if (!workspace) {
+                        toastError("No workspace available");
+                        return [];
+                    }
+                    targetDir = workspace;
                 }
 
                 if (recursive) {
                     const files = await collectFilesRecursive(targetDir);
                     const result: Array<{ path: string; size: number | null }> = [];
                     for (const filePath of files) {
-                        const file = await workspace.getResource(filePath);
+                        const file = await resolveWorkspaceResource(filePath);
                         if (!(file instanceof File)) continue;
                         result.push({ path: filePath, size: await file.size() });
                     }

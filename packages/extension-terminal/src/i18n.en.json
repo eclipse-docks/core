@@ -12,5 +12,5 @@
   "TERMINAL_SELECT_PROFILE": "Select Profile",
   "TERMINAL_RENAME_PROMPT": "Terminal name",
   "TERMINAL_PROFILE_UNAVAILABLE": "Profile unavailable: {profileId}",
-  "TERMINAL_DEFAULT_JS_NAME": "Commands"
+  "TERMINAL_DEFAULT_JS_NAME": "Shell"
 }

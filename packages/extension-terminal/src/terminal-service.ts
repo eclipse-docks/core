@@ -231,15 +231,16 @@ class TerminalService implements TerminalTaskRunner {
     if (forcedId) syncTerminalCounterFromId(forcedId);
     const groupId = options.groupId ?? id;
     const name = options.name ?? profile.label;
+    const creationOptions = { ...options, profileId, name, groupId };
 
     let backend: TerminalBackend;
     try {
-      backend = await profile.create({ ...options, profileId, name, groupId });
+      backend = await profile.create(creationOptions);
     } catch {
       return undefined;
     }
 
-    const terminal = new TerminalInstance(id, name, profileId, { ...options, profileId, name, groupId }, groupId);
+    const terminal = new TerminalInstance(id, name, profileId, creationOptions, groupId);
     terminal.backend = backend;
     terminal.hidden = options.hidden ?? false;
 
@@ -373,6 +374,10 @@ class TerminalService implements TerminalTaskRunner {
       terminal.clear?.();
     }
     await execute(terminal);
+  }
+
+  persistNow(): void {
+    void this.persistState();
   }
 
   private async persistState(): Promise<void> {

@@ -10,10 +10,12 @@ export type {
 export type { ResolvedDependencyInfo, ResolvedDependencyMap } from '../core/resolved-package-info';
 export type { LicenseAttributionOptions } from '../core/license-attribution';
 export type { 
-    Command, 
+    Command,
+    CommandGrant,
     Parameter, 
     Variable, 
     LLMOptions,
+    CommandPrompt,
     ExecutionContext,
     ExecuteParams,
     Handler,

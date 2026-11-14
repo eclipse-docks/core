@@ -25,6 +25,15 @@ export interface LLMOptions {
     model?: string;
 }
 
+export type CommandGrant = "r" | "w";
+
+/** Marks a command as a filesystem shell verb. Models see `shell` instead of these commands. */
+export const COMMAND_TAG_SHELL = "shell";
+
+export function commandHasTag(command: { tags?: string[] } | undefined, tag: string): boolean {
+    return command?.tags?.includes(tag) === true;
+}
+
 export class Command {
     id: string;
     name: string;
@@ -34,6 +43,8 @@ export class Command {
     parameters?: Parameter[];
     output?: Variable[];
     llm?: LLMOptions;
+    tags?: string[];
+    grants?: CommandGrant[];
 
     constructor(id: string, name: string, description: string, parameters?: Parameter[], output?: Variable[]) {
         this.id = id;
@@ -44,12 +55,31 @@ export class Command {
     }
 }
 
+/** A name, or one answer chosen from a list. */
+export interface CommandPrompt {
+    kind: "text" | "choice";
+    message: string;
+    defaultValue?: string;
+    /** Selectable answers. A confirmation is this list with Yes and No. */
+    choices?: string[];
+    /** When false, the answer has to be one of choices. Defaults to true. */
+    custom?: boolean;
+}
+
 export interface ExecutionContext {
     [key: string]: any;
 
     params?: ExecuteParams;
     activePart?: any;
     activeEditor?: any;
+    /** Workspace-relative directory for a shell session. Absent outside a session. */
+    cwd?: string;
+    /** Directory the shell session was opened with. `cd` with no path returns here. */
+    initialCwd?: string;
+    /** When set, shell verbs read prompts from the terminal instead of a dialog. */
+    readLine?: (prompt: string) => Promise<string | undefined>;
+    /** When set, shell verbs ask in the host UI. A chat uses this for questions and choices. */
+    ask?: (prompt: CommandPrompt) => Promise<string | undefined>;
 }
 
 export interface ExecuteParams {
@@ -230,4 +260,20 @@ export interface RegisterOptions {
 
 export const registerAll = (options: RegisterOptions) => {
     commandRegistry.registerAll(options);
+}
+
+/** Compact catalog of shell-tagged verbs for the `shell` tool description. */
+export function describeShellCommands(): string {
+    const verbs = Object.values(commandRegistry.listCommands())
+        .filter((command) => commandHasTag(command, COMMAND_TAG_SHELL))
+        .sort((a, b) => a.id.localeCompare(b.id));
+    const catalog = verbs.map((command) => {
+        const grants = command.grants?.length ? command.grants.join(", ") : "w";
+        return `${command.id} (${grants}): ${command.description}`;
+    });
+    return [
+        "Run a shell line. && sequences commands, | passes the previous result as parameters, and & starts a command without waiting.",
+        "Any registered command id may appear in the line.",
+        ...catalog,
+    ].join("\n");
 }

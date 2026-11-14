@@ -195,7 +195,7 @@ export function formatAttachmentRefForModel(part: Extract<MessagePart, { type: '
   const toolPath = toWorkspaceToolPath(display);
   const kind = part.kind ?? 'file';
   const bytes = part.byteLength != null ? ` bytes=${part.byteLength}` : '';
-  return `[Attachment published: ${display} kind=${kind}${part.mime ? ` mime=${part.mime}` : ''}${bytes}] → workspace_read path="${toolPath}"`;
+  return `[Attachment published: ${display} kind=${kind}${part.mime ? ` mime=${part.mime}` : ''}${bytes}] → shell cat path="${toolPath}"`;
 }
 
 /**
@@ -209,11 +209,7 @@ export function userContentFromParts(parts: MessagePart[]): ProviderContent {
     if (part.type === 'text' && part.text.trim()) texts.push(part.text);
     if (part.type === 'file') refs.push(formatAttachmentRefForModel(part));
   }
-  const body = [...texts, ...refs].join('\n').trim();
-  if (!refs.length) return body;
-  const hint =
-    'Session attachments are files under the in-memory workspace root. List with workspace_list, read with workspace_read. Do not connect storage backends to find them.';
-  return [body, hint].filter(Boolean).join('\n');
+  return [...texts, ...refs].join('\n').trim();
 }
 
 export function attachmentMeta(stored: SessionAttachment) {

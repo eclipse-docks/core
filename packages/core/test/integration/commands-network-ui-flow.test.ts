@@ -16,6 +16,7 @@ const renderMock = vi.fn();
 const markedParseMock = vi.fn((s: string) => `<p>${s}</p>`);
 const unsafeHTMLMock = vi.fn((s: string) => s);
 vi.mock('../../src/core/commandregistry', () => ({
+  COMMAND_TAG_SHELL: 'shell',
   registerAll: harness.registerAllMock,
 }));
 vi.mock('../../src/core/toast', () => ({
@@ -39,6 +40,10 @@ vi.mock('../../src/core/js-runtime', () => ({
     execute: jsRuntimeExecuteMock,
     close: jsRuntimeCloseMock,
   }),
+}));
+vi.mock('../../src/commands/prompt', () => ({
+  askText: vi.fn(async () => undefined),
+  askYes: vi.fn(async () => false),
 }));
 vi.mock('lit', () => ({
   html: vi.fn(),

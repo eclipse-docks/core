@@ -1,6 +1,17 @@
 // Re-export framework services for app usage
 export { appLoaderService } from '../core/apploader';
-export { commandRegistry, CommandStack, registerAll, CommandRegistry, TOPIC_COMMAND_REGISTERED } from '../core/commandregistry';
+export {
+    commandRegistry,
+    CommandStack,
+    registerAll,
+    CommandRegistry,
+    TOPIC_COMMAND_REGISTERED,
+    COMMAND_TAG_SHELL,
+    commandHasTag,
+    describeShellCommands,
+} from '../core/commandregistry';
+export { resolveWorkspacePath, explicitWorkspacePath, stripWorkspacePath, namesWorkspaceRoot } from '../commands/shell-path';
+export { askChoice, askText, askYes } from '../commands/prompt';
 export { contributionRegistry, TOPIC_CONTRIBUTEIONS_CHANGED } from '../core/contributionregistry';
 export { extensionRegistry } from '../core/extensionregistry';
 export {

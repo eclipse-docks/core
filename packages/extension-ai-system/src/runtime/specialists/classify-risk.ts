@@ -10,7 +10,7 @@ export interface PendingToolRisk {
 
 const CLASSIFY_SYSTEM = `You classify tool calls for user approval.
 Mark risk "critical" if the call can change state: write/edit/delete files, connect or load a workspace, run shell/commands with side effects, install, deploy, publish, push, or otherwise mutate the environment.
-Mark risk "safe" only for read-only inspection (list, read, search, describe, fetch).
+Mark risk "safe" only for read-only inspection (list, read, search, describe, fetch). A shell call is one session: its commands list is safe when every command only runs verbs marked (r), including cd, ls, cat, head, tail, wc, exists, and cwd. It is critical when any command runs a verb marked (w), such as mkdir, touch, mv, rm, or wget.
 When unsure, choose "critical".
 Reply with ONLY a JSON array: [{"id":"<tool call id>","risk":"safe"|"critical"}]`;
 

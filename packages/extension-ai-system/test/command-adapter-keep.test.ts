@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@eclipse-docks/core', () => ({
+  COMMAND_TAG_SHELL: 'shell',
+  commandHasTag: (command: { tags?: string[] } | undefined, tag: string) =>
+    command?.tags?.includes(tag) === true,
+  describeShellCommands: () => 'shell catalog',
   commandRegistry: {
     createExecutionContext: () => ({}),
     listCommands: () => ({
@@ -33,6 +37,7 @@ vi.mock('@eclipse-docks/core', () => ({
   },
 }));
 
+import { commandRegistry } from '@eclipse-docks/core';
 import { ToolBroker } from '../src/runtime/tools/broker';
 import { refreshCommandTools } from '../src/runtime/tools/command-adapter';
 
@@ -41,7 +46,7 @@ describe('refreshCommandTools', () => {
     vi.clearAllMocks();
   });
 
-  it('keeps workspace/fetch tools and skips storage bootstrap commands', () => {
+  it('keeps workspace/fetch tools and skips storage bootstrap commands', async () => {
     const broker = new ToolBroker();
     broker.register(
       {
@@ -63,11 +68,22 @@ describe('refreshCommandTools', () => {
     refreshCommandTools(broker, 'build');
 
     const names = broker.listDefinitions('build').map((d) => d.name);
-    expect(names).toContain('workspace_read');
+    expect(names).not.toContain('workspace_read');
     expect(names).toContain('fetch');
     expect(names).toContain('canvas_open');
     expect(names).toContain('format_document');
-    expect(names).not.toContain('connect_opfs');
+    expect(names).toContain('connect_opfs');
     expect(names).not.toContain('load_workspace');
+
+    await broker.execute(
+      { id: '1', name: 'canvas_open', arguments: {} },
+      'chat',
+      'build',
+      { risk: 'safe' },
+    );
+    expect(commandRegistry.execute).toHaveBeenCalledWith(
+      'canvas.open',
+      expect.objectContaining({ ask: expect.any(Function) }),
+    );
   });
 });

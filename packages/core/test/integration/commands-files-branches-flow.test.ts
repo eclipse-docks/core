@@ -11,6 +11,7 @@ const showDirectoryPickerMock = vi.fn();
 const deleteIndexedDbWorkspaceDataMock = vi.fn(async () => true);
 
 vi.mock('../../src/core/commandregistry', () => ({
+  COMMAND_TAG_SHELL: 'shell',
   registerAll: harness.registerAllMock,
 }));
 vi.mock('../../src/core/appstate', () => ({
@@ -103,6 +104,22 @@ describe('commands files branch flow', () => {
     connectWorkspaceSpy.mockRestore();
   });
 
+  it('keeps an existing IndexedDB folder when the same name is requested again', async () => {
+    const { workspaceService } = await import('../../src/core/filesys');
+    await workspaceService.disconnectWorkspace();
+    await import('../../src/commands/files');
+    const idb = harness.getRegistered('connect_indexeddb');
+    const name = folderName();
+
+    await idb.handler?.execute({ params: { name } });
+    const again = await idb.handler?.execute({ params: { name: name.toUpperCase() } });
+
+    expect(again).toContain(`"${name}"`);
+    expect(String(again)).toMatch(/already connected/i);
+    const folders = await workspaceService.getFolders();
+    expect(folders.filter((folder) => folder.type === 'indexeddb')).toHaveLength(1);
+  });
+
   it('connect_opfs and connect_indexeddb handle connect failures', async () => {
     const { workspaceService } = await import('../../src/core/filesys');
     const spy = vi.spyOn(workspaceService, 'connectFolder').mockRejectedValue(new Error('boom'));
@@ -111,7 +128,7 @@ describe('commands files branch flow', () => {
     const idb = harness.getRegistered('connect_indexeddb');
 
     await opfs.handler?.execute({});
-    await idb.handler?.execute({ params: { name: 'x' } });
+    await expect(idb.handler?.execute({ params: { name: 'x' } })).rejects.toThrow('boom');
     expect(toastErrorMock).toHaveBeenCalledWith('boom');
     spy.mockRestore();
   });

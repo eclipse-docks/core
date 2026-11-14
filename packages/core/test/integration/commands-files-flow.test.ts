@@ -7,6 +7,7 @@ const loadEditorMock = vi.fn(async () => undefined);
 const toastErrorMock = vi.fn();
 
 vi.mock('../../src/core/commandregistry', () => ({
+  COMMAND_TAG_SHELL: 'shell',
   registerAll: harness.registerAllMock,
 }));
 vi.mock('../../src/core/appstate', () => ({

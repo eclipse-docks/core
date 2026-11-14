@@ -1,4 +1,4 @@
-import { registerAll } from "../core/commandregistry";
+import { COMMAND_TAG_SHELL, registerAll } from "../core/commandregistry";
 import { toastError } from "../core/toast";
 import { getTextFileFromPath, readTextFile } from "./shared";
 
@@ -7,6 +7,8 @@ registerAll({
         id: "wc",
         name: "Word count",
         description: "Counts lines, words, and characters in a file",
+        tags: [COMMAND_TAG_SHELL],
+        grants: ["r"],
         parameters: [
             {
                 name: "path",

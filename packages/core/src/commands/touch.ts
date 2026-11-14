@@ -1,7 +1,7 @@
-import { registerAll } from "../core/commandregistry";
+import { COMMAND_TAG_SHELL, registerAll } from "../core/commandregistry";
 import { activeSelectionSignal } from "../core/appstate";
 import { Directory, File, workspaceService } from "../core/filesys";
-import { confirmDialog, promptDialog } from "../dialogs";
+import { askText, askYes } from "./prompt";
 import { toastError, toastInfo } from "../core/toast";
 
 registerAll({
@@ -9,6 +9,8 @@ registerAll({
         id: "touch",
         name: "Touch - Create new file",
         description: "Creates a new file within the workspace. For .docks map files, use create_map_file instead.",
+        tags: [COMMAND_TAG_SHELL],
+        grants: ["w"],
         parameters: [
             {
                 name: "path",
@@ -39,14 +41,15 @@ registerAll({
         ]
     },
     handler: {
-        execute: async ({ params }: any) => {
+        execute: async (context: any) => {
+            const params = context.params;
             let path = params?.path as string | undefined | null;
             const contents = params?.contents as string | undefined;
             const ask = params?.ask;
             const extension = params?.extension as string | undefined;
 
             if (ask || !path) {
-                path = await promptDialog("Enter path to new file (directories will be created if not exist):", path || "");
+                path = await askText(context, "Enter path to new file (directories will be created if not exist):", path || "");
                 if (!path) return;
             }
 
@@ -77,7 +80,7 @@ registerAll({
 
             const existingResource = await workspaceDir.getResource(path);
             if (existingResource) {
-                const overwrite = await confirmDialog(`File "${path}" already exists. Do you want to overwrite it?`);
+                const overwrite = await askYes(context, `File "${path}" already exists. Do you want to overwrite it?`);
                 if (!overwrite) return;
             }
 

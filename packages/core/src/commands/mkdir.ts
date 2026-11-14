@@ -1,7 +1,7 @@
-import { registerAll } from "../core/commandregistry";
+import { COMMAND_TAG_SHELL, registerAll } from "../core/commandregistry";
 import { activeSelectionSignal } from "../core/appstate";
 import { Directory, File, workspaceService } from "../core/filesys";
-import { promptDialog } from "../dialogs";
+import { askText } from "./prompt";
 import { toastError, toastInfo } from "../core/toast";
 
 function normalizeTargetPath(inputPath: string): string {
@@ -54,6 +54,8 @@ registerAll({
         id: "mkdir",
         name: "mkdir - Create new folder",
         description: "Creates a new folder within the workspace.",
+        tags: [COMMAND_TAG_SHELL],
+        grants: ["w"],
         parameters: [
             {
                 name: "path",
@@ -74,14 +76,15 @@ registerAll({
         ]
     },
     handler: {
-        execute: async ({ params }: any) => {
+        execute: async (context: any) => {
+            const params = context.params;
             const ask = params?.ask;
             let path = params?.path as string | undefined | null;
             const defaultPath = await getDefaultFolderPath(resolveSelectionBasePath());
             if (!defaultPath) return;
 
             if (ask || !path) {
-                path = await promptDialog("Enter path to new folder:", path || defaultPath);
+                path = await askText(context, "Enter path to new folder:", path || defaultPath);
                 if (!path) return;
             }
 

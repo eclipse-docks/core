@@ -1,4 +1,4 @@
-import { registerAll } from "../core/commandregistry";
+import { COMMAND_TAG_SHELL, registerAll } from "../core/commandregistry";
 import { File, workspaceService } from "../core/filesys";
 
 registerAll({
@@ -6,6 +6,8 @@ registerAll({
         id: "exists",
         name: "Exists",
         description: "Checks if a file exists at the given path (like bash test -f)",
+        tags: [COMMAND_TAG_SHELL],
+        grants: ["r"],
         parameters: [
             {
                 name: "path",

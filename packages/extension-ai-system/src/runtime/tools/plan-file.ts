@@ -50,5 +50,5 @@ export function planDocumentGuide(): string {
 }
 
 export function buildPlanPrompt(path: string): string {
-  return `Implement the plan in ${path}. That file is the ground truth: read it with workspace_read and follow it. Do not replace it with a different plan. Create or update each file under # Files so every scenario in # Spec holds.`;
+  return `Implement the plan in ${path}. That file is the ground truth: read it with shell (cat ${path}) and follow it. Do not replace it with a different plan. Create or update each file under # Files so every scenario in # Spec holds.`;
 }

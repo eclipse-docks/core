@@ -1,4 +1,4 @@
-import { registerAll } from "../core/commandregistry";
+import { COMMAND_TAG_SHELL, registerAll } from "../core/commandregistry";
 import { toastError } from "../core/toast";
 import { getTextFileFromPath, readTextFile } from "./shared";
 
@@ -7,6 +7,8 @@ registerAll({
         id: "tail",
         name: "Tail - Show last lines",
         description: "Shows the last N lines of a file",
+        tags: [COMMAND_TAG_SHELL],
+        grants: ["r"],
         parameters: [
             {
                 name: "path",

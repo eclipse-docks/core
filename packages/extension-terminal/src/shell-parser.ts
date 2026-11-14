@@ -5,9 +5,11 @@ export interface ParsedCommand {
   params: Record<string, string | boolean>;
 }
 
+export type ShellOperator = '&&' | '|' | '&' | null;
+
 export interface ParsedSegment {
   command: ParsedCommand;
-  operator: '&&' | '|' | null;
+  operator: ShellOperator;
 }
 
 const NAMED_PARAM_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*=.*$/;
@@ -40,17 +42,22 @@ function tokenize(segment: string): string[] {
   return tokens;
 }
 
-function splitChain(line: string): { segment: string; operator: '&&' | '|' | null }[] {
-  const result: { segment: string; operator: '&&' | '|' | null }[] = [];
-  const regex = /(\s*&&\s*|\s*\|\s*)/g;
+function operatorOf(match: string): Exclude<ShellOperator, null> {
+  if (match.includes('&&')) return '&&';
+  if (match.includes('|')) return '|';
+  return '&';
+}
+
+function splitChain(line: string): { segment: string; operator: ShellOperator }[] {
+  const result: { segment: string; operator: ShellOperator }[] = [];
+  const regex = /(\s*&&\s*|\s*&\s*|\s*\|\s*)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
   while ((match = regex.exec(line)) !== null) {
     const segment = line.slice(lastIndex, match.index).trim();
     if (segment) {
-      const op = match[0].includes('|') ? ('|' as const) : ('&&' as const);
-      result.push({ segment, operator: op });
+      result.push({ segment, operator: operatorOf(match[0]) });
     }
     lastIndex = regex.lastIndex;
   }
@@ -59,6 +66,11 @@ function splitChain(line: string): { segment: string; operator: '&&' | '|' | nul
     result.push({ segment: tail, operator: null });
   }
   return result;
+}
+
+/** `&` does not produce a value the next command can read. */
+export function rejectsBackgroundPipe(line: string): boolean {
+  return /&\s*\|/.test(line);
 }
 
 function resolveParams(

@@ -1,6 +1,9 @@
 import {
+  COMMAND_TAG_SHELL,
+  commandHasTag,
   commandRegistry,
   createLogger,
+  describeShellCommands,
   subscribe,
   unsubscribe,
   TOPIC_COMMAND_REGISTERED,
@@ -117,7 +120,30 @@ export class WebMCPService {
     }
   }
 
+  private dropTool(commandId: string): void {
+    const toolName = sanitizeWebMcpToolName(commandId);
+    this.registrationControllers.get(toolName)?.abort();
+    this.registrationControllers.delete(toolName);
+    this.registeredIds.delete(commandId);
+    this.registeredToolNames.delete(toolName);
+  }
+
+  private async refreshShellTool(): Promise<void> {
+    if (!commandRegistry.hasCommand("shell") || !this.registeredIds.has("shell")) return;
+    const shell = commandRegistry.getCommand("shell");
+    shell.description = describeShellCommands();
+    this.dropTool("shell");
+    await this.registerCommand(shell);
+  }
+
   private async registerCommand(command: Command): Promise<boolean> {
+    if (commandHasTag(command, COMMAND_TAG_SHELL)) {
+      void this.refreshShellTool();
+      return false;
+    }
+    if (command.id === "shell") {
+      command.description = describeShellCommands();
+    }
     if (this.registeredIds.has(command.id) || this.pendingRegistrations.has(command.id)) {
       return false;
     }

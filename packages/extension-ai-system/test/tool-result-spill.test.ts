@@ -60,7 +60,7 @@ describe('tool result spill', () => {
     const path = toolResultSpillPath(SESSION, 'call-1');
 
     expect(typeof tool?.content).toBe('string');
-    expect(tool?.content).toContain(`workspace_read path="${path}"`);
+    expect(tool?.content).toContain(`shell cat path="${path}"`);
     expect(tool?.content).toContain('Preview:');
     expect(tool?.content).not.toContain(body);
     expect((message.parts[0] as { result: { content: string } }).result.content).toBe(body);
@@ -93,7 +93,7 @@ describe('tool result spill', () => {
     const path = toolArgsSpillPath(SESSION, 'call-1');
 
     expect(parsed.path).toBe('IndexedDB/tasks.canvas.js');
-    expect(parsed.contents).toContain(`workspace_read path="${path}"`);
+    expect(parsed.contents).toContain(`shell cat path="${path}"`);
     expect(parsed.contents).not.toContain(contents);
     expect((tool.args as { contents: string }).contents).toBe(contents);
 
@@ -167,7 +167,7 @@ describe('tool result spill', () => {
 
     expect(toolContents[1]?.[0]).toContain(body);
     const path = toolResultSpillPath(SESSION, 'call-live');
-    expect(toolContents[2]?.[0]).toContain(`workspace_read path="${path}"`);
+    expect(toolContents[2]?.[0]).toContain(`shell cat path="${path}"`);
     expect(toolContents[2]?.[0]).not.toContain(body);
     expect(toolContents[2]?.[1]).toContain(body);
     const root = getInMemoryRoot();

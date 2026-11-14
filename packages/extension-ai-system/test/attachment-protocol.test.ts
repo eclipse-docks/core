@@ -34,11 +34,10 @@ describe('in-memory session attachment paths', () => {
     const ref = toFileRefPart(withPath);
     expect(ref.path?.startsWith('in-memory://')).toBe(true);
     const line = formatAttachmentRefForModel(ref);
-    expect(line).toContain('workspace_read');
+    expect(line).toContain('shell cat');
     expect(line).toContain(ref.path!);
 
     const content = userContentFromParts([{ type: 'text', text: 'replicate' }, ref]);
-    expect(content as string).toContain('in-memory');
-    expect(content as string).toContain('workspace_list');
+    expect(content as string).toContain('shell cat path="in-memory/');
   });
 });

@@ -1,7 +1,7 @@
-import { registerAll } from "../core/commandregistry";
+import { COMMAND_TAG_SHELL, registerAll } from "../core/commandregistry";
 import { activeSelectionSignal } from "../core/appstate";
 import { Directory, workspaceService } from "../core/filesys";
-import { confirmDialog } from "../dialogs";
+import { askYes } from "./prompt";
 import { toastError, toastInfo } from "../core/toast";
 
 registerAll({
@@ -10,6 +10,8 @@ registerAll({
         name: "rm - Delete a resource (file or directory)",
         description: "Deletes a resource (file or directory)",
         keyBinding: "Delete",
+        tags: [COMMAND_TAG_SHELL],
+        grants: ["w"],
         parameters: [
             {
                 name: "path",
@@ -53,7 +55,7 @@ registerAll({
             const resourcePath = resource.getWorkspacePath();
             const confirmParam = context.params?.confirm;
             if (confirmParam === undefined || confirmParam === true) {
-                const yes = await confirmDialog(`Are you sure you want to delete ${resourcePath}?`);
+                const yes = await askYes(context, `Are you sure you want to delete ${resourcePath}?`);
                 if (!yes) return;
             }
 

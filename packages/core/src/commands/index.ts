@@ -5,6 +5,8 @@ import "./js";
 import "./open-view-as-editor";
 import "./version-info";
 import "./cat";
+import "./cd";
+import "./cwd";
 import "./exists";
 import "./filebrowser-contributions";
 import "./head";

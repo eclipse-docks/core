@@ -2,7 +2,7 @@
  * Commands for WebDAV workspace integration
  */
 
-import { registerAll, workspaceService, createLogger, dialogService } from "@eclipse-docks/core";
+import { registerAll, workspaceService, createLogger, dialogService, askText } from "@eclipse-docks/core";
 import type { WebDAVConnectionInfo } from "./webdav-client";
 
 const logger = createLogger('WebDAV');
@@ -33,10 +33,17 @@ registerAll({
     },
     handler: {
         execute: async (context) => {
-            const url = context.parameters?.url as string;
-            const password = context.parameters?.password as string;
+            const params = context.params ?? {};
+            let url = typeof params.url === "string" ? params.url.trim() : "";
+            let password = typeof params.password === "string" ? params.password : "";
 
-            // If no parameters provided, open the shared WebDAV connect dialog
+            if (!url && context.ask) {
+                const entered = await askText(context, "WebDAV or Nextcloud URL:");
+                if (!entered) throw new Error("WebDAV connection cancelled");
+                url = entered.trim();
+                password = (await askText(context, "Password, if this share needs one:")) ?? "";
+            }
+
             if (!url) {
                 await dialogService.open("webdav-connect-dialog");
                 return;
@@ -71,12 +78,11 @@ registerAll({
 
                 await workspaceService.connectWorkspace(connectionInfo);
                 logger.info('Connected to WebDAV workspace');
+                return `Connected WebDAV workspace ${url}`;
             } catch (error) {
-                if (error instanceof Error) {
-                    logger.error(`Failed to connect: ${error.message}`);
-                } else {
-                    logger.error('Failed to connect to WebDAV workspace');
-                }
+                const message = error instanceof Error ? error.message : 'Failed to connect to WebDAV workspace';
+                logger.error(message);
+                throw error instanceof Error ? error : new Error(message);
             }
         }
     },

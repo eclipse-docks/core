@@ -26,7 +26,8 @@ import {
   parseModelIds,
 } from './models';
 import type { ModelCatalogEntry, ModelProvider, ProvidersSettings, RouteRequest } from './models';
-import { ToolBroker, registerWorkspaceTools, registerFetchTools, refreshCommandTools } from './tools';
+import { ToolBroker, registerWorkspaceTools, registerFetchTools, refreshCommandTools, setShellPromptHandler } from './tools';
+import type { ShellPromptRequest } from './tools';
 import type { PermissionHandler } from './tools';
 import { SessionRuntime } from './session';
 import {
@@ -63,6 +64,7 @@ export class CognitiveRuntime {
   private approvalMode: ToolApprovalMode = 'auto_safe';
   private promptEnhancers: SystemPromptEnhancer[] = [];
   private permissionResolvers = new Map<string, (action: PermissionAction) => void>();
+  private questionResolvers = new Map<string, (answer: string | undefined) => void>();
   private started = false;
   private ready: Promise<void> = Promise.resolve();
 
@@ -74,6 +76,7 @@ export class CognitiveRuntime {
     registerFetchTools(this.tools);
     this.tools.setApprovalMode(this.approvalMode);
     this.tools.setPermissionHandler(async (req) => this.requestPermission(req));
+    setShellPromptHandler((request) => this.requestQuestion(request));
     this.ready = this.hydrateAll();
   }
 
@@ -199,16 +202,27 @@ export class CognitiveRuntime {
     );
   }
 
+  resolveQuestion(requestId: string, answer: string | undefined): void {
+    const resolve = this.questionResolvers.get(requestId);
+    if (!resolve) return;
+    this.questionResolvers.delete(requestId);
+    this.resumeAfterWait();
+    resolve(answer);
+  }
+
   resolvePermission(requestId: string, action: PermissionAction): void {
     const resolve = this.permissionResolvers.get(requestId);
     if (!resolve) return;
     this.permissionResolvers.delete(requestId);
-    const focused = this.sessions.focused();
-    if (focused?.status === 'waiting_approval') {
-      this.sessions.update(focused.id, { status: 'running' });
-      this.emitSessions();
-    }
+    this.resumeAfterWait();
     resolve(action);
+  }
+
+  private resumeAfterWait(): void {
+    const focused = this.sessions.focused();
+    if (focused?.status !== 'waiting_approval') return;
+    this.sessions.update(focused.id, { status: 'running' });
+    this.emitSessions();
   }
 
   /** Emit session list changes and persist them. */
@@ -525,6 +539,18 @@ export class CognitiveRuntime {
       }
     }
     this.models.setCatalog(catalog);
+  }
+
+  private requestQuestion(
+    req: Omit<ShellPromptRequest, 'requestId'>,
+  ): Promise<string | undefined> {
+    const requestId = `ask-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    this.sessions.update(req.sessionId, { status: 'waiting_approval' });
+    this.emitSessions();
+    return new Promise((resolve) => {
+      this.questionResolvers.set(requestId, resolve);
+      publish(TOPIC.questionAsked, { requestId, ...req });
+    });
   }
 
   private async requestPermission(req: {

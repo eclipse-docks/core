@@ -1,16 +1,42 @@
-import { Directory, File } from "../core/filesys";
+import { Directory, File, getInMemoryRoot, IN_MEMORY_ROOT_NAME, workspaceService } from "../core/filesys";
 import { toastError } from "../core/toast";
-import { workspaceService } from "../core/filesys";
+
+function stripWorkspaceSlashes(path: string): string {
+    return path.replace(/^\/+|\/+$/g, "");
+}
+
+/** `in-memory` and `in-memory/…` live outside the mounted workspace composite. */
+export function isInMemoryWorkspacePath(path: string): boolean {
+    const normalized = stripWorkspaceSlashes(path);
+    return normalized === IN_MEMORY_ROOT_NAME || normalized.startsWith(`${IN_MEMORY_ROOT_NAME}/`);
+}
+
+async function inMemoryResource(path: string): Promise<File | Directory | null> {
+    const normalized = stripWorkspaceSlashes(path);
+    const root = getInMemoryRoot();
+    if (normalized === IN_MEMORY_ROOT_NAME) return root;
+    const relative = normalized.slice(`${IN_MEMORY_ROOT_NAME}/`.length);
+    return await root.getResource(relative) as File | Directory | null;
+}
+
+/** A workspace path, or an `in-memory/…` path that is not mounted in the composite. */
+export async function resolveWorkspaceResource(path: string): Promise<File | Directory | null> {
+    if (isInMemoryWorkspacePath(path)) return inMemoryResource(path);
+    const workspace = await workspaceService.getWorkspace();
+    if (!workspace) return null;
+    return await workspace.getResource(path) as File | Directory | null;
+}
 
 export async function getTextFileFromPath(path: string): Promise<File | null> {
-    const workspaceDir = await workspaceService.getWorkspace();
-    if (!workspaceDir) {
-        toastError("No workspace selected.");
-        return null;
-    }
-
     try {
-        const resource = await workspaceDir.getResource(path);
+        if (!isInMemoryWorkspacePath(path)) {
+            const workspaceDir = await workspaceService.getWorkspace();
+            if (!workspaceDir) {
+                toastError("No workspace selected.");
+                return null;
+            }
+        }
+        const resource = await resolveWorkspaceResource(path);
         if (!(resource instanceof File)) {
             toastError("File not found: " + path);
             return null;

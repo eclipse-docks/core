@@ -12,5 +12,5 @@
   "TERMINAL_SELECT_PROFILE": "Profil wählen",
   "TERMINAL_RENAME_PROMPT": "Terminalname",
   "TERMINAL_PROFILE_UNAVAILABLE": "Profil nicht verfügbar: {profileId}",
-  "TERMINAL_DEFAULT_JS_NAME": "Befehle"
+  "TERMINAL_DEFAULT_JS_NAME": "Shell"
 }

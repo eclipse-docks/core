@@ -209,22 +209,39 @@ registerAll({
     command: {
         "id": "connect_indexeddb",
         "name": "IndexedDB",
-        "description": "Connect to IndexedDB-backed workspace (browser storage)",
+        "description": "Create a new empty IndexedDB folder. This does not open a folder that is already connected. Read an existing folder with shell ls and cat.",
         "parameters": [
             {
                 "name": "name",
-                "description": "Optional display name for this IndexedDB workspace root",
+                "description": "Name for the new empty folder. If a connected folder already has this name, that folder is kept.",
                 "required": false
             }
         ]
     },
     handler: {
         execute: async (context: ExecutionContext) => {
-            const nameParam = context.params?.["name"];
+            let nameParam = typeof context.params?.["name"] === "string" ? context.params.name.trim() : "";
+            if (!nameParam && context.ask) {
+                const entered = await context.ask({ kind: "text", message: "Name for the IndexedDB folder:" });
+                if (!entered) throw new Error("IndexedDB connection cancelled");
+                nameParam = entered.trim();
+            }
+            const folders = await workspaceService.getFolders();
+            const existing = nameParam
+                ? folders.filter((folder) => folder.type === "indexeddb" && folder.name.toLowerCase() === nameParam.toLowerCase())
+                : [];
+            if (existing.length) {
+                const names = existing.map((folder) => `"${folder.name}"`).join(", ");
+                return `Already connected: ${names}. Read a folder with shell ls. This command does not inspect it.`;
+            }
             try {
-                await workspaceService.connectFolder({ indexeddb: true, name: nameParam });
+                await workspaceService.connectFolder({ indexeddb: true, ...(nameParam ? { name: nameParam } : {}) });
+                const folders = await workspaceService.getFolders();
+                const created = [...folders].reverse().find((folder) => folder.type === "indexeddb" && (!nameParam || folder.name === nameParam));
+                return `Connected IndexedDB folder "${created?.name ?? nameParam}"`;
             } catch (err: any) {
                 toastError(err.message);
+                throw err instanceof Error ? err : new Error(String(err?.message ?? err));
             }
         }
     },

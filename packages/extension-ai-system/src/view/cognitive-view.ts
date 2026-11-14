@@ -47,6 +47,7 @@ import type {
   PermissionAction,
   PromptAttachment,
   SessionAttachment,
+  ShellPromptRequest,
   SpecialistRole,
   ToolApprovalMode,
 } from '../runtime';
@@ -677,6 +678,12 @@ export class DocksCognitiveView extends DocksPart {
       gap: var(--wa-space-s);
       margin-top: var(--wa-space-s);
       flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .approval-actions wa-input {
+      flex: 1 1 12rem;
+      min-width: 8rem;
     }
 
     pre.args {
@@ -752,6 +759,20 @@ export class DocksCognitiveView extends DocksPart {
       min-width: 0;
     }
 
+    .shell-session {
+      display: flex;
+      flex-direction: column;
+      gap: var(--wa-space-2xs);
+    }
+
+    .shell-commands {
+      margin: 0;
+      font-family: var(--wa-font-family-code, ui-monospace, monospace);
+      font-size: var(--wa-font-size-xs);
+      color: var(--wa-color-text-quiet);
+      white-space: pre-wrap;
+    }
+
     .tool-detail-body {
       max-height: min(70vh, 36rem);
       overflow: auto;
@@ -784,6 +805,8 @@ export class DocksCognitiveView extends DocksPart {
   /** Follow-up composed while a turn is running; sent automatically when the turn ends. */
   @state() private queuedPrompt: { text: string; attachmentIds: string[] } | null = null;
   @state() private pendingPermission: PermissionRequest | null = null;
+  @state() private pendingQuestion: ShellPromptRequest | null = null;
+  @state() private questionDraft = '';
   @state() private policyMode: 'auto' | 'manual' = 'auto';
   @state() private optimizeFor: 'cost' | 'balance' | 'intelligence' = 'balance';
   @state() private manualModel = '';
@@ -837,6 +860,12 @@ export class DocksCognitiveView extends DocksPart {
       }),
       subscribe(TOPIC.permissionAsked, (payload) => {
         this.pendingPermission = payload as PermissionRequest;
+        this.scheduleScrollToBottom();
+      }),
+      subscribe(TOPIC.questionAsked, (payload) => {
+        const question = payload as ShellPromptRequest;
+        this.pendingQuestion = question;
+        this.questionDraft = question.kind === 'choice' ? '' : (question.defaultValue ?? '');
         this.scheduleScrollToBottom();
       }),
       subscribe(TOPIC.messagePart, (payload) => {
@@ -1305,6 +1334,7 @@ export class DocksCognitiveView extends DocksPart {
     if (!this.busy && !this.promptController) return;
     this.promptController?.abort();
     if (this.pendingPermission) this.resolvePermission('deny');
+    if (this.pendingQuestion) this.resolveQuestion(undefined);
   }
 
   private clearQueuedPrompt(): void {
@@ -1564,6 +1594,19 @@ export class DocksCognitiveView extends DocksPart {
     `;
   }
 
+  private resolveQuestion(answer: string | undefined): void {
+    if (!this.pendingQuestion) return;
+    cognitiveRuntime.resolveQuestion(this.pendingQuestion.requestId, answer);
+    this.pendingQuestion = null;
+    this.questionDraft = '';
+  }
+
+  private submitQuestionDraft(): void {
+    const value = this.questionDraft.trim();
+    if (!value) return;
+    this.resolveQuestion(value);
+  }
+
   private resolvePermission(action: PermissionAction): void {
     if (!this.pendingPermission) return;
     cognitiveRuntime.resolvePermission(this.pendingPermission.requestId, action);
@@ -1801,6 +1844,7 @@ export class DocksCognitiveView extends DocksPart {
     const showStreaming = this.busy || this.streamingParts.length > 0;
     const showPermission =
       this.pendingPermission && this.pendingPermission.sessionId === session.id;
+    const showQuestion = this.pendingQuestion && this.pendingQuestion.sessionId === session.id;
 
     return html`
       ${session.history.map((m) => this.renderMessage(m))}
@@ -1839,6 +1883,57 @@ export class DocksCognitiveView extends DocksPart {
             </wa-callout>
           `
         : nothing}
+      ${showQuestion ? this.renderQuestion(this.pendingQuestion!) : nothing}
+    `;
+  }
+
+  private renderQuestion(question: ShellPromptRequest) {
+    const listed = question.kind === 'choice' ? (question.choices ?? []) : [];
+    const suggested =
+      question.kind === 'text' && question.defaultValue && !listed.includes(question.defaultValue)
+        ? [question.defaultValue]
+        : [];
+    const options = [...listed, ...suggested];
+    const choiceButtons = options.map(
+      (choice) => html`
+        <wa-button
+          size="s"
+          appearance=${choice === question.defaultValue ? 'accent' : 'outlined'}
+          @click=${() => this.resolveQuestion(choice)}
+        >
+          ${choice}
+        </wa-button>
+      `,
+    );
+    const custom = question.kind !== 'choice' || question.custom !== false;
+    const answer = html`
+      ${choiceButtons}
+      ${custom
+        ? html`
+            <wa-input
+              size="s"
+              placeholder=${question.kind === 'choice' ? 'Other' : 'Answer'}
+              .value=${this.questionDraft}
+              @input=${(event: Event) => {
+                this.questionDraft = (event.target as HTMLInputElement).value;
+              }}
+              @keydown=${(event: KeyboardEvent) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                this.submitQuestionDraft();
+              }}
+            ></wa-input>
+            <wa-button size="s" variant="brand" @click=${() => this.submitQuestionDraft()}>Submit</wa-button>
+          `
+        : nothing}
+      <wa-button size="s" appearance="plain" @click=${() => this.resolveQuestion(undefined)}>Cancel</wa-button>
+    `;
+    return html`
+      <wa-callout variant="brand" appearance="outlined">
+        <wa-icon slot="icon" name="circle-question"></wa-icon>
+        ${question.message}
+        <div class="approval-actions">${answer}</div>
+      </wa-callout>
     `;
   }
 
@@ -2204,7 +2299,7 @@ export class DocksCognitiveView extends DocksPart {
       <div class="msg assistant">
         <wa-details class="msg-details" appearance="plain" ?open=${open}>
           ${summary}
-          <div class="msg-tech">${techParts.map((p) => this.renderTechnicalPart(p))}</div>
+          <div class="msg-tech">${this.renderTechnicalParts(techParts)}</div>
         </wa-details>
         ${message.id !== 'streaming' ? this.renderMessageMeta(message) : nothing}
       </div>
@@ -2234,6 +2329,71 @@ export class DocksCognitiveView extends DocksPart {
       return html`<div class="bubble markdown">${unsafeHTML(parseMarkdownHtml(part.text))}</div>`;
     }
     return html`<div class="bubble">${part.text}</div>`;
+  }
+
+  private renderTechnicalParts(parts: MessagePart[]) {
+    const blocks: unknown[] = [];
+    for (let index = 0; index < parts.length; ) {
+      const part = parts[index]!;
+      if (part.type !== 'tool' || part.name !== 'shell') {
+        blocks.push(this.renderTechnicalPart(part));
+        index += 1;
+        continue;
+      }
+      const group: Array<Extract<MessagePart, { type: 'tool' }>> = [];
+      while (index < parts.length) {
+        const next = parts[index]!;
+        if (next.type !== 'tool' || next.name !== 'shell') break;
+        group.push(next);
+        index += 1;
+      }
+      blocks.push(this.renderShellSession(group));
+    }
+    return blocks;
+  }
+
+  private renderShellSession(parts: Array<Extract<MessagePart, { type: 'tool' }>>) {
+    const commands = parts.flatMap((part) => shellCommandLines(part.args));
+    const status = parts.some((part) => part.status === 'error')
+      ? 'error'
+      : parts.some((part) => part.status === 'running' || part.status === 'preparing')
+        ? 'running'
+        : parts.every((part) => part.status === 'done')
+          ? 'done'
+          : parts[parts.length - 1]?.status;
+    const duration = parts.reduce((total, part) => total + (part.durationMs ?? 0), 0);
+    const heading = `shell · ${status}${duration ? ` · ${duration}ms` : ''}`;
+    return html`
+      <div class="shell-session">
+        <div class="tool-row">
+          <div class="tool-heading">${heading}</div>
+          <wa-button
+            size="s"
+            appearance="plain"
+            variant="neutral"
+            @click=${() => this.openShellDetail(parts)}
+          >
+            Details
+          </wa-button>
+        </div>
+        ${commands.length
+          ? html`<pre class="shell-commands">${commands.map((command) => `$ ${command}`).join('\n')}</pre>`
+          : nothing}
+      </div>
+    `;
+  }
+
+  private openShellDetail(parts: Array<Extract<MessagePart, { type: 'tool' }>>): void {
+    const duration = parts.reduce((total, part) => total + (part.durationMs ?? 0), 0);
+    this.toolDetail = {
+      type: 'tool',
+      id: parts.map((part) => part.id).join(','),
+      name: 'shell',
+      status: parts.some((part) => part.status === 'error') ? 'error' : 'done',
+      args: { commands: parts.flatMap((part) => shellCommandLines(part.args)) },
+      result: parts.map((part) => part.result),
+      ...(duration ? { durationMs: duration } : {}),
+    };
   }
 
   private renderTechnicalPart(part: MessagePart) {
@@ -2360,17 +2520,46 @@ function splitAssistantPresentation(parts: MessagePart[]): {
   return { summaryText: [], techParts };
 }
 
+function shellCommandLines(args: unknown): string[] {
+  if (!args || typeof args !== 'object') return [];
+  const record = args as Record<string, unknown>;
+  if (Array.isArray(record.commands)) {
+    return record.commands.map((command) => String(command).trim()).filter(Boolean);
+  }
+  const script = typeof record.line === 'string' ? record.line : typeof record.command === 'string' ? record.command : '';
+  return script.split(/\r?\n/).map((command) => command.trim()).filter(Boolean);
+}
+
 function technicalSummary(parts: MessagePart[]): string {
   const tools = parts.filter((p): p is Extract<MessagePart, { type: 'tool' }> => p.type === 'tool');
-  const done = tools.filter((t) => t.status === 'done').length;
-  const errors = tools.filter((t) => t.status === 'error').length;
+  const steps: Array<{ status: string }> = [];
+  for (let index = 0; index < tools.length; index++) {
+    const tool = tools[index]!;
+    if (tool.name !== 'shell') {
+      steps.push(tool);
+      continue;
+    }
+    const group = [tool];
+    while (tools[index + 1]?.name === 'shell') {
+      index += 1;
+      group.push(tools[index]!);
+    }
+    const status = group.some((part) => part.status === 'error')
+      ? 'error'
+      : group.some((part) => part.status === 'running' || part.status === 'preparing')
+        ? 'running'
+        : 'done';
+    steps.push({ status });
+  }
+  const done = steps.filter((step) => step.status === 'done').length;
+  const errors = steps.filter((step) => step.status === 'error').length;
   if (!tools.length) {
     if (parts.some((p) => p.type === 'reasoning')) return 'Thinking…';
     return 'Details';
   }
   if (errors && done) return `Finished with ${errors} issue${errors === 1 ? '' : 's'} (${done} ok).`;
   if (errors) return `Couldn't complete ${errors} step${errors === 1 ? '' : 's'}.`;
-  if (tools.some((t) => t.status === 'running' || t.status === 'preparing')) {
+  if (steps.some((step) => step.status === 'running' || step.status === 'preparing')) {
     return 'Working…';
   }
   return done === 1 ? 'Done.' : `Done · ${done} steps.`;

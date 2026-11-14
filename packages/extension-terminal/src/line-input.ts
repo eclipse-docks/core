@@ -15,6 +15,13 @@ export class LineInput {
     this.historyIndex = this.history.length;
   }
 
+  /** Reprint the prompt and any in-progress input after an asynchronous job line. */
+  redraw(prompt: string): void {
+    this.write('\r\n' + prompt + this.buffer);
+    const back = this.buffer.length - this.cursor;
+    if (back > 0) this.write(`\x1b[${back}D`);
+  }
+
   /** Returns the submitted line on Enter, otherwise null. */
   feed(data: string): string | null {
     if (data === '\r') {

@@ -1,4 +1,4 @@
-import { persistenceService, publish } from '@eclipse-docks/core';
+import { enterToastQuiet, persistenceService, publish } from '@eclipse-docks/core';
 import type {
   ChatMessage,
   EffortLevel,
@@ -462,19 +462,25 @@ export class CognitiveRuntime {
       systemPrompt = await enhance(systemPrompt, { role, goal, sessionId: session.id });
     }
     const liveSession = this.sessions.get(session.id)!;
-    const result = await runSpecialistLoop({
-      role,
-      systemPrompt,
-      history: liveSession.history,
-      compactionSummary: liveSession.compactionSummary,
-      resolved,
-      provider,
-      broker: this.tools,
-      refreshTools: () => refreshCommandTools(this.tools, role),
-      sessionId: session.id,
-      signal: input.signal,
-      onPart: (part) => publish(TOPIC.messagePart, { sessionId: session.id, part }),
-    });
+    const leaveToastQuiet = enterToastQuiet();
+    let result;
+    try {
+      result = await runSpecialistLoop({
+        role,
+        systemPrompt,
+        history: liveSession.history,
+        compactionSummary: liveSession.compactionSummary,
+        resolved,
+        provider,
+        broker: this.tools,
+        refreshTools: () => refreshCommandTools(this.tools, role),
+        sessionId: session.id,
+        signal: input.signal,
+        onPart: (part) => publish(TOPIC.messagePart, { sessionId: session.id, part }),
+      });
+    } finally {
+      leaveToastQuiet();
+    }
 
     this.models.recordOutcome(role, resolved.model, resolved.effort, result.success);
     this.sessions.addMessage(session.id, result.message);

@@ -15,7 +15,6 @@ import {
   toolArgsTranscript,
   toolResultTranscript,
 } from '../compact/tool-result-spill';
-import { enterToastQuiet } from '@eclipse-docks/core';
 import { classifyToolRisks } from './classify-risk';
 
 const MAX_TOOL_ITERATIONS = 16;
@@ -225,75 +224,70 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
     // interrupt the required assistant(tool_calls) → tool → tool sequence.
     const pendingImages: Array<{ id: string; name: string; dataUrl: string }> = [];
 
-    const leaveToastQuiet = enterToastQuiet();
-    try {
-      for (const tool of pendingTools) {
-        if (isAborted(input.signal)) {
-          markCancelled();
-          break;
-        }
-        let args: Record<string, unknown> = {};
-        try {
-          args = tool.arguments ? JSON.parse(tool.arguments) : {};
-        } catch {
-          args = { raw: tool.arguments };
-        }
-        const toolPart: MessagePart = {
-          type: 'tool',
-          id: tool.id,
-          name: tool.name,
-          args,
-          status: 'running',
-        };
-        emit(toolPart);
-        const started = Date.now();
-        const result = await input.broker.execute(
-          { id: tool.id, name: tool.name, arguments: args },
-          input.sessionId,
-          input.role,
-          { risk: risks?.get(tool.id) },
-        );
-        const rawOutput = result.ok ? result.output : { error: result.error };
-        const presentImage =
-          result.ok &&
-          rawOutput &&
-          typeof rawOutput === 'object' &&
-          (rawOutput as Record<string, unknown>)[IMAGE_PRESENT_KEY] === true &&
-          typeof (rawOutput as Record<string, unknown>).dataUrl === 'string';
-        const safeOutput = result.ok ? stripAttachmentToolOutput(rawOutput) : rawOutput;
-        emit({
-          type: 'tool',
-          id: tool.id,
-          name: tool.name,
-          args,
-          result: safeOutput,
-          status: result.ok ? 'done' : 'error',
-          durationMs: Date.now() - started,
-        });
-        messages.push({
-          role: 'tool',
-          toolCallId: tool.id,
-          name: tool.name,
-          content: JSON.stringify(
-            presentImage
-              ? {
-                  ...((safeOutput as object) ?? {}),
-                  note: 'Image bytes follow after all tool results for vision inspection.',
-                }
-              : safeOutput,
-          ),
-        });
-        if (presentImage) {
-          pendingImages.push({
-            id: String((rawOutput as Record<string, unknown>).id ?? ''),
-            name: String((rawOutput as Record<string, unknown>).name ?? 'image'),
-            dataUrl: String((rawOutput as Record<string, unknown>).dataUrl),
-          });
-        }
-        if (!result.ok) success = false;
+    for (const tool of pendingTools) {
+      if (isAborted(input.signal)) {
+        markCancelled();
+        break;
       }
-    } finally {
-      leaveToastQuiet();
+      let args: Record<string, unknown> = {};
+      try {
+        args = tool.arguments ? JSON.parse(tool.arguments) : {};
+      } catch {
+        args = { raw: tool.arguments };
+      }
+      const toolPart: MessagePart = {
+        type: 'tool',
+        id: tool.id,
+        name: tool.name,
+        args,
+        status: 'running',
+      };
+      emit(toolPart);
+      const started = Date.now();
+      const result = await input.broker.execute(
+        { id: tool.id, name: tool.name, arguments: args },
+        input.sessionId,
+        input.role,
+        { risk: risks?.get(tool.id) },
+      );
+      const rawOutput = result.ok ? result.output : { error: result.error };
+      const presentImage =
+        result.ok &&
+        rawOutput &&
+        typeof rawOutput === 'object' &&
+        (rawOutput as Record<string, unknown>)[IMAGE_PRESENT_KEY] === true &&
+        typeof (rawOutput as Record<string, unknown>).dataUrl === 'string';
+      const safeOutput = result.ok ? stripAttachmentToolOutput(rawOutput) : rawOutput;
+      emit({
+        type: 'tool',
+        id: tool.id,
+        name: tool.name,
+        args,
+        result: safeOutput,
+        status: result.ok ? 'done' : 'error',
+        durationMs: Date.now() - started,
+      });
+      messages.push({
+        role: 'tool',
+        toolCallId: tool.id,
+        name: tool.name,
+        content: JSON.stringify(
+          presentImage
+            ? {
+                ...((safeOutput as object) ?? {}),
+                note: 'Image bytes follow after all tool results for vision inspection.',
+              }
+            : safeOutput,
+        ),
+      });
+      if (presentImage) {
+        pendingImages.push({
+          id: String((rawOutput as Record<string, unknown>).id ?? ''),
+          name: String((rawOutput as Record<string, unknown>).name ?? 'image'),
+          dataUrl: String((rawOutput as Record<string, unknown>).dataUrl),
+        });
+      }
+      if (!result.ok) success = false;
     }
 
     if (cancelled || isAborted(input.signal)) {

@@ -87,7 +87,14 @@ export {
 export { 
     toastInfo,
     toastError,
-    toastWarning
+    toastWarning,
+    enterToastQuiet,
+    listToasts,
+    toastCounts,
+    clearToasts,
+    type ToastEntry,
+    type ToastState,
+    type ToastVariant,
 } from '../core/toast';
 export { taskService } from '../core/taskservice';
 export { runJavaScriptCode } from '../commands/js';

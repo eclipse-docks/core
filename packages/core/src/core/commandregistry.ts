@@ -262,6 +262,17 @@ export const registerAll = (options: RegisterOptions) => {
     commandRegistry.registerAll(options);
 }
 
+function positionalSignature(parameters: Parameter[] | undefined): string {
+    if (!parameters?.length) return "";
+    const parts = parameters.map((parameter) => {
+        const typed = parameter.type === "number" || parameter.type === "boolean"
+            ? `${parameter.name}:${parameter.type}`
+            : parameter.name;
+        return parameter.required ? typed : `[${typed}]`;
+    });
+    return ` ${parts.join(" ")}`;
+}
+
 /** Compact catalog of shell-tagged verbs for the `shell` tool description. */
 export function describeShellCommands(): string {
     const verbs = Object.values(commandRegistry.listCommands())
@@ -269,10 +280,11 @@ export function describeShellCommands(): string {
         .sort((a, b) => a.id.localeCompare(b.id));
     const catalog = verbs.map((command) => {
         const grants = command.grants?.length ? command.grants.join(", ") : "w";
-        return `${command.id} (${grants}): ${command.description}`;
+        return `${command.id} (${grants})${positionalSignature(command.parameters)}: ${command.description}`;
     });
     return [
         "Run a shell line. && sequences commands, | passes the previous result as parameters, and & starts a command without waiting.",
+        "Positional arguments fill parameters in the order shown. name=value sets a parameter by name.",
         "Any registered command id may appear in the line.",
         ...catalog,
     ].join("\n");

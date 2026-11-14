@@ -14,6 +14,8 @@ export const TOOLBAR_FULLSCREEN = "toolbar.fullscreen";
 export const TOOLBAR_ACTIVE_PART_NAME = "toolbar.activePartName";
 /** Bottom-center toolbar: background tasks / progress (`docks-tasks`). */
 export const TOOLBAR_TASKS = "toolbar.tasks";
+/** Bottom-end toolbar: quiet-mode toast log (`docks-toasts`). */
+export const TOOLBAR_TOASTS = "toolbar.toasts";
 
 /** Main sidebar header toolbar: open extensions (`open_extensions` command). */
 export const SIDEBAR_TOOLBAR_EXTENSIONS = "sidebar.toolbar.extensions";

@@ -1,5 +1,6 @@
 import "./filebrowser"
 import "./tasks"
+import "./toasts"
 import "./document-title"
 import "./part-name"
 import "./extensions"

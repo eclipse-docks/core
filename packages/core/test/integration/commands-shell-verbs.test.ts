@@ -13,7 +13,7 @@ vi.mock('../../src/core/toast', () => ({
   toastError: vi.fn(),
   toastInfo: vi.fn(),
 }));
-import { COMMAND_TAG_SHELL, commandRegistry } from '../../src/core/commandregistry';
+import { COMMAND_TAG_SHELL, commandRegistry, describeShellCommands } from '../../src/core/commandregistry';
 import { File, getInMemoryRoot } from '../../src/core/filesys';
 import { askChoice, askText, askYes } from '../../src/commands/prompt';
 import '../../src/commands/cat';
@@ -34,6 +34,13 @@ const READ_ONLY = ['ls', 'cat', 'head', 'tail', 'wc', 'exists', 'cwd', 'cd'];
 const READ_WRITE = ['mkdir', 'mv', 'rm', 'touch', 'wget'];
 
 describe('shell verb registration', () => {
+  it('lists positional parameters in the order a shell line fills them', () => {
+    const catalog = describeShellCommands();
+    expect(catalog).toContain('Positional arguments fill parameters in the order shown');
+    expect(catalog).toContain('head (r) path [lines:number]:');
+    expect(catalog).toContain('ls (r) [path] [recursive:boolean]:');
+  });
+
   it('tags filesystem verbs and leaves shell itself unregistered in core', () => {
     for (const id of READ_ONLY) {
       const command = commandRegistry.getCommand(id);

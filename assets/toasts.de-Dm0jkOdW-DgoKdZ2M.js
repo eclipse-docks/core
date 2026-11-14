@@ -1,0 +1,1 @@
+var e=`Meldungen`,t=`{pending} ausstehend, {emitted} angezeigt`,n=`ausstehend`,r=`Leeren`,i={TOASTS:e,TOASTS_TITLE:t,PENDING:n,CLEAR:r};export{r as CLEAR,n as PENDING,e as TOASTS,t as TOASTS_TITLE,i as default};

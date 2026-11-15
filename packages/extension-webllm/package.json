@@ -20,7 +20,7 @@
   "dependencies": {
     "@eclipse-docks/core": "*",
     "@eclipse-docks/extension-ai-system": "*",
-    "@mlc-ai/web-llm": "^0.2.79"
+    "@mlc-ai/web-llm": "^0.2.88"
   },
   "devDependencies": {
     "typescript": "^6.0.0",

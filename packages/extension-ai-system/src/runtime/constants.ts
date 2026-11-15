@@ -24,6 +24,7 @@ export const TOPIC = {
   permissionAsked: 'cognitive/permission/asked',
   questionAsked: 'cognitive/question/asked',
   modelRouted: 'cognitive/model/routed',
+  modelProgress: 'cognitive/model/progress',
   coreTick: 'cognitive/core/tick',
   checkpoint: 'cognitive/checkpoint',
   providersChanged: 'cognitive/providers/changed',

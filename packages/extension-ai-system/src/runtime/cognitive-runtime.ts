@@ -21,11 +21,19 @@ import {
   catalogFromSettings,
   defaultProvidersSettings,
   listConfiguredModelIds,
+  listProviderPresets as collectProviderPresets,
+  listedProviderModels,
   loadModelsCatalog,
   normalizeProvidersSettings,
   parseModelIds,
 } from './models';
-import type { ModelCatalogEntry, ModelProvider, ProvidersSettings, RouteRequest } from './models';
+import type {
+  ModelProvider,
+  ProviderModelChoice,
+  ProviderPreset,
+  ProvidersSettings,
+  RouteRequest,
+} from './models';
 import { ToolBroker, registerWorkspaceTools, registerFetchTools, refreshCommandTools, setShellPromptHandler } from './tools';
 import type { ShellPromptRequest } from './tools';
 import type { PermissionHandler } from './tools';
@@ -43,7 +51,6 @@ import { registerSkillMarkdown, registeredSkillsPromptSection } from './skills/s
 import { summarizeDroppedHistory } from './compact/compaction';
 import { publishSpilledToolResults } from './compact/tool-result-spill';
 import { TOPIC } from './constants';
-import { detectEffortCapability } from './models/effort-support';
 
 const PERSIST_KEY = 'cognitive/v1/state';
 /** Auto-compact after a turn when live history exceeds this many messages. */
@@ -90,21 +97,23 @@ export class CognitiveRuntime {
     return structuredClone(this.providersSettings);
   }
 
-  /** Models available for routing (`providerId/modelId`), including external plugins. */
-  listConfiguredModels(): string[] {
-    const ids = listConfiguredModelIds(this.providersSettings);
-    const seen = new Set(ids);
-    for (const provider of this.providers.listExternal()) {
-      const models = provider.listModels();
-      if (!Array.isArray(models)) continue;
-      for (const model of models) {
-        const id = `${provider.id}/${model.id}`;
-        if (seen.has(id)) continue;
-        seen.add(id);
-        ids.push(id);
-      }
+  /** Providers the settings ID column can offer: OpenAI, Ollama, and activated plugins. */
+  listProviderPresets(): ProviderPreset[] {
+    return collectProviderPresets(this.providers.listExternal());
+  }
+
+  /** Models a registered provider can list. Local providers (WebLLM) resolve without a network call. */
+  async listProviderModels(providerId: string): Promise<ProviderModelChoice[]> {
+    const provider = this.providers.listExternal().find((item) => item.id === providerId);
+    if (!provider) {
+      return collectProviderPresets().find((preset) => preset.id === providerId)?.catalog ?? [];
     }
-    return ids;
+    return listedProviderModels(provider);
+  }
+
+  /** Models the user selected in AI Settings (`providerId/modelId`). */
+  listConfiguredModels(): string[] {
+    return listConfiguredModelIds(this.providersSettings);
   }
 
   async setProvidersSettings(settings: ProvidersSettings): Promise<void> {
@@ -113,18 +122,17 @@ export class CognitiveRuntime {
 
   /**
    * Register a plugin ModelProvider (e.g. WebLLM) that survives settings rebuilds.
-   * Models from listModels() are merged into the router catalog as `providerId/modelId`.
+   * `listModels()` feeds the settings editor. Chat and routing use only the models saved for that provider.
    */
   registerExternalProvider(provider: ModelProvider): void {
     this.providers.registerExternal(provider);
-    this.rebuildCatalog();
-    publish(TOPIC.providersChanged, this.providersSettings);
+    // Drop any HTTP wrapper created before this plugin loaded (empty URL becomes 127.0.0.1).
+    this.applyProvidersSettings(this.providersSettings, { persist: false, emit: true });
   }
 
   unregisterExternalProvider(id: string): void {
     this.providers.unregisterExternal(id);
-    this.rebuildCatalog();
-    publish(TOPIC.providersChanged, this.providersSettings);
+    this.applyProvidersSettings(this.providersSettings, { persist: false, emit: true });
   }
 
   /** Append instructions to the specialist system prompt (e.g. RAG guidance). */
@@ -477,6 +485,7 @@ export class CognitiveRuntime {
         sessionId: session.id,
         signal: input.signal,
         onPart: (part) => publish(TOPIC.messagePart, { sessionId: session.id, part }),
+        onProgress: (update) => publish(TOPIC.modelProgress, { sessionId: session.id, ...update }),
       });
     } finally {
       leaveToastQuiet();
@@ -532,19 +541,7 @@ export class CognitiveRuntime {
   }
 
   private rebuildCatalog(): void {
-    const catalog = catalogFromSettings(this.providersSettings);
-    const seen = new Set(catalog.map((e) => e.id));
-    for (const provider of this.providers.listExternal()) {
-      const models = provider.listModels();
-      const list = Array.isArray(models) ? models : [];
-      for (const model of list) {
-        const id = `${provider.id}/${model.id}`;
-        if (seen.has(id)) continue;
-        seen.add(id);
-        catalog.push(externalCatalogEntry(id, provider.id));
-      }
-    }
-    this.models.setCatalog(catalog);
+    this.models.setCatalog(catalogFromSettings(this.providersSettings));
   }
 
   private requestQuestion(
@@ -714,16 +711,6 @@ function sameModelPolicy(a: ModelPolicy, b: ModelPolicy): boolean {
     return a.model === b.model && (a.effort ?? 'auto') === (b.effort ?? 'auto');
   }
   return false;
-}
-
-function externalCatalogEntry(id: string, providerId: string): ModelCatalogEntry {
-  return {
-    id,
-    providerId,
-    tier: 'standard',
-    strengths: ['fast'],
-    effort: detectEffortCapability(id),
-  };
 }
 
 export const cognitiveRuntime = new CognitiveRuntime();

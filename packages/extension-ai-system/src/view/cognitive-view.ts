@@ -304,6 +304,25 @@ export class DocksCognitiveView extends DocksPart {
       font-size: var(--wa-font-size-s);
     }
 
+    .model-progress {
+      display: flex;
+      flex-direction: column;
+      gap: var(--wa-space-2xs);
+      width: 100%;
+    }
+
+    .model-progress .streaming-meta {
+      align-items: flex-start;
+    }
+
+    .model-progress .streaming-meta span {
+      white-space: normal;
+    }
+
+    .model-progress wa-progress-bar {
+      --track-height: 0.35rem;
+    }
+
     .composer-shell {
       display: flex;
       flex-direction: column;
@@ -814,6 +833,8 @@ export class DocksCognitiveView extends DocksPart {
   @state() private approvalMode: ToolApprovalMode = 'auto_safe';
   @state() private modelIds: string[] = [];
   @state() private streamingParts: MessagePart[] = [];
+  /** Latest WebLLM-style load report for the in-flight turn. */
+  @state() private modelProgress: { text: string; progress: number } | null = null;
   @state() private historyOpen = false;
   @state() private historyQuery = '';
   private unsubs: string[] = [];
@@ -871,12 +892,23 @@ export class DocksCognitiveView extends DocksPart {
       subscribe(TOPIC.messagePart, (payload) => {
         const { sessionId, part } = payload as { sessionId: string; part: MessagePart };
         if (sessionId !== this.focusedId) return;
+        if (part.type === 'text') this.modelProgress = null;
         this.streamingParts = mergePart(this.streamingParts, part);
         this.openCreatedPlan(part);
         this.scheduleScrollToBottom();
       }),
+      subscribe(TOPIC.modelProgress, (payload) => {
+        const update = payload as { sessionId: string; text: string; progress?: number };
+        if (update.sessionId !== this.focusedId) return;
+        this.modelProgress = {
+          text: update.text,
+          progress: typeof update.progress === 'number' ? update.progress : 0,
+        };
+        this.scheduleScrollToBottom();
+      }),
       subscribe(TOPIC.messageDone, () => {
         this.streamingParts = [];
+        this.modelProgress = null;
         this.syncSessions();
         this.scheduleScrollToBottom();
       }),
@@ -957,12 +989,14 @@ export class DocksCognitiveView extends DocksPart {
       cognitiveRuntime.removeSession(sessionId);
     }
     this.streamingParts = [];
+    this.modelProgress = null;
     this.syncSessions();
   }
 
   private openSession(sessionId: string): void {
     if (!cognitiveRuntime.sessions.focus(sessionId)) return;
     this.streamingParts = [];
+    this.modelProgress = null;
     this.syncSessions();
     this.historyOpen = false;
     this.historyQuery = '';
@@ -973,6 +1007,7 @@ export class DocksCognitiveView extends DocksPart {
   private newSession(): void {
     cognitiveRuntime.sessions.createSession({ title: 'Chat' });
     this.streamingParts = [];
+    this.modelProgress = null;
     this.historyOpen = false;
     this.historyQuery = '';
     this.syncSessions();
@@ -1402,6 +1437,7 @@ export class DocksCognitiveView extends DocksPart {
     this.promptController = controller;
     this.busy = true;
     this.streamingParts = [];
+    this.modelProgress = null;
     this.startBusyStatus();
     try {
       await cognitiveRuntime.prompt({
@@ -1415,6 +1451,7 @@ export class DocksCognitiveView extends DocksPart {
       this.stopBusyStatus();
       this.busy = false;
       this.streamingParts = [];
+      this.modelProgress = null;
       this.syncSessions();
       this.scheduleScrollToBottom();
       const next = this.queuedPrompt;
@@ -2266,14 +2303,7 @@ export class DocksCognitiveView extends DocksPart {
 
     const summary = html`
       <div slot="summary" class="msg-summary">
-        ${opts.streaming
-          ? html`
-              <div class="streaming-meta">
-                <wa-spinner style="font-size: 0.85rem"></wa-spinner>
-                <span>${this.busy ? this.busyStatus : 'streaming…'}</span>
-              </div>
-            `
-          : nothing}
+        ${opts.streaming ? this.renderStreamingStatus() : nothing}
         ${summaryBubble}
       </div>
     `;
@@ -2281,14 +2311,7 @@ export class DocksCognitiveView extends DocksPart {
     if (!techParts.length) {
       return html`
         <div class="msg assistant">
-          ${opts.streaming
-            ? html`
-                <div class="streaming-meta">
-                  <wa-spinner style="font-size: 0.85rem"></wa-spinner>
-                  <span>${this.busy ? this.busyStatus : 'streaming…'}</span>
-                </div>
-              `
-            : nothing}
+          ${opts.streaming ? this.renderStreamingStatus() : nothing}
           ${summaryBubble}
           ${message.id !== 'streaming' ? this.renderMessageMeta(message) : nothing}
         </div>
@@ -2302,6 +2325,28 @@ export class DocksCognitiveView extends DocksPart {
           <div class="msg-tech">${this.renderTechnicalParts(techParts)}</div>
         </wa-details>
         ${message.id !== 'streaming' ? this.renderMessageMeta(message) : nothing}
+      </div>
+    `;
+  }
+
+  private renderStreamingStatus() {
+    const progress = this.modelProgress;
+    if (!progress) {
+      return html`
+        <div class="streaming-meta">
+          <wa-spinner style="font-size: 0.85rem"></wa-spinner>
+          <span>${this.busy ? this.busyStatus : 'streaming…'}</span>
+        </div>
+      `;
+    }
+    const percent = Math.max(0, Math.min(100, Math.round(progress.progress * 100)));
+    return html`
+      <div class="model-progress">
+        <div class="streaming-meta">
+          <wa-spinner style="font-size: 0.85rem"></wa-spinner>
+          <span>${progress.text}</span>
+        </div>
+        <wa-progress-bar .value=${percent} label=${progress.text}></wa-progress-bar>
       </div>
     `;
   }

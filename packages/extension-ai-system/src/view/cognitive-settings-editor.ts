@@ -16,7 +16,7 @@ import {
   fetchOpenAICompatibleModels,
   parseModelIds,
 } from '../runtime';
-import type { ProviderConfig, ProvidersSettings, RemoteModelInfo, ToolApprovalMode } from '../runtime';
+import type { ProviderConfig, ProviderPreset, ProvidersSettings, RemoteModelInfo, ToolApprovalMode } from '../runtime';
 
 const APPROVAL_OPTIONS: Array<{ value: ToolApprovalMode; label: string; hint: string }> = [
   {
@@ -33,6 +33,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
   @property({ attribute: false }) public input?: EditorInput;
 
   @state() private settings: ProvidersSettings = defaultProvidersSettings();
+  @state() private presets: ProviderPreset[] = cognitiveRuntime.listProviderPresets();
   @state() private approvalMode: ToolApprovalMode = 'auto_safe';
   @state() private availableModels: Record<number, RemoteModelInfo[]> = {};
   @state() private loadingModels: Record<number, boolean> = {};
@@ -48,6 +49,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     this.loadFromRuntime();
     this.unsubs.push(
       subscribe(TOPIC.providersChanged, () => {
+        this.presets = cognitiveRuntime.listProviderPresets();
         if (!this.isDirty()) this.loadFromRuntime();
       }),
       subscribe(TOPIC.approvalModeChanged, (mode) => {
@@ -67,14 +69,23 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
   }
 
   private loadFromRuntime(): void {
-    this.settings = cognitiveRuntime.getProvidersSettings();
+    this.presets = cognitiveRuntime.listProviderPresets();
+    const loaded = cognitiveRuntime.getProvidersSettings();
+    const providers = loaded.providers.map((provider) =>
+      this.localPreset(provider) && (provider.baseUrl || provider.apiKey)
+        ? { ...provider, baseUrl: '', apiKey: '' }
+        : provider,
+    );
+    const stripped = providers.some((provider, index) => provider !== loaded.providers[index]);
+    this.settings = stripped ? { ...loaded, providers } : loaded;
     this.approvalMode = cognitiveRuntime.getApprovalMode();
     this.availableModels = {};
     this.loadingModels = {};
     this.modelErrors = {};
     this.autoFetchedKeys.clear();
-    this.markDirty(false);
+    this.markDirty(stripped);
     this.settings.providers.forEach((provider, index) => {
+      if (this.localPreset(provider)) return;
       if (provider.apiKey.trim() && provider.baseUrl.trim()) {
         void this.fetchModels(index, { auto: true });
       }
@@ -137,7 +148,13 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
 
   private async fetchModels(index: number, opts: { auto?: boolean } = {}): Promise<void> {
     const provider = this.settings.providers[index];
-    if (!provider?.baseUrl.trim()) {
+    if (!provider) return;
+    if (this.localPreset(provider)) {
+      if (opts.auto) return;
+      await this.reloadListedModels(index, provider.id);
+      return;
+    }
+    if (!provider.baseUrl.trim()) {
       toastError('Set a base URL before fetching models');
       return;
     }
@@ -178,6 +195,23 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     }
   }
 
+  private async reloadListedModels(index: number, providerId: string): Promise<void> {
+    this.loadingModels = { ...this.loadingModels, [index]: true };
+    this.modelErrors = { ...this.modelErrors, [index]: '' };
+    try {
+      const models = await cognitiveRuntime.listProviderModels(providerId);
+      this.availableModels = { ...this.availableModels, [index]: models };
+      this.presets = cognitiveRuntime.listProviderPresets();
+      toastInfo(models.length ? `Loaded ${models.length} models` : 'No models reported');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.modelErrors = { ...this.modelErrors, [index]: message };
+      toastError(message);
+    } finally {
+      this.loadingModels = { ...this.loadingModels, [index]: false };
+    }
+  }
+
   private onModelsSelect(index: number, e: Event): void {
     const target = e.target as HTMLSelectElement & { value: string | string[] };
     const value = target.value;
@@ -186,14 +220,56 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
   }
 
   private addProvider(): void {
-    const id = uniqueProviderId(this.settings.providers);
     this.touch({
       ...this.settings,
       providers: [
         ...this.settings.providers,
-        { id, baseUrl: '', apiKey: '', models: '', enabled: true },
+        { id: '', baseUrl: '', apiKey: '', models: '', enabled: true },
       ],
-      defaultProviderId: this.settings.defaultProviderId || id,
+    });
+  }
+
+  private presetFor(id: string): ProviderPreset | undefined {
+    return this.presets.find((preset) => preset.id === id);
+  }
+
+  private presetOptions(currentId: string): ProviderPreset[] {
+    const taken = new Set(
+      this.settings.providers.map((provider) => provider.id).filter((id) => id && id !== currentId),
+    );
+    return this.presets.filter((preset) => !taken.has(preset.id));
+  }
+
+  private onProviderIdInput(index: number, value: string): void {
+    const preset = this.presetFor(value.trim());
+    if (preset) {
+      this.selectPreset(index, preset.id);
+      return;
+    }
+    const current = this.settings.providers[index];
+    if (!current || current.id === value) return;
+    this.updateProvider(index, { id: value });
+  }
+
+  private selectPreset(index: number, id: string): void {
+    const current = this.settings.providers[index];
+    if (!id || !current) return;
+    if (current.id === id) {
+      if (this.localPreset(current) && (current.baseUrl || current.apiKey)) {
+        this.updateProvider(index, { baseUrl: '', apiKey: '' });
+      }
+      return;
+    }
+    const preset = this.presetFor(id);
+    if (!preset) {
+      this.updateProvider(index, { id });
+      return;
+    }
+    this.updateProvider(index, {
+      id: preset.id,
+      baseUrl: preset.baseUrl,
+      apiKey: preset.requiresApiKey ? current.apiKey : '',
+      models: preset.models,
     });
   }
 
@@ -250,7 +326,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
           <header class="header">
             <div>
               <h2>AI Providers</h2>
-              <p class="hint">OpenAI-compatible endpoints. Edit cells in place, then save from the toolbar.</p>
+              <p class="hint">Pick a known provider or type an id, then set its base URL and save.</p>
             </div>
             <wa-button size="s" variant="brand" appearance="filled" @click=${() => this.addProvider()}>
               <wa-icon slot="start" name="plus"></wa-icon>
@@ -283,7 +359,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
 
           <wa-callout variant="neutral" appearance="plain" size="s">
             <wa-icon slot="icon" name="circle-info"></wa-icon>
-            Enter an API key to load available models. Catalog ids become
+            Pick a known provider or type a custom id and its base URL. Enter an API key when that provider requires one. Catalog ids become
             <code>providerId/modelId</code> for Auto routing.
           </wa-callout>
         </section>
@@ -334,19 +410,45 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
               this.updateProvider(index, { enabled: (e.target as HTMLInputElement).checked })}
           ></wa-checkbox>
         </td>
-        <td>
-          <wa-input
+        <td class="col-id">
+          <wa-dropdown
+            class="provider-id"
             size="s"
-            .value=${provider.id}
-            placeholder="openai"
-            @input=${(e: Event) => this.updateProvider(index, { id: (e.target as HTMLInputElement).value })}
-          ></wa-input>
+            placement="bottom-start"
+            distance="4"
+            @wa-select=${(e: CustomEvent<{ item?: { value?: string } }>) => {
+              const value = e.detail?.item?.value;
+              if (value) this.selectPreset(index, value);
+            }}
+          >
+            <wa-input
+              slot="trigger"
+              size="s"
+              placeholder="provider id"
+              .value=${provider.id}
+              @input=${(e: Event) =>
+                this.onProviderIdInput(index, (e.target as HTMLInputElement).value)}
+            ></wa-input>
+            ${this.presetOptions(provider.id).map(
+              (preset) => html`
+                <wa-dropdown-item value=${preset.id} type="checkbox" .checked=${provider.id === preset.id}>
+                  ${preset.label}
+                  ${preset.label === preset.id
+                    ? ''
+                    : html`<span slot="details">${preset.id}</span>`}
+                </wa-dropdown-item>
+              `,
+            )}
+          </wa-dropdown>
         </td>
         <td>
           <wa-input
             size="s"
-            .value=${provider.baseUrl}
-            placeholder="https://api.openai.com/v1"
+            .value=${this.localPreset(provider) ? '' : provider.baseUrl}
+            placeholder=${this.localPreset(provider)
+              ? 'In the browser'
+              : this.presetFor(provider.id)?.baseUrl || 'https://api.openai.com/v1'}
+            ?disabled=${Boolean(this.localPreset(provider))}
             @input=${(e: Event) =>
               this.updateProvider(index, { baseUrl: (e.target as HTMLInputElement).value })}
           ></wa-input>
@@ -356,8 +458,13 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
             size="s"
             type="password"
             password-toggle
-            .value=${provider.apiKey}
-            placeholder="optional"
+            .value=${this.localPreset(provider) ? '' : provider.apiKey}
+            placeholder=${this.localPreset(provider)
+              ? 'Not used'
+              : this.presetFor(provider.id)?.requiresApiKey
+                ? 'required'
+                : 'optional'}
+            ?disabled=${Boolean(this.localPreset(provider))}
             @input=${(e: Event) =>
               this.updateProvider(index, { apiKey: (e.target as HTMLInputElement).value })}
           ></wa-input>
@@ -392,13 +499,60 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     `;
   }
 
+  /** In-browser providers list models themselves, even if the row still has a leftover URL. */
+  private localPreset(provider: ProviderConfig): ProviderPreset | undefined {
+    const preset = this.presetFor(provider.id);
+    if (!preset?.catalog.length || preset.baseUrl.trim()) return undefined;
+    return preset;
+  }
+
+  private renderModelOptions(choices: Array<{ id: string; name?: string; group?: string }>) {
+    const buckets = new Map<string, Array<{ id: string; name?: string; group?: string }>>();
+    const unlabeled: Array<{ id: string; name?: string; group?: string }> = [];
+    for (const choice of choices) {
+      const group = choice.group?.trim();
+      if (!group) {
+        unlabeled.push(choice);
+        continue;
+      }
+      const list = buckets.get(group) ?? [];
+      list.push(choice);
+      buckets.set(group, list);
+    }
+    if (!buckets.size) {
+      return unlabeled.map((choice) => html`<wa-option value=${choice.id}>${choice.name || choice.id}</wa-option>`);
+    }
+    const order = ['GPU', 'CPU', 'NPU'];
+    const labels = [...buckets.keys()].sort((a, b) => {
+      const left = order.indexOf(a);
+      const right = order.indexOf(b);
+      return (left === -1 ? order.length : left) - (right === -1 ? order.length : right) || a.localeCompare(b);
+    });
+    const option = (choice: { id: string; name?: string }) =>
+      html`<wa-option value=${choice.id}>${choice.name || choice.id}</wa-option>`;
+    return [
+      ...labels.flatMap((label) => [
+        html`<wa-divider label-placement="start">${label}</wa-divider>`,
+        ...(buckets.get(label) ?? []).map(option),
+      ]),
+      ...unlabeled.map(option),
+    ];
+  }
+
+  private modelChoices(provider: ProviderConfig, index: number) {
+    const local = this.localPreset(provider);
+    if (local?.catalog.length) return local.catalog;
+    return this.availableModels[index] ?? [];
+  }
+
   private renderModelsCell(provider: ProviderConfig, index: number) {
     const hasKey = Boolean(provider.apiKey.trim());
-    const remote = this.availableModels[index] ?? [];
+    const choices = this.modelChoices(provider, index);
     const loading = Boolean(this.loadingModels[index]);
     const error = this.modelErrors[index];
     const selected = parseModelIds(provider.models);
-    const showPicker = hasKey || remote.length > 0;
+    const local = Boolean(this.localPreset(provider));
+    const showPicker = hasKey || choices.length > 0;
 
     if (!showPicker) {
       return html`
@@ -414,7 +568,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
             size="s"
             appearance="plain"
             title="Fetch models"
-            ?disabled=${!provider.baseUrl.trim() || loading}
+            ?disabled=${(!local && !provider.baseUrl.trim()) || loading}
             ?loading=${loading}
             @click=${() => void this.fetchModels(index)}
           >
@@ -432,21 +586,19 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
           with-clear
           placeholder=${loading ? 'Loading models…' : 'Select models'}
           .value=${selected}
-          ?disabled=${loading && remote.length === 0}
+          ?disabled=${loading && choices.length === 0}
           @change=${(e: Event) => this.onModelsSelect(index, e)}
         >
-          ${remote.map(
-            (m) => html`<wa-option value=${m.id}>${m.name === m.id ? m.id : `${m.name} (${m.id})`}</wa-option>`,
-          )}
+          ${this.renderModelOptions(choices)}
           ${selected
-            .filter((id) => !remote.some((m) => m.id === id))
+            .filter((id) => !choices.some((m) => m.id === id))
             .map((id) => html`<wa-option value=${id}>${id}</wa-option>`)}
         </wa-select>
         <wa-button
           size="s"
           appearance="plain"
           title="Reload models"
-          ?disabled=${!provider.baseUrl.trim() || loading}
+          ?disabled=${loading}
           ?loading=${loading}
           @click=${() => void this.fetchModels(index)}
         >
@@ -526,7 +678,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     table.providers {
       width: 100%;
       border-collapse: collapse;
-      min-width: 56rem;
+      min-width: 64rem;
     }
 
     th,
@@ -557,8 +709,24 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
       width: 2.5rem;
     }
 
-    .col-id {
-      width: 8rem;
+    .col-id,
+    td.col-id {
+      width: 14rem;
+      min-width: 14rem;
+    }
+
+    td.col-id wa-dropdown.provider-id {
+      display: block;
+      width: 100%;
+    }
+
+    td.col-id wa-dropdown.provider-id wa-input {
+      width: 100%;
+      min-width: 12rem;
+    }
+
+    td.col-id wa-dropdown.provider-id::part(menu) {
+      min-width: 14rem;
     }
 
     .col-key {
@@ -566,7 +734,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     }
 
     .col-models {
-      min-width: 16rem;
+      min-width: 26rem;
     }
 
     .col-default {
@@ -579,7 +747,8 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
       text-align: end;
     }
 
-    td wa-input {
+    td wa-input,
+    td wa-select {
       width: 100%;
     }
 
@@ -593,7 +762,8 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     .models-cell wa-input,
     .models-cell wa-select {
       flex: 1;
-      min-width: 0;
+      min-width: 18rem;
+      --tag-max-size: 28ch;
     }
 
     .models-error {
@@ -607,14 +777,6 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
       font-size: 0.9em;
     }
   `;
-}
-
-function uniqueProviderId(existing: ProviderConfig[]): string {
-  const used = new Set(existing.map((p) => p.id));
-  if (!used.has('provider')) return 'provider';
-  let n = 2;
-  while (used.has(`provider-${n}`)) n += 1;
-  return `provider-${n}`;
 }
 
 declare global {

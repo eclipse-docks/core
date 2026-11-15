@@ -23,13 +23,13 @@ export class ProviderRegistry {
   }
 
   get(id: string): ModelProvider | undefined {
-    return this.settingsProviders.get(id) ?? this.externalProviders.get(id);
+    return this.externalProviders.get(id) ?? this.settingsProviders.get(id);
   }
 
   list(): ModelProvider[] {
     const byId = new Map<string, ModelProvider>();
-    for (const provider of this.externalProviders.values()) byId.set(provider.id, provider);
     for (const provider of this.settingsProviders.values()) byId.set(provider.id, provider);
+    for (const provider of this.externalProviders.values()) byId.set(provider.id, provider);
     return [...byId.values()];
   }
 

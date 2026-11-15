@@ -35,6 +35,8 @@ export interface SpecialistLoopInput {
   /** Rebuild the broker's command tools before each model call. */
   refreshTools?: () => void;
   onPart?: (part: MessagePart) => void;
+  /** Ephemeral model-load status. Not stored on the assistant message. */
+  onProgress?: (update: { text: string; progress?: number }) => void;
 }
 
 export interface SpecialistLoopResult {
@@ -160,6 +162,10 @@ export async function runSpecialistLoop(input: SpecialistLoopInput): Promise<Spe
       signal: input.signal,
     })) {
       if (isAborted(input.signal)) break;
+      if (chunk.type === 'progress' && chunk.text) {
+        input.onProgress?.({ text: chunk.text, progress: chunk.progress });
+        continue;
+      }
       if (chunk.type === 'error') {
         emit({ type: 'text', text: `Error: ${chunk.error}` });
         success = false;

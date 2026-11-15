@@ -27,6 +27,7 @@ export {
   type TokenUsage,
   type EmotionalState,
   type ProviderConfig,
+  type ProviderPreset,
   type ProvidersSettings,
   type RemoteModelInfo,
   type ModelProvider,

@@ -6,8 +6,10 @@ export interface StreamTokenUsage {
 }
 
 export interface StreamChunk {
-  type: 'text' | 'reasoning' | 'tool_call_delta' | 'usage' | 'done' | 'error';
+  type: 'text' | 'reasoning' | 'tool_call_delta' | 'usage' | 'done' | 'error' | 'progress';
   text?: string;
+  /** Load progress from 0 to 1 when `type` is `progress`. */
+  progress?: number;
   toolCall?: { id: string; name: string; arguments: string };
   usage?: StreamTokenUsage;
   error?: string;
@@ -50,7 +52,17 @@ export interface StreamParams {
 
 export interface ModelProvider {
   id: string;
-  listModels(): Promise<Array<{ id: string; name: string }>> | Array<{ id: string; name: string }>;
+  /** Label in the AI settings provider list. Defaults to `id`. */
+  label?: string;
+  /** Default endpoint copied into a settings row. In-browser providers leave this empty. */
+  baseUrl?: string;
+  /** When true, a settings row expects an API key. Plugin providers default to false. */
+  requiresApiKey?: boolean;
+  /** Model ids selected when this provider is chosen. Defaults to every model from `listModels()`. */
+  defaultModelIds?: string[];
+  listModels():
+    | Promise<Array<{ id: string; name: string; group?: string }>>
+    | Array<{ id: string; name: string; group?: string }>;
   stream(params: StreamParams): AsyncIterable<StreamChunk>;
 }
 

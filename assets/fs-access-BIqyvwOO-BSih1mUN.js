@@ -1,1 +1,0 @@
-export{Qt as FileSysDirHandleResource}from"./canvas-bridge-core.js-DzNT3DE6.js";

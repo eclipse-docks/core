@@ -1,0 +1,1 @@
+var e=`AI System`,t=`AI assistants, chat, and tool execution`,n={EXT_AI_NAME:e,EXT_AI_DESC:t};export{t as EXT_AI_DESC,e as EXT_AI_NAME,n as default};

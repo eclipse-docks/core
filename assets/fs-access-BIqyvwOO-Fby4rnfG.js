@@ -1,0 +1,1 @@
+export{Qt as FileSysDirHandleResource}from"./canvas-bridge-core.js-CBM4vOmG.js";

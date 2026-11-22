@@ -1,1 +1,0 @@
-var e=`Kognitive KI`,t=`Headless kognitives Agenten-Runtime mit moderner Chat-UI`,n={EXT_COGNITIVE_NAME:e,EXT_COGNITIVE_DESC:t};export{t as EXT_COGNITIVE_DESC,e as EXT_COGNITIVE_NAME,n as default};

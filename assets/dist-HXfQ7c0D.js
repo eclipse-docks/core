@@ -1,0 +1,1 @@
+export{Xt as File,kt as getInMemoryRoot}from"./canvas-bridge-core.js-CBM4vOmG.js";import"./canvas-bridge-canvas.js-D2E74L6t.js";

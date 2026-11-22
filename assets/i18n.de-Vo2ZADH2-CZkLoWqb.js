@@ -1,0 +1,1 @@
+var e=`KI-System`,t=`KI-Assistenten, Chat und Tool-Ausführung`,n={EXT_AI_NAME:e,EXT_AI_DESC:t};export{t as EXT_AI_DESC,e as EXT_AI_NAME,n as default};

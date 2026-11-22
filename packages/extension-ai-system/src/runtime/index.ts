@@ -1,7 +1,5 @@
 export * from './types';
 export * from './constants';
-export * from './core';
-export * from './memory';
 export * from './models';
 export * from './tools';
 export * from './session';
@@ -12,7 +10,7 @@ export * from './attachments/attachments';
 export * from './attachments/attachment-paths';
 export * from './attachments/session-workspace';
 export * from './compact/tool-result-spill';
-export * from './cognitive-runtime';
+export * from './ai-runtime';
 export * from './skills/skills';
 export * from './skills/skills-commands';
 export * from './app-context-enhancer';

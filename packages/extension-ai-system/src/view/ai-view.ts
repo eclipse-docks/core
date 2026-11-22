@@ -28,7 +28,7 @@ import {
   OPEN_AI_SETTINGS_COMMAND,
   TOPIC,
   buildPlanPrompt,
-  cognitiveRuntime,
+  aiRuntime,
   isPlanFilePath,
   detectEffortCapability,
   estimateSessionContextUsage,
@@ -39,7 +39,7 @@ import {
 } from '../runtime';
 import type {
   ChatMessage,
-  CognitiveSession,
+  AiSession,
   ContextUsage,
   EffortLevel,
   MessagePart,
@@ -98,8 +98,8 @@ function browserFileFromContents(contents: unknown, name: string): File | null {
   return null;
 }
 
-@customElement('docks-cognitive-view')
-export class DocksCognitiveView extends DocksPart {
+@customElement('docks-ai-view')
+export class DocksAiView extends DocksPart {
   protected scrollMode: 'scroller' | 'native' | 'none' = 'none';
 
   static styles = css`
@@ -117,7 +117,7 @@ export class DocksCognitiveView extends DocksPart {
       min-height: 0;
     }
 
-    .cognitive-shell {
+    .ai-shell {
       display: flex;
       flex-direction: column;
       height: 100%;
@@ -127,7 +127,7 @@ export class DocksCognitiveView extends DocksPart {
       position: relative;
     }
 
-    .cognitive-shell.drag-over {
+    .ai-shell.drag-over {
       outline: 2px dashed var(--wa-color-brand-border-normal);
       outline-offset: -2px;
       background: color-mix(in srgb, var(--wa-color-brand-fill-quiet) 35%, transparent);
@@ -810,7 +810,7 @@ export class DocksCognitiveView extends DocksPart {
   @query('#attach-file-input') private fileInput?: HTMLInputElement;
   private composerPasteBound = false;
 
-  @state() private sessions: CognitiveSession[] = [];
+  @state() private sessions: AiSession[] = [];
   @state() private focusedId: string | null = null;
   @state() private draft = '';
   /** Session attachment ids to publish with the next user turn. */
@@ -861,11 +861,11 @@ export class DocksCognitiveView extends DocksPart {
   }
 
   protected doBeforeUI(): void {
-    cognitiveRuntime.start();
+    aiRuntime.start();
     this.syncSessions();
     this.syncModels();
-    this.approvalMode = cognitiveRuntime.getApprovalMode();
-    void cognitiveRuntime.whenReady().then(() => {
+    this.approvalMode = aiRuntime.getApprovalMode();
+    void aiRuntime.whenReady().then(() => {
       this.syncSessions();
       this.restoreRoutingFromRuntime();
       this.scheduleScrollToBottom();
@@ -948,12 +948,12 @@ export class DocksCognitiveView extends DocksPart {
   }
 
   private syncSessions(): void {
-    const byRecency = cognitiveRuntime.sessions.list();
+    const byRecency = aiRuntime.sessions.list();
     this.sessions = [...byRecency].sort((a, b) => a.createdAt - b.createdAt);
-    const focused = cognitiveRuntime.sessions.focused();
+    const focused = aiRuntime.sessions.focused();
     const activeId = focused?.id ?? byRecency[0]?.id ?? null;
     if (activeId && focused?.id !== activeId) {
-      cognitiveRuntime.sessions.focus(activeId);
+      aiRuntime.sessions.focus(activeId);
     }
     this.focusedId = activeId;
   }
@@ -977,16 +977,16 @@ export class DocksCognitiveView extends DocksPart {
     container.scrollTop = container.scrollHeight;
   }
 
-  private focusedSession(): CognitiveSession | undefined {
+  private focusedSession(): AiSession | undefined {
     return this.sessions.find((s) => s.id === this.focusedId) ?? this.sessions[0];
   }
 
   private deleteSession(sessionId: string): void {
     if (this.sessions.length <= 1) {
-      cognitiveRuntime.sessions.createSession({ title: 'Chat' });
-      cognitiveRuntime.removeSession(sessionId);
+      aiRuntime.sessions.createSession({ title: 'Chat' });
+      aiRuntime.removeSession(sessionId);
     } else {
-      cognitiveRuntime.removeSession(sessionId);
+      aiRuntime.removeSession(sessionId);
     }
     this.streamingParts = [];
     this.modelProgress = null;
@@ -994,27 +994,27 @@ export class DocksCognitiveView extends DocksPart {
   }
 
   private openSession(sessionId: string): void {
-    if (!cognitiveRuntime.sessions.focus(sessionId)) return;
+    if (!aiRuntime.sessions.focus(sessionId)) return;
     this.streamingParts = [];
     this.modelProgress = null;
     this.syncSessions();
     this.historyOpen = false;
     this.historyQuery = '';
-    cognitiveRuntime.commitSessions();
+    aiRuntime.commitSessions();
     this.scheduleScrollToBottom();
   }
 
   private newSession(): void {
-    cognitiveRuntime.sessions.createSession({ title: 'Chat' });
+    aiRuntime.sessions.createSession({ title: 'Chat' });
     this.streamingParts = [];
     this.modelProgress = null;
     this.historyOpen = false;
     this.historyQuery = '';
     this.syncSessions();
-    cognitiveRuntime.commitSessions();
+    aiRuntime.commitSessions();
   }
 
-  private historySessions(): CognitiveSession[] {
+  private historySessions(): AiSession[] {
     const q = this.historyQuery.trim().toLowerCase();
     const sorted = [...this.sessions].sort((a, b) => b.updatedAt - a.updatedAt);
     if (!q) return sorted;
@@ -1037,16 +1037,16 @@ export class DocksCognitiveView extends DocksPart {
   }
 
   private syncModels(): void {
-    this.modelIds = cognitiveRuntime.listConfiguredModels();
+    this.modelIds = aiRuntime.listConfiguredModels();
     if (!this.manualModel || !this.modelIds.includes(this.manualModel)) {
-      this.manualModel = this.modelIds[0] ?? cognitiveRuntime.defaultModelId();
+      this.manualModel = this.modelIds[0] ?? aiRuntime.defaultModelId();
     }
   }
 
   /** Mirror persisted runtime policy into the gear menu after hydrate. */
   private restoreRoutingFromRuntime(): void {
     this.syncModels();
-    const policy = cognitiveRuntime.getModelPolicy();
+    const policy = aiRuntime.getModelPolicy();
     if (policy.mode === 'auto') {
       this.policyMode = 'auto';
       this.optimizeFor = policy.optimizeFor;
@@ -1055,23 +1055,23 @@ export class DocksCognitiveView extends DocksPart {
       this.manualModel = policy.model;
       this.manualEffort = policy.effort ?? 'auto';
       if (!this.manualModel || !this.modelIds.includes(this.manualModel)) {
-        this.manualModel = this.modelIds[0] ?? cognitiveRuntime.defaultModelId();
+        this.manualModel = this.modelIds[0] ?? aiRuntime.defaultModelId();
         this.applyPolicy();
       }
     }
-    this.approvalMode = cognitiveRuntime.getApprovalMode();
+    this.approvalMode = aiRuntime.getApprovalMode();
   }
 
   private onProvidersChanged(): void {
     this.syncModels();
     if (this.policyMode !== 'manual') return;
     if (this.manualModel && this.modelIds.includes(this.manualModel)) return;
-    this.manualModel = this.modelIds[0] ?? cognitiveRuntime.defaultModelId();
+    this.manualModel = this.modelIds[0] ?? aiRuntime.defaultModelId();
     this.applyPolicy();
   }
 
   private effortChoices(): Array<EffortLevel | 'auto'> {
-    const cap = detectEffortCapability(this.manualModel || cognitiveRuntime.defaultModelId());
+    const cap = detectEffortCapability(this.manualModel || aiRuntime.defaultModelId());
     if (!cap.supported) return ['auto', 'none'];
     return ['auto', ...cap.levels];
   }
@@ -1104,9 +1104,9 @@ export class DocksCognitiveView extends DocksPart {
       .find((m) => m.role === 'assistant' && m.routedModel)?.routedModel;
     if (routed) return routed;
     if (this.policyMode === 'manual') {
-      return this.manualModel || this.modelIds[0] || cognitiveRuntime.defaultModelId();
+      return this.manualModel || this.modelIds[0] || aiRuntime.defaultModelId();
     }
-    return this.modelIds[0] || cognitiveRuntime.defaultModelId();
+    return this.modelIds[0] || aiRuntime.defaultModelId();
   }
 
   private contextUsage(): ContextUsage {
@@ -1115,7 +1115,7 @@ export class DocksCognitiveView extends DocksPart {
 
   private async compactFocused(): Promise<void> {
     if (!this.focusedId) return;
-    await cognitiveRuntime.compactSession(this.focusedId);
+    await aiRuntime.compactSession(this.focusedId);
     this.syncSessions();
   }
 
@@ -1143,11 +1143,11 @@ export class DocksCognitiveView extends DocksPart {
       this.policyMode === 'manual'
         ? {
             mode: 'manual',
-            model: this.manualModel || cognitiveRuntime.defaultModelId(),
+            model: this.manualModel || aiRuntime.defaultModelId(),
             effort: this.manualEffort,
           }
         : { mode: 'auto', optimizeFor: this.optimizeFor };
-    cognitiveRuntime.setModelPolicy(policy);
+    aiRuntime.setModelPolicy(policy);
   }
 
   private async setComposerText(value: string): Promise<void> {
@@ -1180,8 +1180,8 @@ export class DocksCognitiveView extends DocksPart {
   }
 
   private removeSessionAttachment(attachmentId: string): void {
-    const sessionId = this.focusedId ?? cognitiveRuntime.ensureSessionId();
-    cognitiveRuntime.removeAttachment(sessionId, attachmentId);
+    const sessionId = this.focusedId ?? aiRuntime.ensureSessionId();
+    aiRuntime.removeAttachment(sessionId, attachmentId);
     this.pendingAttachmentIds = this.pendingAttachmentIds.filter((id) => id !== attachmentId);
     if (this.previewAttachmentId === attachmentId) this.previewAttachmentId = null;
     this.syncSessions();
@@ -1232,7 +1232,7 @@ export class DocksCognitiveView extends DocksPart {
     const files = [...fileList];
     if (!files.length) return;
 
-    const sessionId = cognitiveRuntime.ensureSessionId(this.focusedId ?? undefined);
+    const sessionId = aiRuntime.ensureSessionId(this.focusedId ?? undefined);
     this.focusedId = sessionId;
     const existing = this.sessionAttachments();
     const accepted: PromptAttachment[] = [];
@@ -1256,7 +1256,7 @@ export class DocksCognitiveView extends DocksPart {
       accepted.push(result.attachment);
     }
 
-    const stored = await cognitiveRuntime.addAttachments(sessionId, accepted);
+    const stored = await aiRuntime.addAttachments(sessionId, accepted);
     if (stored.length) {
       this.pendingAttachmentIds = [
         ...this.pendingAttachmentIds,
@@ -1390,7 +1390,7 @@ export class DocksCognitiveView extends DocksPart {
       toastInfo('Wait for the current turn to finish');
       return;
     }
-    cognitiveRuntime.setSpecialistMode('build', this.focusedId ?? undefined);
+    aiRuntime.setSpecialistMode('build', this.focusedId ?? undefined);
     this.syncSessions();
     await this.setComposerText(buildPlanPrompt(planPath));
     await this.send();
@@ -1440,7 +1440,7 @@ export class DocksCognitiveView extends DocksPart {
     this.modelProgress = null;
     this.startBusyStatus();
     try {
-      await cognitiveRuntime.prompt({
+      await aiRuntime.prompt({
         sessionId: this.focusedId ?? undefined,
         text,
         attachmentIds,
@@ -1633,7 +1633,7 @@ export class DocksCognitiveView extends DocksPart {
 
   private resolveQuestion(answer: string | undefined): void {
     if (!this.pendingQuestion) return;
-    cognitiveRuntime.resolveQuestion(this.pendingQuestion.requestId, answer);
+    aiRuntime.resolveQuestion(this.pendingQuestion.requestId, answer);
     this.pendingQuestion = null;
     this.questionDraft = '';
   }
@@ -1646,7 +1646,7 @@ export class DocksCognitiveView extends DocksPart {
 
   private resolvePermission(action: PermissionAction): void {
     if (!this.pendingPermission) return;
-    cognitiveRuntime.resolvePermission(this.pendingPermission.requestId, action);
+    aiRuntime.resolvePermission(this.pendingPermission.requestId, action);
     this.pendingPermission = null;
   }
 
@@ -1665,9 +1665,9 @@ export class DocksCognitiveView extends DocksPart {
         title="Checkpoint"
         @click=${() => {
           if (!this.focusedId) return;
-          cognitiveRuntime.sessions.checkpoint(this.focusedId);
+          aiRuntime.sessions.checkpoint(this.focusedId);
           this.syncSessions();
-          cognitiveRuntime.commitSessions();
+          aiRuntime.commitSessions();
         }}
       >
         <wa-icon name="floppy-disk" label="Checkpoint"></wa-icon>
@@ -1782,7 +1782,7 @@ export class DocksCognitiveView extends DocksPart {
     const session = this.focusedSession();
     return html`
       <div
-        class="cognitive-shell ${this.dragOver ? 'drag-over' : ''}"
+        class="ai-shell ${this.dragOver ? 'drag-over' : ''}"
         @dragover=${(e: DragEvent) => this.onViewDragOver(e)}
         @dragleave=${(e: DragEvent) => this.onViewDragLeave(e)}
         @drop=${(e: DragEvent) => void this.onViewDrop(e)}
@@ -1875,7 +1875,7 @@ export class DocksCognitiveView extends DocksPart {
     `;
   }
 
-  private renderTranscript(session: CognitiveSession) {
+  private renderTranscript(session: AiSession) {
     // Show the live assistant row as soon as the turn starts (busy), not only after
     // the first streamed part — otherwise the transcript stays blank until tools/text arrive.
     const showStreaming = this.busy || this.streamingParts.length > 0;
@@ -2069,7 +2069,7 @@ export class DocksCognitiveView extends DocksPart {
     if (value.startsWith('mode:')) {
       const mode = value.slice('mode:'.length);
       if (mode === 'build' || mode === 'plan' || mode === 'explore') {
-        cognitiveRuntime.setSpecialistMode(mode);
+        aiRuntime.setSpecialistMode(mode);
       }
       return;
     }
@@ -2077,7 +2077,7 @@ export class DocksCognitiveView extends DocksPart {
       const mode = value.slice('approval:'.length);
       if (mode === 'manual' || mode === 'auto_safe' || mode === 'auto_all') {
         this.approvalMode = mode;
-        cognitiveRuntime.setApprovalMode(mode);
+        aiRuntime.setApprovalMode(mode);
       }
       return;
     }
@@ -2616,12 +2616,12 @@ function startOfDay(ts: number): number {
   return d.getTime();
 }
 
-function groupSessionsByRecency(sessions: CognitiveSession[]): Array<{ label: string; sessions: CognitiveSession[] }> {
+function groupSessionsByRecency(sessions: AiSession[]): Array<{ label: string; sessions: AiSession[] }> {
   const now = Date.now();
   const today = startOfDay(now);
   const yesterday = today - 86_400_000;
   const week = today - 7 * 86_400_000;
-  const buckets: Record<'today' | 'yesterday' | 'week' | 'older', CognitiveSession[]> = {
+  const buckets: Record<'today' | 'yesterday' | 'week' | 'older', AiSession[]> = {
     today: [],
     yesterday: [],
     week: [],
@@ -2745,6 +2745,6 @@ function elementsNamed(name: string, root: ParentNode = document): Element[] {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'docks-cognitive-view': DocksCognitiveView;
+    'docks-ai-view': DocksAiView;
   }
 }

@@ -1,6 +1,6 @@
 # `@eclipse-docks/extension-ai-system`
 
-Cognitive chat runtime for Eclipse Docks: sessions, model routing, tool broker with approval modes, and a UI-agnostic event bus. Consumers use `@eclipse-docks/extension-ai-system/api`.
+AI chat runtime for Eclipse Docks: sessions, model routing, tool broker with approval modes, and a UI-agnostic event bus. Consumers use `@eclipse-docks/extension-ai-system/api`.
 
 ## Status
 
@@ -10,32 +10,11 @@ Composer supports **attachments** (paperclip / drag-drop / Ctrl+V, up to 8). Pay
 
 Supported: text files (≤~100k chars stored) and visual media (jpeg/png/gif/webp/svg/ico/bmp/avif/tiff, ≤4MB). SVG keeps source text plus a preview data URL. Audio/video rejected. Storage bootstrap commands (`connect_opfs`, `load_workspace`, …) are not exposed as LLM tools.
 
-**ICOM Core** (`runtime/core`) and **ACT-R memory** (`runtime/memory` + session buffers) are wired into each turn but do not yet drive model policy, tool policy, or prompt content in a meaningful way. Treat them as scaffolding until the todos below land.
-
-See also `docs/internal/icom-agentic-runtime.md` for the layer map.
-
 ## Finalize implementation
-
-### ICOM Core — make motivation real
-
-- [ ] Feed intent / dominant need / valence into the specialist system prompt (not only `goal ≈ user text`)
-- [ ] Let needs/valence influence routing (e.g. `safety` → prefer ask / lower-risk tools; `clarity` → explore/plan)
-- [ ] Update need urgency from turn outcomes (tool failure, user correction, success) via `bumpNeed`
-- [ ] Surface `TOPIC.coreTick` in the UI (optional debug panel: conscious valence, need, intent)
-- [ ] Decide whether subconscious state affects anything beyond blending, or drop it until needed
-
-### ACT-R memory — close the loop
-
-- [ ] Inject top retrieved chunks into the LLM context (system or dedicated message), not only the `retrieval` buffer for `coreTick`
-- [ ] Call `decay()` on a schedule (per turn or idle) so activation ranking matters over time
-- [ ] Use `imaginal` / `motor` buffers or remove them from `BufferMap` until there is a real producer/consumer
-- [ ] Persist utility-relevant episodic structure (what worked) and retrieve by task similarity, not only keyword overlap
-- [ ] Pin / forget UX for workspace-scoped chunks (or API for extensions)
 
 ### Specialist roles & Plan/Build
 
-- [ ] Role picker in `docks-cognitive-view` (`plan` / `explore` / `build` / `general`)
-- [ ] Default role from ICOM intent / need instead of hard-coded `build`
+- [ ] Role picker in `docks-ai-view` (`plan` / `explore` / `build` / `general`)
 - [ ] Explicit Plan → approve → Build handoff (checkpoint + user gate), not only read-only tool filters
 - [ ] Compact / title / summary specialists invoked automatically with economy models
 
@@ -48,7 +27,7 @@ See also `docs/internal/icom-agentic-runtime.md` for the layer map.
 
 ### Model router & transport
 
-- [ ] Persist router utility scores with cognitive state
+- [ ] Persist router utility scores with AI state
 - [ ] Move tool + reasoning to Responses API (or equivalent) so `reasoning_effort` and tools can coexist
 - [ ] Re-enable effort levels when tools are required, once transport allows
 - [ ] Expose manual effort override consistently with Models.dev capabilities
@@ -56,9 +35,8 @@ See also `docs/internal/icom-agentic-runtime.md` for the layer map.
 ### Sessions, context & compaction
 
 - [x] Inject `compactionSummary` into provider messages; LLM summarize on compact (extractive fallback)
-- [ ] Auto-compact threshold tunable in settings; compact summary should include ACT-R goal/retrieval highlights
-- [ ] Keep context-usage estimate in sync with what is actually sent to the provider (retrieved chunks, enhancers)
-- [ ] Checkpoint restore should rehydrate Core state, not only session buffers/history
+- [ ] Auto-compact threshold tunable in settings
+- [ ] Keep context-usage estimate in sync with what is actually sent to the provider (enhancers)
 
 ### Consumer API & docs
 
@@ -68,5 +46,5 @@ See also `docs/internal/icom-agentic-runtime.md` for the layer map.
 
 ### Cleanup
 
-- [ ] Remove or quarantine any leftover pre-cognitive modules if still present in the tree
-- [ ] Trim public exports to the stable façade; keep Core/memory internals package-private unless consumers need them
+- [ ] Remove or quarantine any leftover unused modules if still present in the tree
+- [ ] Trim public exports to the stable façade

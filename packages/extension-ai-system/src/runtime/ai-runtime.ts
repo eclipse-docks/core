@@ -11,8 +11,6 @@ import type {
   ToolApprovalMode,
 } from './types';
 import { MAX_ATTACHMENTS, toFileRefPart, toSessionAttachment } from './attachments/attachments';
-import { createCoreState, coreTick, defaultNeeds } from './core';
-import { CognitiveMemory } from './memory';
 import {
   ModelRouter,
   OpenAICompatibleProvider,
@@ -52,20 +50,20 @@ import { summarizeDroppedHistory } from './compact/compaction';
 import { publishSpilledToolResults } from './compact/tool-result-spill';
 import { TOPIC } from './constants';
 
-const PERSIST_KEY = 'cognitive/v1/state';
+const PERSIST_KEY = 'ai/v1/state';
+const PREVIOUS_PERSIST_KEY = 'cognitive/v1/state';
+const PREVIOUS_PROVIDERS_PERSIST_KEY = 'cognitive/v1/providers';
 /** Auto-compact after a turn when live history exceeds this many messages. */
 const AUTO_COMPACT_AFTER = 40;
 /** Messages retained in the live transcript after compaction. */
 const COMPACT_KEEP_COUNT = 12;
 
-export class CognitiveRuntime {
+export class AiRuntime {
   readonly sessions = new SessionRuntime();
-  readonly memory = new CognitiveMemory();
   readonly providers = new ProviderRegistry();
   readonly models = new ModelRouter();
   readonly tools = new ToolBroker();
 
-  private core = createCoreState(defaultNeeds());
   private policy: ModelPolicy = { mode: 'auto', optimizeFor: 'balance' };
   private providersSettings: ProvidersSettings = defaultProvidersSettings();
   private approvalMode: ToolApprovalMode = 'auto_safe';
@@ -411,30 +409,9 @@ export class CognitiveRuntime {
     if (isDefaultChatTitle(session.title)) {
       this.sessions.update(session.id, { title: titleFromPrompt(promptSummary) });
     }
-
-    const contextChunk = this.memory.upsert({
-      type: 'context',
-      slots: { kind: 'user', summary: promptSummary },
-      scope: 'session',
-      sessionId: session.id,
-      activation: 0.8,
-    });
-    const retrieved = this.memory.retrieveForContext(promptSummary.split(/\s+/).slice(0, 12));
-    const buffers = {
-      ...session.buffers,
-      retrieval: retrieved[0] ?? contextChunk,
-    };
-
-    const tick = coreTick({ state: this.core, buffers, context: contextChunk });
-    this.core = tick.state;
-    this.sessions.update(session.id, { buffers: tick.buffers, status: 'running' });
+    this.sessions.update(session.id, { status: 'running' });
     // Publish immediately so the user bubble appears before the model turn starts.
     this.emitSessions();
-    publish(TOPIC.coreTick, {
-      valenceDelta: tick.valenceDelta,
-      intent: tick.intent,
-      conscious: tick.state.conscious,
-    });
 
     const role = input.role ?? session.specialistMode ?? 'build';
     refreshCommandTools(this.tools, role);
@@ -461,7 +438,7 @@ export class CognitiveRuntime {
       return err;
     }
 
-    const goal = tick.intent?.summary ?? promptSummary;
+    const goal = promptSummary;
     const hasAttachments =
       published.length > 0 || (this.sessions.get(session.id)?.attachments?.length ?? 0) > 0;
     const skillsSection = await registeredSkillsPromptSection();
@@ -493,13 +470,6 @@ export class CognitiveRuntime {
 
     this.models.recordOutcome(role, resolved.model, resolved.effort, result.success);
     this.sessions.addMessage(session.id, result.message);
-    this.memory.upsert({
-      type: 'episodic',
-      slots: { kind: result.success ? 'progress' : 'error', summary: goal },
-      scope: 'workspace',
-      sessionId: session.id,
-      activation: 0.7,
-    });
 
     const aborted = Boolean(input.signal?.aborted);
     if (!aborted && (this.sessions.get(session.id)?.history.length ?? 0) > AUTO_COMPACT_AFTER) {
@@ -613,7 +583,10 @@ export class CognitiveRuntime {
 
   private async hydrateProviders(): Promise<void> {
     try {
-      const saved = (await persistenceService.getObject(PROVIDERS_PERSIST_KEY)) as ProvidersSettings | null;
+      const saved = await loadPersisted<ProvidersSettings>(
+        PROVIDERS_PERSIST_KEY,
+        PREVIOUS_PROVIDERS_PERSIST_KEY,
+      );
       if (!saved?.providers?.length) return;
       this.applyProvidersSettings(saved, { persist: false, emit: true });
     } catch {
@@ -631,17 +604,13 @@ export class CognitiveRuntime {
 
   private async hydrate(): Promise<void> {
     try {
-      const saved = (await persistenceService.getObject(PERSIST_KEY)) as
-        | {
-            sessions?: ReturnType<SessionRuntime['snapshot']>;
-            memory?: ReturnType<CognitiveMemory['snapshot']>;
-            approvalMode?: ToolApprovalMode;
-            modelPolicy?: ModelPolicy;
-          }
-        | null;
+      const saved = await loadPersisted<{
+        sessions?: ReturnType<SessionRuntime['snapshot']>;
+        approvalMode?: ToolApprovalMode;
+        modelPolicy?: ModelPolicy;
+      }>(PERSIST_KEY, PREVIOUS_PERSIST_KEY);
       if (!saved) return;
       if (saved.sessions) this.sessions.loadSnapshot(saved.sessions);
-      if (saved.memory) this.memory.restore(saved.memory);
       if (saved.approvalMode && isToolApprovalMode(saved.approvalMode)) {
         this.approvalMode = saved.approvalMode;
         this.tools.setApprovalMode(saved.approvalMode);
@@ -657,7 +626,6 @@ export class CognitiveRuntime {
     try {
       await persistenceService.persistObject(PERSIST_KEY, {
         sessions: this.sessions.snapshot(),
-        memory: this.memory.snapshot(),
         approvalMode: this.approvalMode,
         modelPolicy: this.policy,
       });
@@ -665,6 +633,12 @@ export class CognitiveRuntime {
       // ignore persistence failures in constrained environments
     }
   }
+}
+
+async function loadPersisted<T>(key: string, previousKey: string): Promise<T | null> {
+  const current = (await persistenceService.getObject(key)) as T | null;
+  if (current) return current;
+  return (await persistenceService.getObject(previousKey)) as T | null;
 }
 
 function isToolApprovalMode(value: unknown): value is ToolApprovalMode {
@@ -713,7 +687,7 @@ function sameModelPolicy(a: ModelPolicy, b: ModelPolicy): boolean {
   return false;
 }
 
-export const cognitiveRuntime = new CognitiveRuntime();
+export const aiRuntime = new AiRuntime();
 
 function isDefaultChatTitle(title: string): boolean {
   const t = title.trim().toLowerCase();

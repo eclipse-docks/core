@@ -4,7 +4,6 @@
 import { File, getInMemoryRoot } from '@eclipse-docks/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { estimateSessionContextUsage } from '../src/runtime/context/usage';
-import { emptyBuffers } from '../src/runtime/core/tick';
 import { historyToProviderMessages, runSpecialistLoop } from '../src/runtime/specialists/loop';
 import { ToolBroker } from '../src/runtime/tools/broker';
 import type { ModelProvider, StreamChunk, StreamParams } from '../src/runtime/models/types';
@@ -15,7 +14,7 @@ import {
   toolArgsSpillPath,
   toolResultSpillPath,
 } from '../src/runtime/compact/tool-result-spill';
-import type { ChatMessage, CognitiveSession } from '../src/runtime/types';
+import type { ChatMessage, AiSession } from '../src/runtime/types';
 
 const SESSION = 'sess-spill';
 
@@ -106,13 +105,12 @@ describe('tool result spill', () => {
 
   it('estimates context from the transcript preview, not the stored body', () => {
     const body = 'y'.repeat(TOOL_RESULT_SPILL_CHARS + 4_000);
-    const session: CognitiveSession = {
+    const session: AiSession = {
       id: SESSION,
       title: 'Chat',
       status: 'idle',
       history: [assistantWithResult({ content: body })],
       attachments: [],
-      buffers: emptyBuffers(),
       specialistMode: 'build',
       createdAt: 1,
       updatedAt: 1,

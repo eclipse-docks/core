@@ -6,7 +6,7 @@ import { rootContext } from '@eclipse-docks/core';
 import { SEARCH_CONFIG } from './utils/constants';
 import { RAGResultFormatter } from './services/rag-result-formatter';
 import { SnippetExtractor } from './utils/snippet-extractor';
-import { cognitiveRuntime, type SystemPromptEnhancer } from '@eclipse-docks/extension-ai-system/api';
+import { aiRuntime, type SystemPromptEnhancer } from '@eclipse-docks/extension-ai-system/api';
 import { commandRegistry, registerAll } from '@eclipse-docks/core';
 import { createLogger } from '@eclipse-docks/core';
 
@@ -197,8 +197,8 @@ export function registerRAGCommands() {
 export function integrateRAGWithAI() {
     try {
         registerRAGCommands();
-        cognitiveRuntime.start();
-        cognitiveRuntime.addSystemPromptEnhancer(ragPromptEnhancer);
+        aiRuntime.start();
+        aiRuntime.addSystemPromptEnhancer(ragPromptEnhancer);
         logger.info('RAG prompt enhancer and commands registered');
     } catch (error) {
         logger.warn(`Failed to integrate RAG with AI: ${error}`);

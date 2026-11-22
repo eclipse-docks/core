@@ -72,7 +72,7 @@ registerAll({
 await commandRegistry.execute("demo.ping", {});
 ```
 
-Commands registered this way can surface as AI tools when the cognitive runtime refreshes command tools.
+Commands registered this way can surface as AI tools when the AI runtime refreshes command tools.
 
 ## Contributions
 

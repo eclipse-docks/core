@@ -1,4 +1,4 @@
-import type { ChatMessage, CognitiveSession, MessagePart } from '../types';
+import type { ChatMessage, AiSession, MessagePart } from '../types';
 import { getModelContextLimit } from '../models/effort-support';
 import { toolArgsTranscript, toolResultTranscript } from '../compact/tool-result-spill';
 
@@ -83,7 +83,7 @@ export function contextUsageLevel(percent: number): ContextUsageLevel {
 
 /** Estimate how much of the model context window the session currently occupies. */
 export function estimateSessionContextUsage(
-  session: CognitiveSession | undefined,
+  session: AiSession | undefined,
   modelRef: string,
 ): ContextUsage {
   const limit = getModelContextLimit(modelRef);

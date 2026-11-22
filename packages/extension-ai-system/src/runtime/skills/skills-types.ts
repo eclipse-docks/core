@@ -9,7 +9,7 @@ export interface SkillRelevanceContext {
 export type SkillLoadResult = string | { default: string };
 
 /**
- * Declares an agent skill for the cognitive runtime.
+ * Declares an agent skill for the AI runtime.
  * Register with `contributionRegistry.registerContribution(SYSTEM_SKILLS, …)`.
  *
  * Provide either eager `body` (full SKILL.md) or lazy `load` (Vite `import('…/SKILL.md?raw')`).

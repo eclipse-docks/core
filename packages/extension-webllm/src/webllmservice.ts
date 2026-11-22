@@ -1,6 +1,6 @@
 import { createLogger } from '@eclipse-docks/core';
 import {
-  cognitiveRuntime,
+  aiRuntime,
   type ModelProvider,
   type ProviderChatMessage,
   type StreamChunk,
@@ -216,7 +216,7 @@ function toWebLLMMessage(message: ProviderChatMessage): ChatCompletionMessagePar
 }
 
 export default () => {
-  cognitiveRuntime.start();
-  cognitiveRuntime.registerExternalProvider(new WebLLMProvider());
+  aiRuntime.start();
+  aiRuntime.registerExternalProvider(new WebLLMProvider());
   logger.info('WebLLM provider registered');
 };

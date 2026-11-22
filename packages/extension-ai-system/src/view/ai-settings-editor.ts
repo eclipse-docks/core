@@ -10,7 +10,7 @@ import {
 } from '@eclipse-docks/core';
 import { css, customElement, html, property, state } from '@eclipse-docks/core/externals/lit';
 import {
-  cognitiveRuntime,
+  aiRuntime,
   TOPIC,
   defaultProvidersSettings,
   fetchOpenAICompatibleModels,
@@ -28,12 +28,12 @@ const APPROVAL_OPTIONS: Array<{ value: ToolApprovalMode; label: string; hint: st
   { value: 'auto_all', label: 'Approve all', hint: 'Run every tool without asking' },
 ];
 
-@customElement('docks-cognitive-settings-editor')
-export class DocksCognitiveSettingsEditor extends DocksPart {
+@customElement('docks-ai-settings-editor')
+export class DocksAiSettingsEditor extends DocksPart {
   @property({ attribute: false }) public input?: EditorInput;
 
   @state() private settings: ProvidersSettings = defaultProvidersSettings();
-  @state() private presets: ProviderPreset[] = cognitiveRuntime.listProviderPresets();
+  @state() private presets: ProviderPreset[] = aiRuntime.listProviderPresets();
   @state() private approvalMode: ToolApprovalMode = 'auto_safe';
   @state() private availableModels: Record<number, RemoteModelInfo[]> = {};
   @state() private loadingModels: Record<number, boolean> = {};
@@ -45,11 +45,11 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
   private autoFetchedKeys = new Set<string>();
 
   protected doInitUI(): void {
-    cognitiveRuntime.start();
+    aiRuntime.start();
     this.loadFromRuntime();
     this.unsubs.push(
       subscribe(TOPIC.providersChanged, () => {
-        this.presets = cognitiveRuntime.listProviderPresets();
+        this.presets = aiRuntime.listProviderPresets();
         if (!this.isDirty()) this.loadFromRuntime();
       }),
       subscribe(TOPIC.approvalModeChanged, (mode) => {
@@ -69,8 +69,8 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
   }
 
   private loadFromRuntime(): void {
-    this.presets = cognitiveRuntime.listProviderPresets();
-    const loaded = cognitiveRuntime.getProvidersSettings();
+    this.presets = aiRuntime.listProviderPresets();
+    const loaded = aiRuntime.getProvidersSettings();
     const providers = loaded.providers.map((provider) =>
       this.localPreset(provider) && (provider.baseUrl || provider.apiKey)
         ? { ...provider, baseUrl: '', apiKey: '' }
@@ -78,7 +78,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     );
     const stripped = providers.some((provider, index) => provider !== loaded.providers[index]);
     this.settings = stripped ? { ...loaded, providers } : loaded;
-    this.approvalMode = cognitiveRuntime.getApprovalMode();
+    this.approvalMode = aiRuntime.getApprovalMode();
     this.availableModels = {};
     this.loadingModels = {};
     this.modelErrors = {};
@@ -94,7 +94,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
 
   private setApprovalMode(mode: ToolApprovalMode): void {
     this.approvalMode = mode;
-    cognitiveRuntime.setApprovalMode(mode);
+    aiRuntime.setApprovalMode(mode);
   }
 
   private touch(next: ProvidersSettings): void {
@@ -199,9 +199,9 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
     this.loadingModels = { ...this.loadingModels, [index]: true };
     this.modelErrors = { ...this.modelErrors, [index]: '' };
     try {
-      const models = await cognitiveRuntime.listProviderModels(providerId);
+      const models = await aiRuntime.listProviderModels(providerId);
       this.availableModels = { ...this.availableModels, [index]: models };
-      this.presets = cognitiveRuntime.listProviderPresets();
+      this.presets = aiRuntime.listProviderPresets();
       toastInfo(models.length ? `Loaded ${models.length} models` : 'No models reported');
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -310,7 +310,7 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
   override async save(): Promise<void> {
     if (!this.isDirty()) return;
     try {
-      await cognitiveRuntime.setProvidersSettings(this.settings);
+      await aiRuntime.setProvidersSettings(this.settings);
       this.loadFromRuntime();
       toastInfo('AI providers saved');
     } catch (err) {
@@ -781,6 +781,6 @@ export class DocksCognitiveSettingsEditor extends DocksPart {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'docks-cognitive-settings-editor': DocksCognitiveSettingsEditor;
+    'docks-ai-settings-editor': DocksAiSettingsEditor;
   }
 }

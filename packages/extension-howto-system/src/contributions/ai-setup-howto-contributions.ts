@@ -11,7 +11,7 @@ import {
   AI_SETTINGS_KEY,
   OPEN_AI_SETTINGS_COMMAND,
   TOPIC,
-  cognitiveRuntime,
+  aiRuntime,
 } from '@eclipse-docks/extension-ai-system/api';
 import { HOWTO_CONTRIBUTION_TARGET } from '../howto-service';
 import type { HowToContribution, HowToContext } from '../howto-contribution';
@@ -25,13 +25,13 @@ function isAIConfigEditorOpen(): boolean {
   if (!activeEditor) return false;
   if (activeEditor.input?.key === AI_SETTINGS_KEY) return true;
   const tag = (activeEditor.tagName || activeEditor.localName || '').toLowerCase();
-  return tag === 'docks-cognitive-settings-editor';
+  return tag === 'docks-ai-settings-editor';
 }
 
 async function isLLMProviderConfigured(): Promise<boolean> {
   try {
-    await cognitiveRuntime.whenReady();
-    const settings = cognitiveRuntime.getProvidersSettings();
+    await aiRuntime.whenReady();
+    const settings = aiRuntime.getProvidersSettings();
     if (!settings.defaultProviderId) return false;
     const provider = settings.providers.find((p) => p.id === settings.defaultProviderId);
     if (!provider?.enabled) return false;
@@ -61,8 +61,8 @@ function isAIConfigEditorClosed(): boolean {
 
 async function hasTypedInChat(): Promise<boolean> {
   try {
-    await cognitiveRuntime.whenReady();
-    for (const session of cognitiveRuntime.sessions.list()) {
+    await aiRuntime.whenReady();
+    for (const session of aiRuntime.sessions.list()) {
       const hasUserMessage = session.history.some(
         (msg) =>
           msg.role === 'user' &&

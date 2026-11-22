@@ -123,7 +123,7 @@ export interface ProvidersSettings {
   providers: ProviderConfig[];
 }
 
-export const PROVIDERS_PERSIST_KEY = 'cognitive/v1/providers';
+export const PROVIDERS_PERSIST_KEY = 'ai/v1/providers';
 
 export function defaultProvidersSettings(): ProvidersSettings {
   return {

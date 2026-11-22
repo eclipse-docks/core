@@ -11,8 +11,8 @@ async function openAiConfigWithAuxOnAiAssistant(page: Page) {
     const auxTabs = page.locator('docks-tabs#sidebar-auxiliary');
     await expect(auxTabs).toBeVisible({ timeout: UI_MS });
 
-    // Tabs: AI chat (cognitiveview), real coupled panel, decoy with wrong editor id.
-    const aiAssistantTab = auxTabs.locator('wa-tab[panel="cognitiveview"]');
+    // Tabs: AI chat (aiview), real coupled panel, decoy with wrong editor id.
+    const aiAssistantTab = auxTabs.locator('wa-tab[panel="aiview"]');
     const coupledTab = auxTabs.locator('wa-tab[panel="e2e-coupled-ai-config"]');
     const coupledPanel = auxTabs.locator('wa-tab-panel[name="e2e-coupled-ai-config"]');
     const decoyTab = auxTabs.locator('wa-tab[panel="e2e-decoy-coupled-ai-config"]');
@@ -26,15 +26,15 @@ async function openAiConfigWithAuxOnAiAssistant(page: Page) {
     await expect(decoyTab).toHaveAttribute('aria-selected', 'false');
     await expect(coupledPanel).not.toHaveAttribute('active');
     await expect(decoyPanel).not.toHaveAttribute('active');
-    await expect(auxTabs.locator('wa-tab-group')).toHaveAttribute('active', 'cognitiveview');
+    await expect(auxTabs.locator('wa-tab-group')).toHaveAttribute('active', 'aiview');
 
-    const aiView = page.locator('docks-cognitive-view');
+    const aiView = page.locator('docks-ai-view');
     const gear = aiView.getByRole('button', { name: /AI settings/i });
     await expect(gear).toBeVisible({ timeout: UI_MS });
     await gear.click();
     await aiView.locator('wa-dropdown-item[value="settings"]').click();
 
-    const aiEditor = page.locator('docks-tabs#editor-area-main docks-cognitive-settings-editor');
+    const aiEditor = page.locator('docks-tabs#editor-area-main docks-ai-settings-editor');
     await expect(aiEditor).toBeVisible({ timeout: UI_MS });
 
     return { auxTabs, coupledTab, coupledPanel, decoyTab, decoyPanel };

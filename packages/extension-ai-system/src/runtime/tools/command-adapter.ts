@@ -12,7 +12,7 @@ import type { SpecialistRole } from '../types';
 
 /** Commands that must never be exposed as LLM tools (pickers, storage boots, settings). */
 const SKIP = new Set([
-  'open_cognitive_ai_settings',
+  'open_ai_settings',
   'open_ai_config',
   'load_workspace',
   'disconnect_workspace',

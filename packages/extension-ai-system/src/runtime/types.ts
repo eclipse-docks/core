@@ -1,54 +1,3 @@
-export type PlutchikEmotion =
-  | 'joy'
-  | 'trust'
-  | 'fear'
-  | 'surprise'
-  | 'sadness'
-  | 'disgust'
-  | 'anger'
-  | 'anticipation';
-
-export type EmotionalState = Record<PlutchikEmotion, number>;
-
-export type BufferName = 'goal' | 'retrieval' | 'imaginal' | 'emotion' | 'motor';
-
-export interface BufferMap {
-  goal: Chunk | null;
-  retrieval: Chunk | null;
-  imaginal: Chunk | null;
-  emotion: Chunk | null;
-  motor: Chunk | null;
-}
-
-export type MemoryScope = 'run' | 'workspace' | 'session';
-
-export interface Chunk {
-  id: string;
-  type: string;
-  slots: Record<string, unknown>;
-  activation: number;
-  createdAt: number;
-  updatedAt: number;
-  scope: MemoryScope;
-  sessionId?: string;
-  pinned?: boolean;
-}
-
-export interface Need {
-  id: string;
-  label: string;
-  weight: number;
-  urgency: number;
-}
-
-export interface Intent {
-  id: string;
-  summary: string;
-  motivation: string;
-  valenceDelta: number;
-  createdAt: number;
-}
-
 export type SpecialistRole = 'plan' | 'build' | 'explore' | 'general' | 'compact' | 'title' | 'summary';
 
 export type EffortLevel = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
@@ -66,7 +15,7 @@ export type MessagePart =
   | { type: 'text'; text: string }
   | {
       type: 'file';
-      /** Session attachment id (payload lives on `CognitiveSession.attachments`). */
+      /** Session attachment id (payload lives on `AiSession.attachments`). */
       id: string;
       /** Display name (usually the basename). */
       name: string;
@@ -144,20 +93,18 @@ export interface Checkpoint {
   label: string;
   createdAt: number;
   messageSeq: number;
-  buffers: BufferMap;
   compactionSummary?: string;
   specialistMode: SpecialistRole;
   toolEffectCount: number;
 }
 
-export interface CognitiveSession {
+export interface AiSession {
   id: string;
   title: string;
   status: SessionStatus;
   history: ChatMessage[];
   /** Attachment payloads referenced by `file` message parts. */
   attachments: SessionAttachment[];
-  buffers: BufferMap;
   specialistMode: SpecialistRole;
   parentSessionId?: string;
   createdAt: number;

@@ -56,8 +56,8 @@ export async function attachPreviewShot(active: {
     if (!active.capturePreview) return 'No canvas is open';
     const shot = await active.capturePreview();
     const name = previewFileName(active.getFilePath?.() ?? active.canvasName, shot.mime);
-    const { cognitiveRuntime } = await import('@eclipse-docks/extension-ai-system/api');
-    const stored = await cognitiveRuntime.addAttachments(undefined, [{
+    const { aiRuntime } = await import('@eclipse-docks/extension-ai-system/api');
+    const stored = await aiRuntime.addAttachments(undefined, [{
         name,
         mime: shot.mime,
         kind: 'image',

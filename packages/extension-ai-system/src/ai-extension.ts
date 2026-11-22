@@ -15,23 +15,23 @@ import {
   BUILD_PLAN_COMMAND,
   OPEN_AI_SETTINGS_COMMAND,
   appContextPromptEnhancer,
-  cognitiveRuntime,
+  aiRuntime,
   registerSkillCommands,
 } from './runtime';
-import './view/cognitive-view';
-import './view/cognitive-settings-editor';
+import './view/ai-view';
+import './view/ai-settings-editor';
 
-cognitiveRuntime.start();
+aiRuntime.start();
 registerSkillCommands();
-cognitiveRuntime.addSystemPromptEnhancer(appContextPromptEnhancer);
-rootContext.put('cognitiveRuntime', cognitiveRuntime);
+aiRuntime.addSystemPromptEnhancer(appContextPromptEnhancer);
+rootContext.put('aiRuntime', aiRuntime);
 
 contributionRegistry.registerContribution(SIDEBAR_AUXILIARY, {
   name: AI_VIEW_NAME,
   label: 'AI',
   icon: 'robot',
   editorId: AI_VIEW_NAME,
-  component: (id: string) => html`<docks-cognitive-view id="${id}"></docks-cognitive-view>`,
+  component: (id: string) => html`<docks-ai-view id="${id}"></docks-ai-view>`,
 });
 
 editorRegistry.registerEditorInputHandler({
@@ -41,7 +41,7 @@ editorRegistry.registerEditorInputHandler({
   canHandle: (input: EditorInput) => input.key === AI_SETTINGS_KEY,
   handle: async (input: EditorInput) => {
     input.component = (id: string) =>
-      html`<docks-cognitive-settings-editor id="${id}" .input=${input}></docks-cognitive-settings-editor>`;
+      html`<docks-ai-settings-editor id="${id}" .input=${input}></docks-ai-settings-editor>`;
     return input;
   },
 });
@@ -62,7 +62,7 @@ registerAll({
   handler: {
     execute: async (context) => {
       const path = String(context.params?.path ?? '').trim();
-      const view = findElement('docks-cognitive-view') as
+      const view = findElement('docks-ai-view') as
         | (HTMLElement & { buildFromPlan(path: string): Promise<void> })
         | null;
       if (!view) {

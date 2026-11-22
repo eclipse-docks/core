@@ -1,41 +1,34 @@
 import type {
-  BufferMap,
   Checkpoint,
   ChatMessage,
-  CognitiveSession,
+  AiSession,
   ModelPolicy,
   SpecialistRole,
 } from '../types';
-import { emptyBuffers } from '../core/tick';
 import { compactHistory } from '../compact/compaction';
 
 function sid(): string {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function cloneBuffers(buffers: BufferMap): BufferMap {
-  return {
-    goal: buffers.goal ? { ...buffers.goal, slots: { ...buffers.goal.slots } } : null,
-    retrieval: buffers.retrieval ? { ...buffers.retrieval, slots: { ...buffers.retrieval.slots } } : null,
-    imaginal: buffers.imaginal ? { ...buffers.imaginal, slots: { ...buffers.imaginal.slots } } : null,
-    emotion: buffers.emotion ? { ...buffers.emotion, slots: { ...buffers.emotion.slots } } : null,
-    motor: buffers.motor ? { ...buffers.motor, slots: { ...buffers.motor.slots } } : null,
-  };
+/** Drop `buffers` left on sessions saved before that field was removed. */
+function withoutLegacyBuffers<T extends object>(value: T): Omit<T, 'buffers'> {
+  const { buffers: _legacy, ...rest } = value as T & { buffers?: unknown };
+  return rest;
 }
 
 export class SessionRuntime {
-  private sessions = new Map<string, CognitiveSession>();
+  private sessions = new Map<string, AiSession>();
   private checkpoints = new Map<string, Checkpoint[]>();
   private focusedId: string | null = null;
 
-  createSession(input: { title?: string; parentSessionId?: string; specialistMode?: SpecialistRole } = {}): CognitiveSession {
-    const session: CognitiveSession = {
+  createSession(input: { title?: string; parentSessionId?: string; specialistMode?: SpecialistRole } = {}): AiSession {
+    const session: AiSession = {
       id: sid(),
       title: input.title ?? 'New session',
       status: 'idle',
       history: [],
       attachments: [],
-      buffers: emptyBuffers(),
       specialistMode: input.specialistMode ?? 'build',
       parentSessionId: input.parentSessionId,
       createdAt: Date.now(),
@@ -47,11 +40,11 @@ export class SessionRuntime {
     return session;
   }
 
-  get(sessionId: string): CognitiveSession | undefined {
+  get(sessionId: string): AiSession | undefined {
     return this.sessions.get(sessionId);
   }
 
-  list(): CognitiveSession[] {
+  list(): AiSession[] {
     return [...this.sessions.values()].sort((a, b) => b.updatedAt - a.updatedAt);
   }
 
@@ -61,7 +54,7 @@ export class SessionRuntime {
     return true;
   }
 
-  focused(): CognitiveSession | undefined {
+  focused(): AiSession | undefined {
     return this.focusedId ? this.sessions.get(this.focusedId) : undefined;
   }
 
@@ -75,7 +68,7 @@ export class SessionRuntime {
     return true;
   }
 
-  update(sessionId: string, patch: Partial<CognitiveSession>): CognitiveSession | undefined {
+  update(sessionId: string, patch: Partial<AiSession>): AiSession | undefined {
     const session = this.sessions.get(sessionId);
     if (!session) return undefined;
     const next = { ...session, ...patch, updatedAt: Date.now() };
@@ -100,7 +93,6 @@ export class SessionRuntime {
       label: label ?? `Checkpoint ${new Date().toLocaleString()}`,
       createdAt: Date.now(),
       messageSeq: session.history.length,
-      buffers: cloneBuffers(session.buffers),
       compactionSummary: session.compactionSummary,
       specialistMode: session.specialistMode,
       toolEffectCount,
@@ -126,7 +118,6 @@ export class SessionRuntime {
     if (!session || !cp) return undefined;
 
     const history = session.history.slice(0, cp.messageSeq);
-    const buffers = cloneBuffers(cp.buffers);
 
     if (input.mode === 'fork') {
       const forked = this.createSession({
@@ -135,7 +126,6 @@ export class SessionRuntime {
       });
       this.update(forked.id, {
         history,
-        buffers,
         compactionSummary: cp.compactionSummary,
         status: 'idle',
       });
@@ -144,7 +134,6 @@ export class SessionRuntime {
 
     this.update(input.sessionId, {
       history,
-      buffers,
       compactionSummary: cp.compactionSummary,
       specialistMode: cp.specialistMode,
       status: 'idle',
@@ -189,35 +178,34 @@ export class SessionRuntime {
     });
   }
 
-  snapshot(): { sessions: CognitiveSession[]; checkpoints: Record<string, Checkpoint[]> } {
+  snapshot(): { sessions: AiSession[]; checkpoints: Record<string, Checkpoint[]> } {
     const checkpoints: Record<string, Checkpoint[]> = {};
-    for (const [id, list] of this.checkpoints) checkpoints[id] = list.map((c) => ({ ...c, buffers: cloneBuffers(c.buffers) }));
+    for (const [id, list] of this.checkpoints) checkpoints[id] = list.map((c) => ({ ...c }));
     return {
       sessions: this.list().map((s) => ({
         ...s,
         attachments: [...(s.attachments ?? [])],
         history: s.history.map((m) => ({ ...m, parts: [...m.parts] })),
-        buffers: cloneBuffers(s.buffers),
       })),
       checkpoints,
     };
   }
 
-  loadSnapshot(data: { sessions: CognitiveSession[]; checkpoints: Record<string, Checkpoint[]> }): void {
+  loadSnapshot(data: { sessions: AiSession[]; checkpoints: Record<string, Checkpoint[]> }): void {
     this.sessions.clear();
     this.checkpoints.clear();
-    for (const session of data.sessions) {
+    for (const raw of data.sessions) {
+      const session = withoutLegacyBuffers(raw);
       this.sessions.set(session.id, {
         ...session,
         attachments: [...(session.attachments ?? [])],
-        buffers: cloneBuffers(session.buffers),
         history: [...session.history],
       });
     }
     for (const [id, list] of Object.entries(data.checkpoints ?? {})) {
       this.checkpoints.set(
         id,
-        list.map((c) => ({ ...c, buffers: cloneBuffers(c.buffers) })),
+        list.map((c) => withoutLegacyBuffers(c)),
       );
     }
     this.focusedId = this.list()[0]?.id ?? null;

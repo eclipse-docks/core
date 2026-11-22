@@ -1,6 +1,6 @@
 import type { File } from '@eclipse-docks/core';
 import { createLogger } from '@eclipse-docks/core';
-import { cognitiveRuntime, parseModelIds } from '@eclipse-docks/extension-ai-system/api';
+import { aiRuntime, parseModelIds } from '@eclipse-docks/extension-ai-system/api';
 import type { IDocumentExtractor, DocumentExtractionOptions } from './document-extractor-interface';
 
 const logger = createLogger('LLMOCRExtractor');
@@ -18,8 +18,8 @@ export class LLMOCRExtractor implements IDocumentExtractor {
     const fileName = file.getName();
     const fileType = options?.fileType || fileName.split('.').pop()?.toLowerCase() || 'pdf';
 
-    await cognitiveRuntime.whenReady();
-    const settings = cognitiveRuntime.getProvidersSettings();
+    await aiRuntime.whenReady();
+    const settings = aiRuntime.getProvidersSettings();
     const ocrProvider = settings.providers.find((p) => {
       if (!p.enabled) return false;
       if (p.extra?.ocrApiEndpoint) return true;

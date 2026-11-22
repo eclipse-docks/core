@@ -6,8 +6,7 @@ import {
   formatBucketDetail,
   formatContextPercent,
 } from '../src/runtime/context/usage';
-import type { CognitiveSession } from '../src/runtime/types';
-import { emptyBuffers } from '../src/runtime/core/tick';
+import type { AiSession } from '../src/runtime/types';
 
 describe('context usage', () => {
   it('estimates tokens from text length', () => {
@@ -34,7 +33,7 @@ describe('context usage', () => {
   });
 
   it('breaks session usage into buckets with counts', () => {
-    const session: CognitiveSession = {
+    const session: AiSession = {
       id: 's1',
       title: 'Chat',
       status: 'idle',
@@ -64,7 +63,6 @@ describe('context usage', () => {
         },
       ],
       attachments: [],
-      buffers: emptyBuffers(),
       specialistMode: 'build',
       createdAt: 1,
       updatedAt: 2,
